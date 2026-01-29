@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LOVD Planning — Projecten</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="row" style="gap:12px">
+        <a class="btn ghost" href="index.html">← Menu</a>
+        <div class="brand"><span class="dot"></span> Projecten</div>
+      </div>
+      <div class="row">
+        <input id="q" class="input" style="width:420px; max-width:60vw" placeholder="Zoek op projectnr / klant / projectnaam..." />
+        <button id="btnReload" class="btn">Ververs</button>
+        <button id="btnLogout" class="btn">Uitloggen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">
+        <h2>Lijst</h2>
+        <span id="meta" class="muted"></span>
+      </div>
+      <div class="bd">
+        <div id="status"></div>
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th style="width:160px">Projectnr</th>
+              <th style="width:320px">Klant</th>
+              <th>Project</th>
+              <th style="width:140px">Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="projects.js"></script>
+</body>
+</html>

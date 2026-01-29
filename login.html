@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LOVD Planning — Login</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#f4f6fb">
+</head>
+<body>
+  <div class="container" style="max-width:520px">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span> LOVD Planning</div>
+      <span class="pill">Start clean</span>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h1>Inloggen</h1></div>
+      <div class="bd">
+        <p class="muted" style="margin-top:0">Log in met je Supabase Auth gebruiker (email + wachtwoord).</p>
+
+        <div class="grid" style="gap:10px">
+          <div>
+            <div class="label">Email</div>
+            <input id="email" class="input" type="email" autocomplete="email" placeholder="jeroen@..." />
+          </div>
+          <div>
+            <div class="label">Wachtwoord</div>
+            <input id="password" class="input" type="password" autocomplete="current-password" placeholder="••••••••" />
+          </div>
+          <div class="row" style="justify-content:space-between">
+            <button id="btnLogin" class="btn primary" type="button">Inloggen</button>
+            <button id="btnDemo" class="btn" type="button" title="Vult alleen het email veld (handig bij testen)">Vul email</button>
+          </div>
+
+          <div id="status"></div>
+
+          <div class="hr"></div>
+          <div class="muted" style="font-size:13px">
+            Geen account? Maak in Supabase (Authentication → Users) een user aan.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="login.js"></script>
+</body>
+</html>

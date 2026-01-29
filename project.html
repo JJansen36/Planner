@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LOVD Planning — Project</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="row" style="gap:12px">
+        <a class="btn ghost" href="projects.html">← Projecten</a>
+        <div class="brand"><span class="dot"></span> <span id="title">Project</span></div>
+      </div>
+      <div class="row">
+        <button id="btnLogout" class="btn">Uitloggen</button>
+      </div>
+    </div>
+
+    <div id="status" style="margin-top:14px"></div>
+
+    <div class="card" id="cardMain" style="display:none">
+      <div class="hd">
+        <div class="row" style="gap:10px; flex-wrap:wrap">
+          <span class="chip blue" id="chipHead"></span>
+        </div>
+        <div class="row" style="gap:10px; flex-wrap:wrap">
+          <span class="pill" id="pillStatus"></span>
+          <span class="muted" id="pillMeta"></span>
+        </div>
+      </div>
+
+      <div class="bd">
+        <div class="grid cols-2">
+          <!-- LEFT COLUMN -->
+          <div class="grid" style="gap:14px">
+            <div class="card" style="box-shadow:none">
+              <div class="hd"><h2>Project</h2></div>
+              <div class="bd"><div id="blkProject" class="fieldgrid"></div></div>
+            </div>
+
+            <div class="card" style="box-shadow:none">
+              <div class="hd"><h2>Klant</h2></div>
+              <div class="bd"><div id="blkCustomer" class="fieldgrid"></div></div>
+            </div>
+
+            <div class="card" style="box-shadow:none">
+              <div class="hd"><h2>Aflevergegevens</h2></div>
+              <div class="bd"><div id="blkDelivery" class="fieldgrid"></div></div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div class="grid" style="gap:14px">
+            <div class="card" style="box-shadow:none">
+              <div class="hd"><h2>Order</h2></div>
+              <div class="bd"><div id="blkOrder" class="fieldgrid"></div></div>
+            </div>
+
+            <div class="card" style="box-shadow:none">
+              <div class="hd"><h2>Totalen</h2></div>
+              <div class="bd">
+                <div id="blkTotals" class="fieldgrid"></div>
+                <div class="muted" style="margin-top:10px; font-size:13px">
+                  Als totalen leeg zijn, berekenen we ze automatisch uit secties (uren_wvb / uren_prod / uren_mont / uren_reis).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row" style="justify-content:space-between; align-items:flex-end; gap:12px">
+          <div>
+            <h2 style="margin:0 0 6px">Secties</h2>
+            <div class="muted" id="secMeta"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px">
+          <table class="table" id="secTable">
+            <thead>
+              <tr id="secHead"></tr>
+            </thead>
+            <tbody id="secBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="project.js"></script>
+</body>
+</html>

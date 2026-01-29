@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LOVD Planning — Menu</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span> LOVD Planning</div>
+      <div class="row">
+        <span id="who" class="muted"></span>
+        <button id="btnLogout" class="btn">Uitloggen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h1>Menu</h1></div>
+      <div class="bd">
+        <div class="grid cols-3">
+          <a class="card" href="projects.html" style="box-shadow:none">
+            <div class="bd">
+              <div class="chip blue">Projecten</div>
+              <p class="muted">Zoeken, openen en secties bekijken.</p>
+            </div>
+          </a>
+
+          <div class="card" style="opacity:.5; box-shadow:none">
+            <div class="bd">
+              <div class="chip green">Klanten</div>
+              <p class="muted">Komt later.</p>
+            </div>
+          </div>
+
+          <div class="card" style="opacity:.5; box-shadow:none">
+            <div class="bd">
+              <div class="chip purple">Planning</div>
+              <p class="muted">Komt later (capaciteit + weekplanning).</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="status" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="menu.js"></script>
+</body>
+</html>
