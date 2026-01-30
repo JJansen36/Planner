@@ -11,6 +11,12 @@ export const DB = {
     sections: "secties",
   },
 
+    // Primary key kolommen (BELANGRIJK!)
+  projectPkCol: "project_id",  // <-- jouw projecten PK
+  customerPkCol: "klant_id",   // <-- alleen aanpassen als klanten géén "id" heeft
+  sectionPkCol: "id",          // <-- alleen aanpassen als secties géén "id" heeft
+
+
   // FK kolom in projecten -> klanten.id (pas aan als je bv customer_id gebruikt)
   projectCustomerFk: "klant_id",
 

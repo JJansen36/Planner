@@ -37,7 +37,7 @@ async function loadProject(id){
   const a = await sb
     .from(tProj)
     .select(`*, ${joinName}:${tCust}(*)`)
-    .eq("id", id)
+    .eq(DB.projectPkCol, id)
     .maybeSingle();
 
   if(a.error){
@@ -72,7 +72,8 @@ async function loadProject(id){
   el("title").textContent = projectNo ? `${projectNo}` : "Project";
   el("chipHead").textContent = `${projectNo} - ${klantName} - ${projectName}`;
   el("pillStatus").textContent = project.salesstatus ?? "";
-  el("pillMeta").textContent = `ID: ${project.id}`;
+  el("pillMeta").textContent = `ID: ${project[DB.projectPkCol]}`;
+
 
   // Render blocks
   renderBlock("blkProject", DB.projectBlocks.project, project, project.klant);

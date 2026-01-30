@@ -34,7 +34,7 @@ async function load(){
   const joinName = "klant"; // alias
   const { data, error } = await sb
     .from(tProj)
-    .select(`id, ${DB.projectNoCol}, ${DB.projectNameCol}, salesstatus, ${DB.projectCustomerFk}, ${joinName}:${tCust}(id, ${DB.customerNameCol})`)
+    .select(`${DB.projectPkCol}, ${DB.projectNoCol}, ${DB.projectNameCol}, salesstatus, ${DB.projectCustomerFk}, ${joinName}:${tCust}(${DB.customerPkCol}, ${DB.customerNameCol})`)
     .order(DB.projectNoCol, { ascending: false })
     .limit(500);
 
@@ -43,7 +43,7 @@ async function load(){
     // 2) Fallback: haal projecten op, dan klanten in tweede query
     const a = await sb
       .from(tProj)
-      .select(`id, ${DB.projectNoCol}, ${DB.projectNameCol}, salesstatus, ${DB.projectCustomerFk}`)
+      .select(`${DB.projectPkCol}, ${DB.projectNoCol}, ${DB.projectNameCol}, salesstatus, ${DB.projectCustomerFk}`)
       .order(DB.projectNoCol, { ascending: false })
       .limit(500);
 
@@ -92,7 +92,7 @@ function render(){
   el("meta").textContent = `${filtered.length} / ${rows.length}`;
 
   el("tbody").innerHTML = filtered.map(r=>{
-    const id = r.id;
+    const id = r[DB.projectPkCol];
     const projectNo = escapeHtml(r[DB.projectNoCol] ?? "");
     const projectName = escapeHtml(r[DB.projectNameCol] ?? "");
     const klant = escapeHtml(r.klant?.[DB.customerNameCol] ?? "");
