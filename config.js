@@ -18,7 +18,8 @@ export const DB = {
 
 
   // FK kolom in projecten -> klanten.id (pas aan als je bv customer_id gebruikt)
-  projectCustomerFk: "klant_id",
+  customerPkCol: "id",
+
 
   // FK kolom in secties -> projecten.id (pas aan als je bv project_id gebruikt)
   sectionProjectFk: "project_id",
