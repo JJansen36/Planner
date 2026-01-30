@@ -11,34 +11,25 @@ export const DB = {
     sections: "secties",
   },
 
-  // ✅ Primary key kolommen
-  projectPkCol: "project_id",   // jouw PK in projecten
-  customerPkCol: "id",          // verander naar "customer_id" als klanten zo heet
-  sectionPkCol: "id",           // verander als secties geen 'id' heeft
+  // Primary keys
+  projectPkCol: "project_id",
+  customerPkCol: "id",
+  sectionPkCol: "id",
 
-  // ✅ FK in projecten die naar klanten wijst
-  projectCustomerFk: "customer_id",  // <-- dit is die kolomnaam in projecten
-  // ✅ FK in secties die naar projecten wijst
+  // Foreign keys
+  projectCustomerFk: "customer_id",
   sectionProjectFk: "project_id",
 
+  // Kolommen voor header/titels
   projectNoCol: "offerno",
   projectNameCol: "projectname",
   customerNameCol: "name_kl",
 
-  // ... de rest mag blijven zoals je al had
-};
-
-
-  // Velden voor de project-detail indeling (labels links, kolomnamen rechts)
-  // Je kunt hier vrij velden toevoegen/verwijderen; UI rendert automatisch.
   projectBlocks: {
-    // Linksboven (blauw) – project
     project: [
       { label: "Project nummer", col: "offerno" },
       { label: "Project naam", col: "projectname" },
     ],
-
-    // Links midden (groen) – klant
     customer: [
       { label: "Klant", col: "name_kl" },
       { label: "Contact persoon", col: "fullname_kl" },
@@ -48,8 +39,6 @@ export const DB = {
       { label: "Mobiel contactpersoon", col: "mobilephone_kl" },
       { label: "Email contactpersoon", col: "email_kl" },
     ],
-
-    // Links onder (blauw) – aflevergegevens (meestal in projecten; pas aan als dit in klanten zit)
     delivery: [
       { label: "Naam locatie", col: "deliveryname" },
       { label: "Contactpersoon", col: "deliveryfullname" },
@@ -58,8 +47,6 @@ export const DB = {
       { label: "Telefoon", col: "deliveryphone" },
       { label: "Email", col: "deliveryemail" },
     ],
-
-    // Rechts (blauw) – orderstatus / datums / medewerkers
     order: [
       { label: "Order status", col: "salesstatus" },
       { label: "Invoerdatum", col: "entrydate", type: "date" },
@@ -71,8 +58,6 @@ export const DB = {
       { label: "Verkoper", col: "salesemployee" },
       { label: "Calculator", col: "offeremployee" },
     ],
-
-    // Totalen (als je ze in projecten hebt, toon je ze hier; anders laten we ze berekenen uit secties)
     totals: [
       { label: "Totaal werkvoorbereiding uren", col: "total_wvb" },
       { label: "Totaal productie uren", col: "total_prod" },
@@ -81,8 +66,6 @@ export const DB = {
     ],
   },
 
-  // Secties overzicht (onderaan)
-  // Welke kolommen tonen we in de tabel-rij?
   sectionRowCols: [
     { label: "Paragraaf", col: "paragraph" },
     { label: "Omschrijving", col: "description" },
@@ -90,7 +73,6 @@ export const DB = {
     { label: "Bijlage", col: "bijlage" },
   ],
 
-  // Welke detailvelden tonen we als je een sectie openklapt?
   sectionDetailCols: [
     { label: "Tekst", col: "text" },
     { label: "Werkvoorbereiding uren", col: "uren_wvb" },
@@ -99,3 +81,4 @@ export const DB = {
     { label: "Reis uren", col: "uren_reis" },
   ],
 };
+
