@@ -13,7 +13,7 @@ export const DB = {
 
   // Primary keys
   projectPkCol: "project_id",
-  customerPkCol: "id",
+  customerPkCol: "customer_id",
   sectionPkCol: "id",
 
   // Foreign keys
