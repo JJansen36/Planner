@@ -13,13 +13,13 @@ export const DB = {
 
   // Primary keys
   projectPkCol: "project_id",
-  projectCustomerFk: "customer_id",
   customerPkCol: "customer_id",
-
+  sectionPkCol: "section_id",   // <-- zet hier de echte PK van secties
 
   // Foreign keys
   projectCustomerFk: "customer_id",
   sectionProjectFk: "project_id",
+
 
   // Kolommen voor header/titels
   projectNoCol: "offerno",

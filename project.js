@@ -56,7 +56,7 @@ async function loadProject(id){
     .from(tSec)
     .select("*")
     .eq(DB.sectionProjectFk, id)
-    .order("id", { ascending: true });
+    .order(DB.sectionPkCol, { ascending: true });
 
   if(b.error){
     setStatus(el("status"), b.error.message, "error");
