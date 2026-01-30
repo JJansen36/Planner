@@ -11,24 +11,23 @@ export const DB = {
     sections: "secties",
   },
 
-    // Primary key kolommen (BELANGRIJK!)
-  projectPkCol: "project_id",  // <-- jouw projecten PK
-  customerPkCol: "klant_id",   // <-- alleen aanpassen als klanten géén "id" heeft
-  sectionPkCol: "id",          // <-- alleen aanpassen als secties géén "id" heeft
+  // ✅ Primary key kolommen
+  projectPkCol: "project_id",   // jouw PK in projecten
+  customerPkCol: "id",          // verander naar "customer_id" als klanten zo heet
+  sectionPkCol: "id",           // verander als secties geen 'id' heeft
 
-
-  // FK kolom in projecten -> klanten.id (pas aan als je bv customer_id gebruikt)
-  customerPkCol: "id",
-
-
-  // FK kolom in secties -> projecten.id (pas aan als je bv project_id gebruikt)
+  // ✅ FK in projecten die naar klanten wijst
+  projectCustomerFk: "customer_id",  // <-- dit is die kolomnaam in projecten
+  // ✅ FK in secties die naar projecten wijst
   sectionProjectFk: "project_id",
 
-  // Project "header" titel: <OFFFERNO> - <name_kl> - <projectname>
-  // Dit zijn kolommen in projecten en klanten:
   projectNoCol: "offerno",
   projectNameCol: "projectname",
   customerNameCol: "name_kl",
+
+  // ... de rest mag blijven zoals je al had
+};
+
 
   // Velden voor de project-detail indeling (labels links, kolomnamen rechts)
   // Je kunt hier vrij velden toevoegen/verwijderen; UI rendert automatisch.
