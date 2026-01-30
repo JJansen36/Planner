@@ -75,7 +75,7 @@ export const DB = {
   ],
 
   sectionDetailCols: [
-    { label: "Tekst", col: "text" },
+    { label: "Tekst", col: "salestextrtf" },
     { label: "Werkvoorbereiding uren", col: "uren_wvb" },
     { label: "Productie uren", col: "uren_prod" },
     { label: "Montage uren", col: "uren_mont" },
