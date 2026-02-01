@@ -57,7 +57,7 @@ async function loadAndRender(){
   const { data: projecten, error: pErr } = await sb
     .from("projecten")
     .select("*")
-    .order("projectnr", { ascending: true })
+    .order("offerno", { ascending: true })
     .limit(500);
 
   if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
@@ -119,7 +119,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
   // indexes
   const projIdKey = pickKey(projecten[0], ["project_id","id"]);
-  const projNrKey = pickKey(projecten[0], ["projectnr","project_nr","nummer","nr"]);
+  const projNrKey = pickKey(projecten[0], ["offerno","projectnr","project_nr","nummer","nr"]);
   const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
   const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
 
