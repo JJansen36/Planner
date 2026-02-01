@@ -94,7 +94,7 @@ async function loadAndRender(){
   const { data: werknemers, error: eErr } = await sb
     .from("werknemers")
     .select("*")
-    .order("naam", { ascending: true })
+    .order("name", { ascending: true })
     .limit(500);
 
   if (eErr) { statusEl.textContent = "Fout werknemers: " + eErr.message; return; }
