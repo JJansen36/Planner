@@ -218,6 +218,68 @@ a{color:inherit; text-decoration:none}
   background:#f8fafc;
   border-top:1px solid var(--line);
 }
+
+/* Planning grid */
+.planner{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:12px;
+}
+.planner table{width:100%; border-collapse:collapse; min-width: 980px;}
+.planner th, .planner td{border-bottom:1px solid var(--line); padding:8px 10px; font-size:13px; vertical-align:top;}
+.planner thead th{position:sticky; top:0; background:#f8fafc; z-index:2; color:var(--muted); font-weight:800;}
+.planner .sticky-col{position:sticky; left:0; background:#fff; z-index:3; border-right:1px solid var(--line);}
+.planner .sticky-col2{position:sticky; left:260px; background:#fff; z-index:3; border-right:1px solid var(--line);}
+.planner .col-name{min-width:260px; max-width:260px;}
+.planner .col-meta{min-width:180px; max-width:180px;}
+.planner .day{min-width:110px;}
+.planner .cell{
+  background:#fff;
+}
+.planner .cell .tiny{font-size:12px; color:var(--muted)}
+.planner .cell .sum{font-weight:850}
+.planner .cap-good{color:var(--good)}
+.planner .cap-warn{color:var(--warn)}
+.planner .cap-bad{color:var(--bad)}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+}
+
+/* Modal */
+.modal-backdrop{
+  position:fixed; inset:0;
+  background:rgba(15,23,42,.35);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:50;
+}
+.modal-backdrop.show{display:flex;}
+.modal{
+  width:min(720px, 100%);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.modal .hd{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.modal .bd{padding:16px;}
+.modal .ft{padding:14px 16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px;}
+
+.split2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media (max-width:720px){.split2{grid-template-columns:1fr}}
 .hr{height:1px;background:var(--line);margin:10px 0}
 
 .notice{

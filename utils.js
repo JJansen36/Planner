@@ -14,6 +14,45 @@ export function getParam(name){
   return u.searchParams.get(name);
 }
 
+// Compat aliases (used in newer pages)
+export const getQueryParam = getParam;
+
+export function setQueryParam(name, value){
+  const u = new URL(location.href);
+  if(value===null || value===undefined || value==="") u.searchParams.delete(name);
+  else u.searchParams.set(name, value);
+  history.replaceState(null, "", u.toString());
+}
+
+export function parseISODate(s){
+  // expects YYYY-MM-DD
+  if(!s) return null;
+  const [y,m,d] = s.split("-").map(Number);
+  if(!y || !m || !d) return null;
+  return new Date(y, m-1, d);
+}
+
+export function toISODate(d){
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function addDays(d, n){
+  const x = new Date(d);
+  x.setDate(x.getDate()+n);
+  return x;
+}
+
+export function startOfISOWeek(d){
+  const x = new Date(d);
+  const day = (x.getDay()+6)%7; // Monday=0
+  x.setHours(0,0,0,0);
+  x.setDate(x.getDate() - day);
+  return x;
+}
+
 export function setStatus(node, msg, kind="notice"){
   node.innerHTML = msg ? `<div class="${kind}">${escapeHtml(msg)}</div>` : "";
 }

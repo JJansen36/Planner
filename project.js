@@ -34,17 +34,37 @@ async function loadProject(id){
   const joinName = "klant";
   let project = null;
 
-  const a = await sb
+  // Probeer project + klant via relationship select; als dat faalt: 2-step fallback
+  let a = await sb
     .from(tProj)
     .select(`*, ${joinName}:${tCust}(*)`)
     .eq(DB.projectPkCol, id)
     .maybeSingle();
 
   if(a.error){
-    setStatus(el("status"), a.error.message, "error");
-    return;
+    console.warn("Project join failed, fallback to 2-step", a.error.message);
+    a = await sb
+      .from(tProj)
+      .select("*")
+      .eq(DB.projectPkCol, id)
+      .maybeSingle();
+    if(a.error){
+      setStatus(el("status"), a.error.message, "error");
+      return;
+    }
+    project = a.data;
+    const custId = project?.[DB.projectCustomerFk];
+    if(custId){
+      const k = await sb
+        .from(tCust)
+        .select("*")
+        .eq(DB.customerPkCol, custId)
+        .maybeSingle();
+      if(!k.error) project.klant = k.data;
+    }
+  } else {
+    project = a.data;
   }
-  project = a.data;
 
   if(!project){
     setStatus(el("status"), "Project niet gevonden.", "error");
@@ -72,8 +92,7 @@ async function loadProject(id){
   el("title").textContent = projectNo ? `${projectNo}` : "Project";
   el("chipHead").textContent = `${projectNo} - ${klantName} - ${projectName}`;
   el("pillStatus").textContent = project.salesstatus ?? "";
-  el("pillMeta").textContent = `ID: ${project[DB.projectPkCol]}`;
-
+  el("pillMeta").textContent = `ID: ${project?.[DB.projectPkCol] ?? ""}`;
 
   // Render blocks
   renderBlock("blkProject", DB.projectBlocks.project, project, project.klant);
@@ -82,10 +101,11 @@ async function loadProject(id){
   renderBlock("blkOrder", DB.projectBlocks.order, project, project.klant);
 
   // Totals: use project totals if present, else compute from sections
+  // Kolomnamen van uren kunnen per omgeving verschillen; we volgen config.js
   const computed = {
     total_wvb: sumNums(sections, "uren_wvb"),
     total_prod: sumNums(sections, "uren_prod"),
-    total_mont: sumNums(sections, "uren_mont"),
+    total_mont: sumNums(sections, "uren_montage") || sumNums(sections, "uren_mont"),
     total_reis: sumNums(sections, "uren_reis"),
   };
 
