@@ -1,665 +1,569 @@
-// planning.js
-import { makeSupabaseClient, requireSession, signOut } from "./auth.js";
-import { DB } from "./config.js";
-import {
-  el, escapeHtml, fmtDate, setStatus,
-  getQueryParam, setQueryParam,
-  startOfISOWeek, addDays, toISODate, parseISODate
-} from "./utils.js";
+import { makeSupabaseClient, requireSession } from "./auth.js";
+import { startOfISOWeek, addDays, toISODate, parseISODate } from "./utils.js";
 
 const sb = makeSupabaseClient();
 
-// ====== helpers ======
-const TYPE_OPTIONS = [
-  {value:"werk", label:"Werk", counts:true},
-  {value:"verlof", label:"Verlof", counts:false},
-  {value:"ziek", label:"Ziek", counts:false},
-  {value:"inhuur", label:"Inhuur", counts:true},
-  {value:"overig", label:"Overig", counts:false},
-];
+const el = (id) => document.getElementById(id);
+const gridEl = el("plannerGrid");
+const statusEl = el("plannerStatus");
 
-const WORK_TYPES = [
-  {value:"prod", label:"Productie"},
-  {value:"mont", label:"Montage"},
-  {value:"reis", label:"Reis"},
-  {value:"wvb", label:"Werkvoorbereiding"},
-];
+const RANGE_DAYS = 56; // 8 weken zoals je PDF-screens
+let rangeStart = startOfISOWeek(new Date()); // maandag
 
-function countsTowardsCapacity(type){
-  const t = TYPE_OPTIONS.find(x=>x.value===type);
-  return t? !!t.counts : false;
-}
+// UI
+el("btnMenu").onclick = () => (location.href = "./index.html");
+el("btnLogout").onclick = async () => { await sb.auth.signOut(); location.href = "./login.html"; };
+el("btnToday").onclick = () => { rangeStart = startOfISOWeek(new Date()); loadAndRender(); };
+el("btnPrev").onclick = () => { rangeStart = addDays(rangeStart, -RANGE_DAYS); loadAndRender(); };
+el("btnNext").onclick = () => { rangeStart = addDays(rangeStart, +RANGE_DAYS); loadAndRender(); };
+el("btnRefresh").onclick = () => loadAndRender();
 
-function getEmployeeId(row){
-  return row?.[DB.employeePkCol];
-}
-
-function getEmployeeName(row){
-  const preferred = DB.employeeNameCol;
-  if (preferred && row?.[preferred]) return row[preferred];
-  for (const k of ["naam","name","full_name","fullname","email","username"]){
-    if (row?.[k]) return row[k];
-  }
-  return String(getEmployeeId(row) || "(onbekend)");
-}
-
-function dayLabel(date){
-  // NL compact
-  const d = new Date(date+"T00:00:00");
-  const wd = ["zo","ma","di","wo","do","vr","za"][d.getDay()];
-  return `${wd} ${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
-}
-
-function parseNum(v){
-  const n = Number(String(v).replace(",","."));
-  return Number.isFinite(n) ? n : 0;
-}
-
-// ====== state ======
-let session = null;
-let weekStart = null; // ISO date
-let days = []; // ISO dates
-let employees = [];
-let empById = new Map();
-
-// caches
-let capacityMap = new Map(); // key: `${empId}|${date}` -> {id, hours, type}
-let workMap = new Map();     // key: `${section_id}|${date}` -> array entries
-let projects = [];
-let customers = new Map();
-let sectionsByProject = new Map();
-
-// ====== init ======
 document.addEventListener("DOMContentLoaded", init);
 
 async function init(){
-  session = await requireSession(sb);
-  if (!session) return;
-
-  // UI hooks
-  el("btnLogout").addEventListener("click", async()=>{ await signOut(sb); window.location.href = "login.html"; });
-  el("btnPrev").addEventListener("click", ()=> shiftWeek(-1));
-  el("btnNext").addEventListener("click", ()=> shiftWeek(1));
-  el("btnToday").addEventListener("click", ()=> goToday());
-  el("btnRefresh").addEventListener("click", ()=> loadAll());
-
-  el("tabOverview").addEventListener("click", ()=> setTab("overview"));
-  el("tabCapacity").addEventListener("click", ()=> setTab("capacity"));
-  el("q").addEventListener("input", ()=> renderProjects());
-
-  // default week
-  const qp = getQueryParam("d");
-  const base = qp ? parseISODate(qp) : new Date();
-  const ws = startOfISOWeek(base);
-  weekStart = toISODate(ws);
-  setQueryParam("d", weekStart);
-  computeDays();
-
-  await loadAll();
-  setTab(getQueryParam("tab") || "overview");
+  await requireSession(sb);
+  loadAndRender();
 }
 
-function setTab(name){
-  const isOverview = name === "overview";
-  el("tabOverview").classList.toggle("primary", isOverview);
-  el("tabCapacity").classList.toggle("primary", !isOverview);
-  el("overview").style.display = isOverview ? "block" : "none";
-  el("capacity").style.display = !isOverview ? "block" : "none";
-  setQueryParam("tab", name);
+function monthNameNL(m){
+  return ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"][m];
+}
+function dayNameNL(d){
+  return ["zo","ma","di","wo","do","vr","za"][d];
+}
+function isWeekend(date){
+  const d = date.getDay();
+  return d === 0 || d === 6;
+}
+function weekNumberISO(date){
+  // ISO week number
+  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+  return Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
 }
 
-function shiftWeek(deltaWeeks){
-  const base = parseISODate(weekStart);
-  const next = addDays(base, deltaWeeks*7);
-  weekStart = toISODate(startOfISOWeek(next));
-  setQueryParam("d", weekStart);
-  computeDays();
-  loadAll();
-}
+// -------- DATA LOAD --------
+async function loadAndRender(){
+  const start = new Date(rangeStart);
+  const end = addDays(start, RANGE_DAYS - 1);
+  const startISO = toISODate(start);
+  const endISO = toISODate(end);
 
-function goToday(){
-  weekStart = toISODate(startOfISOWeek(new Date()));
-  setQueryParam("d", weekStart);
-  computeDays();
-  loadAll();
-}
+  statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
-function computeDays(){
-  days = [];
-  const ws = parseISODate(weekStart);
-  for (let i=0;i<7;i++) days.push(toISODate(addDays(ws,i)));
-
-  const label = `${dayLabel(days[0])}  →  ${dayLabel(days[6])}`;
-  el("rangeLabel").textContent = label;
-}
-
-// ====== loading ======
-async function loadAll(){
-  setStatus(el("status"), "Laden...", "");
-
-  try{
-    await loadEmployees();
-    await loadCapacityEntries();
-    await loadProjectsCustomersSections();
-    await loadSectionWork();
-
-    renderOverview();
-    renderCapacity();
-    renderProjects();
-
-    setStatus(el("status"), "", "");
-  }catch(err){
-    setStatus(el("status"), String(err?.message||err), "error");
-    console.error(err);
-  }
-}
-
-async function loadEmployees(){
-  const { data, error } = await sb
-    .from(DB.tables.employees)
+  // 1) projecten
+  const { data: projecten, error: pErr } = await sb
+    .from("projecten")
     .select("*")
-    .order(DB.employeeNameCol || "naam", { ascending:true });
-  if (error) throw error;
-  employees = data || [];
-  empById = new Map(employees.map(e=>[getEmployeeId(e), e]));
-}
+    .order("projectnr", { ascending: true })
+    .limit(500);
 
-async function loadCapacityEntries(){
-  capacityMap = new Map();
-  if (!DB.tables.capacityEntries) return;
+  if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
 
-  const from = days[0];
-  const to = days[6];
-
-  const { data, error } = await sb
-    .from(DB.tables.capacityEntries)
-    .select("id, work_date, werknemer_id, hours, type")
-    .gte("work_date", from)
-    .lte("work_date", to);
-  if (error) throw error;
-  for (const r of (data||[])){
-    capacityMap.set(`${r.werknemer_id}|${r.work_date}`, r);
-  }
-}
-
-async function loadProjectsCustomersSections(){
-  // projects
-  const { data: pr, error: perr } = await sb
-    .from(DB.tables.projects)
+  // 2) secties
+  const { data: secties, error: sErr } = await sb
+    .from("secties")
     .select("*")
-    .order(DB.projectNoCol, { ascending:false });
-  if (perr) throw perr;
+    .limit(2000);
 
-  // customers
-  const { data: cu, error: cerr } = await sb
-    .from(DB.tables.customers)
-    .select("*");
-  if (cerr) throw cerr;
-  customers = new Map((cu||[]).map(c=>[c[DB.customerPkCol], c]));
+  if (sErr) { statusEl.textContent = "Fout secties: " + sErr.message; return; }
 
-  // filter: status=1 & opleverdatum
-  projects = (pr||[]).filter(p=>{
-    const status = String(p?.salesstatus ?? p?.status ?? "");
-    const due = p?.completiondate || p?.opleverdatum || p?.deliverydate;
-    // jouw uitgangspunt: status=1 en opleverdatum gevuld
-    return status === "1" && !!due;
+  // 3) section_work in range
+  const { data: work, error: wErr } = await sb
+    .from("section_work")
+    .select("section_id, work_date, work_type, hours, werknemer_id")
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
+
+  if (wErr) { statusEl.textContent = "Fout planning: " + wErr.message; return; }
+
+  // 4) capacity_entries in range
+  const { data: cap, error: cErr } = await sb
+    .from("capacity_entries")
+    .select("work_date, werknemer_id, hours, type")
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
+
+  if (cErr) { statusEl.textContent = "Fout capaciteit: " + cErr.message; return; }
+
+  // 5) werknemers (voor namen in capaciteitblok)
+  const { data: werknemers, error: eErr } = await sb
+    .from("werknemers")
+    .select("*")
+    .order("naam", { ascending: true })
+    .limit(500);
+
+  if (eErr) { statusEl.textContent = "Fout werknemers: " + eErr.message; return; }
+
+  statusEl.textContent = "";
+
+  renderPlanner({
+    start,
+    days: RANGE_DAYS,
+    projecten,
+    secties,
+    work,
+    cap,
+    werknemers
   });
-
-  // sections per project
-  const projectIds = projects.map(p=>p[DB.projectPkCol]).filter(Boolean);
-  if (!projectIds.length){
-    sectionsByProject = new Map();
-    return;
-  }
-
-  const { data: se, error: serr } = await sb
-    .from(DB.tables.sections)
-    .select("*")
-    .in(DB.sectionProjectFk, projectIds)
-    .order("paragraaf", { ascending:true });
-  if (serr) throw serr;
-
-  sectionsByProject = new Map();
-  for (const s of (se||[])){
-    const pid = s[DB.sectionProjectFk];
-    if (!sectionsByProject.has(pid)) sectionsByProject.set(pid, []);
-    sectionsByProject.get(pid).push(s);
-  }
 }
 
-async function loadSectionWork(){
-  workMap = new Map();
-  // if table missing, just skip
-  if (!DB.tables.sectionWork) return;
+// -------- RENDER --------
+function renderPlanner({ start, days, projecten, secties, work, cap, werknemers }){
+  const dates = [];
+  for(let i=0;i<days;i++) dates.push(addDays(start, i));
 
-  const from = days[0];
-  const to = days[6];
+  // indexes
+  const projIdKey = pickKey(projecten[0], ["project_id","id"]);
+  const projNrKey = pickKey(projecten[0], ["projectnr","project_nr","nummer","nr"]);
+  const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
+  const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
 
-  const { data, error } = await sb
-    .from(DB.tables.sectionWork)
-    .select("id, section_id, work_date, werknemer_id, work_type, hours")
-    .gte("work_date", from)
-    .lte("work_date", to);
-  if (error){
-    // Most likely table not created yet
-    console.warn("section_work not available:", error.message);
-    return;
+  const sectIdKey = pickKey(secties[0], ["section_id","id"]);
+  const sectProjKey = pickKey(secties[0], ["project_id","projectid","project"]);
+  const sectNameKey = pickKey(secties[0], ["naam","name","titel","title","omschrijving"]);
+
+  // map secties per project
+  const sectiesByProject = new Map();
+  for(const s of secties || []){
+    const pid = s?.[sectProjKey];
+    if(!pid) continue;
+    if(!sectiesByProject.has(pid)) sectiesByProject.set(pid, []);
+    sectiesByProject.get(pid).push(s);
   }
 
-  for (const r of (data||[])){
-    const key = `${r.section_id}|${r.work_date}`;
-    if (!workMap.has(key)) workMap.set(key, []);
-    workMap.get(key).push(r);
+  // map work per section -> date -> {type->hours}
+  const workMap = new Map(); // sectionId -> dateISO -> array rows
+  for(const r of work || []){
+    const sid = r.section_id;
+    const d = r.work_date;
+    if(!sid || !d) continue;
+    if(!workMap.has(sid)) workMap.set(sid, new Map());
+    const dm = workMap.get(sid);
+    if(!dm.has(d)) dm.set(d, []);
+    dm.get(d).push(r);
   }
-}
 
-// ====== render overview ======
-function renderOverview(){
-  // capacity summary per day
-  const rowCap = el("rowCap");
-  const rowPlanned = el("rowPlanned");
-  const rowAvail = el("rowAvail");
-  const rowConcept = el("rowConcept");
-
-  rowCap.innerHTML = "";
-  rowPlanned.innerHTML = "";
-  rowAvail.innerHTML = "";
-  rowConcept.innerHTML = "";
-
-  for (const d of days){
-    const cap = sumCapacityForDay(d);
-    const planned = sumPlannedForDay(d, { includeConcept:false });
-    const avail = cap - planned;
-
-    rowCap.appendChild(cellNumber(cap));
-    rowPlanned.appendChild(cellNumber(planned));
-    rowAvail.appendChild(cellNumber(avail, true));
-
-    // concept (voor later): nu tonen we 0; zodra project_plan in use, vullen we dit.
-    rowConcept.appendChild(cellNumber(0));
+  // capacity: per werknemer per dag
+  const capByEmp = new Map(); // empId -> dateISO -> sumHours
+  for(const r of cap || []){
+    const emp = r.werknemer_id;
+    const d = r.work_date;
+    const h = Number(r.hours || 0);
+    // type filtering: alleen "werk" telt als capaciteit (pas aan als je anders wil)
+    const t = String(r.type || "werk");
+    const sign = (t === "werk") ? 1 : 1; // als je verlof/ziek als 0 wil tellen, maak sign=0
+    if(!emp || !d) continue;
+    if(!capByEmp.has(emp)) capByEmp.set(emp, new Map());
+    const dm = capByEmp.get(emp);
+    dm.set(d, (dm.get(d) || 0) + (h * sign));
   }
-}
 
-function cellNumber(n, color=false){
-  const td = document.createElement("td");
-  td.className = "cell";
-  const wrap = document.createElement("div");
-  wrap.innerHTML = `<div class="sum">${n.toFixed(2)}</div>`;
-  if (color){
-    const cls = n > 0 ? "cap-good" : (n === 0 ? "cap-warn" : "cap-bad");
-    wrap.querySelector(".sum").classList.add(cls);
-  }
-  td.appendChild(wrap);
-  return td;
-}
-
-function sumCapacityForDay(date){
-  let total = 0;
-  for (const e of employees){
-    const id = getEmployeeId(e);
-    const rec = capacityMap.get(`${id}|${date}`);
-    if (!rec) continue;
-    if (!countsTowardsCapacity(rec.type)) continue;
-    total += parseNum(rec.hours);
-  }
-  return total;
-}
-
-function sumPlannedForDay(date, { includeConcept=false }={}){
-  // MVP: we have no concept filter yet; includeConcept ignored for now.
-  let total = 0;
-  for (const [key, arr] of workMap.entries()){
-    if (!key.endsWith(`|${date}`)) continue;
-    for (const r of arr){
-      const t = String(r.work_type);
-      if (t === "reis" && DB.planning.addTravelToMontage) {
-        total += parseNum(r.hours);
-      } else if (DB.planning.plannedTypes.includes(t)) {
-        total += parseNum(r.hours);
-      }
+  // totals capaciteit per dag
+  const capTotalByDay = {};
+  for(const [emp, dm] of capByEmp){
+    for(const [d,h] of dm){
+      capTotalByDay[d] = (capTotalByDay[d] || 0) + h;
     }
   }
-  return total;
-}
 
-// ====== render capacity tab ======
-function renderCapacity(){
-  const table = el("capTable");
-  const thead = el("capThead");
-  const tbody = el("capTbody");
-
-  // header
-  thead.innerHTML = "";
-  const trh = document.createElement("tr");
-  trh.appendChild(thSticky("Medewerker", "col-name sticky-col"));
-  for (const d of days){
-    const th = document.createElement("th");
-    th.className = "day";
-    th.textContent = dayLabel(d);
-    trh.appendChild(th);
-  }
-  thead.appendChild(trh);
-
-  // rows
-  tbody.innerHTML = "";
-  for (const emp of employees){
-    const empId = getEmployeeId(emp);
-    const tr = document.createElement("tr");
-
-    const tdName = document.createElement("td");
-    tdName.className = "sticky-col col-name";
-    tdName.innerHTML = `<div style="font-weight:850">${escapeHtml(getEmployeeName(emp))}</div>`;
-    tr.appendChild(tdName);
-
-    for (const d of days){
-      const td = document.createElement("td");
-      td.className = "cell";
-
-      const rec = capacityMap.get(`${empId}|${d}`);
-      const hours = rec ? rec.hours : "";
-      const type = rec ? rec.type : "werk";
-
-      const div = document.createElement("div");
-      div.className = "split2";
-
-      const inp = document.createElement("input");
-      inp.className = "input";
-      inp.type = "number";
-      inp.step = "0.25";
-      inp.placeholder = "0";
-      inp.value = (hours ?? "");
-
-      const sel = document.createElement("select");
-      sel.className = "input";
-      for (const o of TYPE_OPTIONS){
-        const opt = document.createElement("option");
-        opt.value = o.value;
-        opt.textContent = o.label;
-        if (o.value === type) opt.selected = true;
-        sel.appendChild(opt);
-      }
-
-      const save = async()=>{
-        const h = parseNum(inp.value);
-        const t = sel.value;
-        await upsertCapacity(empId, d, h, t);
-        renderOverview();
-      };
-
-      inp.addEventListener("change", save);
-      sel.addEventListener("change", save);
-
-      div.appendChild(inp);
-      div.appendChild(sel);
-      td.appendChild(div);
-      tr.appendChild(td);
-    }
-
-    tbody.appendChild(tr);
-  }
-}
-
-function thSticky(text, cls){
-  const th = document.createElement("th");
-  th.textContent = text;
-  th.className = cls || "";
-  return th;
-}
-
-async function upsertCapacity(empId, date, hours, type){
-  if (!empId) return;
-  const key = `${empId}|${date}`;
-  const existing = capacityMap.get(key);
-
-  const payload = {
-    work_date: date,
-    werknemer_id: empId,
-    hours,
-    type,
-  };
-
-  let res;
-  if (existing?.id){
-    res = await sb.from(DB.tables.capacityEntries).update(payload).eq("id", existing.id).select().maybeSingle();
-  } else {
-    // Prefer upsert on unique(work_date, werknemer_id)
-    res = await sb.from(DB.tables.capacityEntries).upsert(payload, { onConflict: "work_date,werknemer_id" }).select().maybeSingle();
-  }
-  if (res.error) throw res.error;
-  const saved = res.data;
-  if (saved) capacityMap.set(key, saved);
-}
-
-// ====== render projects list ======
-function renderProjects(){
-  const wrap = el("projectsWrap");
-  wrap.innerHTML = "";
-
-  const q = (el("q").value || "").trim().toLowerCase();
-
-  const filtered = projects.filter(p=>{
-    const cust = customers.get(p[DB.projectCustomerFk]);
-    const s = [
-      p?.[DB.projectNoCol],
-      p?.[DB.projectNameCol],
-      cust?.[DB.customerNameCol],
-    ].filter(Boolean).join(" ").toLowerCase();
-    return !q || s.includes(q);
-  });
-
-  if (!filtered.length){
-    wrap.innerHTML = `<div class="notice">Geen projecten gevonden voor deze filter.</div>`;
-    return;
+  // planned prod/mont per day
+  const plannedProdByDay = {};
+  const plannedMontByDay = {};
+  for(const r of work || []){
+    const d = r.work_date;
+    const h = Number(r.hours || 0);
+    const wt = String(r.work_type || "");
+    if(!d) continue;
+    if(isProdType(wt)) plannedProdByDay[d] = (plannedProdByDay[d] || 0) + h;
+    if(isMontType(wt)) plannedMontByDay[d] = (plannedMontByDay[d] || 0) + h;
   }
 
-  for (const p of filtered){
-    wrap.appendChild(projectCard(p));
-  }
-}
-
-function projectCard(p){
-  const pid = p[DB.projectPkCol];
-  const cust = customers.get(p[DB.projectCustomerFk]);
-  const title = `${p[DB.projectNoCol] || ""} — ${cust?.[DB.customerNameCol] || ""} — ${p[DB.projectNameCol] || ""}`.replace(/^\s*—\s*/,"...");
-
-  const due = p?.completiondate || p?.opleverdatum;
-
-  const card = document.createElement("div");
-  card.className = "card";
-  card.style.marginTop = "14px";
-
-  const hd = document.createElement("div");
-  hd.className = "hd";
-  hd.innerHTML = `
-    <div>
-      <div style="font-weight:900">${escapeHtml(title)}</div>
-      <div class="muted" style="font-size:13px">Opleverdatum: <b>${escapeHtml(fmtDate(due) || "-")}</b></div>
-    </div>
-    <div class="row">
-      <a class="btn small" href="project.html?project=${encodeURIComponent(pid)}">Open project</a>
-      <button class="btn small" data-act="toggle">Secties</button>
-    </div>
-  `;
-
-  const bd = document.createElement("div");
-  bd.className = "bd";
-  bd.style.display = "none";
-
-  const se = sectionsByProject.get(pid) || [];
-  if (!se.length){
-    bd.innerHTML = `<div class="notice">Geen secties gevonden voor dit project.</div>`;
-  } else {
-    bd.appendChild(sectionsTable(se));
-  }
-
-  hd.querySelector('[data-act="toggle"]').addEventListener("click", ()=>{
-    bd.style.display = bd.style.display === "none" ? "block" : "none";
-  });
-
-  card.appendChild(hd);
-  card.appendChild(bd);
-  return card;
-}
-
-function sectionsTable(sections){
-  const container = document.createElement("div");
-  container.className = "planner";
-
+  // build table
   const table = document.createElement("table");
-  const thead = document.createElement("thead");
-  const trh = document.createElement("tr");
-  trh.appendChild(thSticky("Sectie", "sticky-col col-name"));
-  trh.appendChild(thSticky("Totaal (prod+mont)", "sticky-col2 col-meta"));
-  for (const d of days){
-    const th = document.createElement("th");
-    th.className = "day";
-    th.textContent = dayLabel(d);
-    trh.appendChild(th);
-  }
-  thead.appendChild(trh);
+  table.className = "planner-table";
 
+  // THEAD (3 rijen: maand / week / dag)
+  const thead = document.createElement("thead");
+
+  // Row: months
+  const trMonth = document.createElement("tr");
+  trMonth.className = "hdr hdr-month";
+  trMonth.appendChild(hdrCell("Planning", "rowhdr sticky-left sticky-top"));
+  let i = 0;
+  while(i < dates.length){
+    const m = dates[i].getMonth();
+    const y = dates[i].getFullYear();
+    let span = 1;
+    while(i+span < dates.length && dates[i+span].getMonth() === m) span++;
+    trMonth.appendChild(hdrCell(`${monthNameNL(m)} ${y}`, "sticky-top", span));
+    i += span;
+  }
+  thead.appendChild(trMonth);
+
+  // Row: weeks
+  const trWeek = document.createElement("tr");
+  trWeek.className = "hdr hdr-week";
+  trWeek.appendChild(hdrCell("", "rowhdr sticky-left sticky-top2"));
+  let j=0;
+  while(j < dates.length){
+    const wk = weekNumberISO(dates[j]);
+    // span to next monday or end
+    let span = 1;
+    while(j+span < dates.length && dates[j+span].getDay() !== 1) span++;
+    trWeek.appendChild(hdrCell(`Wk ${wk}`, "sticky-top2", span));
+    j += span;
+  }
+  thead.appendChild(trWeek);
+
+  // Row: days
+  const trDay = document.createElement("tr");
+  trDay.className = "hdr hdr-day";
+  trDay.appendChild(hdrCell("", "rowhdr sticky-left sticky-top3"));
+  for(const d of dates){
+    const iso = toISODate(d);
+    const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
+    trDay.appendChild(hdrCell(`${dayNameNL(d.getDay())}<br>${d.getDate()}-${d.getMonth()+1}`, cls));
+  }
+  thead.appendChild(trDay);
+  table.appendChild(thead);
+
+  // TBODY
   const tbody = document.createElement("tbody");
 
-  for (const s of sections){
-    tbody.appendChild(sectionRow(s));
+  // Projects + sections (expand/collapse)
+  for(const p of projecten || []){
+    const pid = p?.[projIdKey];
+    const nr  = p?.[projNrKey] ?? "";
+    const nm  = p?.[projNameKey] ?? "";
+    const kl  = p?.[klantKey] ?? "";
+
+    const projRow = document.createElement("tr");
+    projRow.className = "row project-row";
+    const left = document.createElement("td");
+    left.className = "rowhdr sticky-left project-cell";
+    left.innerHTML = `
+      <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
+      <span class="projtext">${escapeHtml(nr)} - ${escapeHtml(kl)} - ${escapeHtml(nm)}</span>
+    `;
+    projRow.appendChild(left);
+
+    // project-level: we render bars aggregated from all sections (simple view)
+    const projBars = buildBarRunsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
+    appendRunCells(projRow, dates, projBars);
+    tbody.appendChild(projRow);
+
+    // section rows (hidden by default)
+    const secList = (sectiesByProject.get(pid) || []).slice()
+      .sort((a,b)=>String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||"")));
+
+    for(const s of secList){
+      const sid = s?.[sectIdKey];
+      const sn  = s?.[sectNameKey] ?? "sectie";
+
+      const secRow = document.createElement("tr");
+      secRow.className = "row section-row hidden";
+      secRow.dataset.parent = String(pid);
+
+      const leftS = document.createElement("td");
+      leftS.className = "rowhdr sticky-left section-cell";
+      leftS.innerHTML = `<span class="sectext">↳ ${escapeHtml(sn)}</span>`;
+      secRow.appendChild(leftS);
+
+      const runs = buildBarRunsForSection(sid, workMap, dates);
+      appendRunCells(secRow, dates, runs);
+      tbody.appendChild(secRow);
+    }
   }
 
-  table.appendChild(thead);
+  // CAPACITY BLOCK
+  tbody.appendChild(spacerRow(dates.length));
+
+  // Header row "Capaciteit"
+  tbody.appendChild(sectionHeaderRow("Capaciteit", dates.length));
+
+  // per werknemer rows
+  const empIdKey = pickKey(werknemers[0], ["id","werknemer_id","employee_id"]);
+  const empNameKey = pickKey(werknemers[0], ["naam","name","fullname","display_name"]);
+
+  for(const w of werknemers || []){
+    const wid = w?.[empIdKey];
+    const wnm = w?.[empNameKey] ?? String(wid ?? "");
+    const tr = document.createElement("tr");
+    tr.className = "row cap-emp-row";
+
+    tr.appendChild(leftRowHdrCell(wnm, "sticky-left cap-name"));
+
+    for(const d of dates){
+      const iso = toISODate(d);
+      const h = capByEmp.get(wid)?.get(iso) || 0;
+      const td = document.createElement("td");
+      td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+      td.textContent = formatHoursCell(h);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  // Totals / beschikbaar rows (zoals PDF onderin)
+  tbody.appendChild(spacerRow(dates.length));
+
+  // Uren beschikbaar (cap - gepland prod - gepland mont)
+  tbody.appendChild(sectionHeaderRow("Uren beschikbaar", dates.length, true));
+
+  const trAvail = document.createElement("tr");
+  trAvail.className = "row sum-row";
+  trAvail.appendChild(leftRowHdrCell("", "sticky-left"));
+
+  for(const d of dates){
+    const iso = toISODate(d);
+    const capT = capTotalByDay[iso] || 0;
+    const prod = plannedProdByDay[iso] || 0;
+    const mont = plannedMontByDay[iso] || 0;
+    const avail = capT - (prod + mont);
+
+    const td = document.createElement("td");
+    td.className = `cell sum-cell ${availabilityClass(avail)} ${isWeekend(d) ? "wknd" : ""}`;
+    td.textContent = formatHoursCell(avail);
+    trAvail.appendChild(td);
+  }
+  tbody.appendChild(trAvail);
+
+  // Gepland productie
+  tbody.appendChild(labelRow("Gepland productie", dates, plannedProdByDay));
+
+  // Gepland montage
+  tbody.appendChild(labelRow("Gepland montage", dates, plannedMontByDay));
+
+  // (optioneel) Capaciteit met nieuwe order / Nieuwe order: laat ik als “hook” staan
+  // omdat ik jouw project_orders schema nog niet gezien heb.
+  // Je kunt dit later 1-op-1 invullen.
+  tbody.appendChild(spacerRow(dates.length));
+  tbody.appendChild(sectionHeaderRow("Capaciteit met nieuwe order", dates.length, true));
+  tbody.appendChild(infoRow("Nieuwe order (nog te koppelen)", dates.length));
+
   table.appendChild(tbody);
-  container.appendChild(table);
-  return container;
+
+  // mount
+  gridEl.innerHTML = "";
+  gridEl.appendChild(table);
+
+  // expanders
+  gridEl.querySelectorAll(".expander").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const pid = btn.dataset.proj;
+      const open = btn.classList.toggle("open");
+      btn.textContent = open ? "▼" : "▶";
+      gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"]`)
+        .forEach(tr=>tr.classList.toggle("hidden", !open));
+    });
+  });
 }
 
-function sectionRow(s){
-  const sid = s[DB.sectionPkCol];
-  const tr = document.createElement("tr");
+// -------- RUN BUILDERS (bars via colspan) --------
+function buildBarRunsForSection(sectionId, workMap, dates){
+  // per dag label kiezen (dominant type), en contiguous dagen samenvoegen
+  const dm = workMap.get(sectionId);
+  const labels = dates.map(d=>{
+    const iso = toISODate(d);
+    const rows = dm?.get(iso) || [];
+    if(!rows.length) return "";
+    // label = type(s) samengevat
+    const byType = {};
+    for(const r of rows){
+      const t = normalizeType(r.work_type);
+      byType[t] = (byType[t]||0) + Number(r.hours||0);
+    }
+    // neem grootste type als label
+    let bestT = "";
+    let bestH = 0;
+    for(const [t,h] of Object.entries(byType)){
+      if(h > bestH){ bestH = h; bestT = t; }
+    }
+    return bestT ? `${bestT}` : "";
+  });
 
-  const name = `${s.paragraaf ?? ""} — ${(s.beschrijving ?? s.Beschrijving ?? "").toString().slice(0,60)}`;
+  return compressRuns(labels);
+}
 
-  const tdName = document.createElement("td");
-  tdName.className = "sticky-col col-name";
-  tdName.innerHTML = `
-    <div style="font-weight:900">${escapeHtml(name)}</div>
-    <div class="muted" style="font-size:12px">${escapeHtml(String(s.aantal ?? ""))}</div>
-  `;
-  tr.appendChild(tdName);
+function buildBarRunsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates){
+  // project: als er ergens iets gepland is, label op projectniveau
+  // (simpel: kies per dag de meest voorkomende label over secties)
+  const secs = sectiesByProject.get(projectId) || [];
+  const dayLabels = dates.map(d=>{
+    const iso = toISODate(d);
+    const counts = {};
+    for(const s of secs){
+      const sid = s?.[sectIdKey];
+      const rows = workMap.get(sid)?.get(iso) || [];
+      for(const r of rows){
+        const t = normalizeType(r.work_type);
+        counts[t] = (counts[t]||0) + Number(r.hours||0);
+      }
+    }
+    let bestT="", bestH=0;
+    for(const [t,h] of Object.entries(counts)){
+      if(h>bestH){ bestH=h; bestT=t; }
+    }
+    return bestT ? `${bestT}` : "";
+  });
 
-  // total meta
-  const total = parseNum(s.uren_prod) + parseNum(s.uren_montage) + (DB.planning.addTravelToMontage ? parseNum(s.uren_reis) : 0);
-  const tdMeta = document.createElement("td");
-  tdMeta.className = "sticky-col2 col-meta";
-  tdMeta.innerHTML = `<div class="sum">${total.toFixed(2)}u</div><div class="tiny">(uit sectie)</div>`;
-  tr.appendChild(tdMeta);
+  return compressRuns(dayLabels);
+}
 
-  for (const d of days){
+function compressRuns(labels){
+  // labels[] -> [{label, span}]
+  const runs = [];
+  let i=0;
+  while(i<labels.length){
+    const cur = labels[i];
+    let span=1;
+    while(i+span<labels.length && labels[i+span]===cur) span++;
+    runs.push({ label: cur, span });
+    i += span;
+  }
+  return runs;
+}
+
+function appendRunCells(tr, dates, runs){
+  // runs align with dates length
+  for(const run of runs){
     const td = document.createElement("td");
-    td.className = "cell";
-
-    const entries = workMap.get(`${sid}|${d}`) || [];
-    const planned = entries.reduce((acc,r)=> acc + parseNum(r.hours), 0);
-
-    const btn = document.createElement("button");
-    btn.className = "btn small";
-    btn.textContent = "+";
-    btn.title = "Uren toevoegen";
-    btn.addEventListener("click", ()=> openWorkModal({section:s, date:d}));
-
-    const list = document.createElement("div");
-    list.style.marginTop = "6px";
-    list.innerHTML = entries.length
-      ? entries.map(r=>{
-          const emp = empById.get(r.werknemer_id);
-          const nm = emp ? getEmployeeName(emp) : "(onbekend)";
-          return `<div class="tiny">${escapeHtml(nm)} — ${escapeHtml(r.work_type)} — ${parseNum(r.hours).toFixed(2)}u</div>`;
-        }).join("")
-      : `<div class="tiny">—</div>`;
-
-    const sum = document.createElement("div");
-    sum.className = "sum";
-    sum.textContent = planned ? `${planned.toFixed(2)}u` : "";
-
-    td.appendChild(btn);
-    td.appendChild(sum);
-    td.appendChild(list);
+    td.colSpan = run.span;
+    const label = run.label || "";
+    td.className = `cell plan-cell ${label ? barClass(label) : ""}`;
+    td.innerHTML = label ? `<div class="bar">${escapeHtml(label)}</div>` : "";
     tr.appendChild(td);
   }
+}
 
+function barClass(label){
+  if(isProdType(label)) return "bar-prod";
+  if(isMontType(label)) return "bar-mont";
+  if(isPrepType(label)) return "bar-prep";
+  if(isDeliveryType(label)) return "bar-delivery";
+  return "bar-generic";
+}
+
+function normalizeType(t){
+  const s = String(t||"").toLowerCase();
+  if(!s) return "";
+  // jouw PDF-termen
+  if(s.includes("werkvoor")) return "werkvoorbereiding";
+  if(s.includes("prod")) return "productie";
+  if(s.includes("mont")) return "montage";
+  if(s.includes("oplever")) return "oplevering";
+  return s;
+}
+
+function isProdType(t){ const s=String(t||"").toLowerCase(); return s.includes("prod") || s==="productie"; }
+function isMontType(t){ const s=String(t||"").toLowerCase(); return s.includes("mont") || s==="montage"; }
+function isPrepType(t){ const s=String(t||"").toLowerCase(); return s.includes("werkvoor"); }
+function isDeliveryType(t){ const s=String(t||"").toLowerCase(); return s.includes("oplever"); }
+
+function availabilityClass(v){
+  if (v >= 0) return "ok";
+  if (v > -4) return "warn";
+  return "bad";
+}
+
+// -------- small row helpers --------
+function hdrCell(html, cls="", colspan=1){
+  const th = document.createElement("th");
+  th.className = `hdr-cell ${cls}`.trim();
+  if(colspan>1) th.colSpan = colspan;
+  th.innerHTML = html;
+  return th;
+}
+function leftRowHdrCell(text, cls=""){
+  const td = document.createElement("td");
+  td.className = `rowhdr ${cls}`.trim();
+  td.textContent = text;
+  return td;
+}
+function spacerRow(cols){
+  const tr = document.createElement("tr");
+  tr.className = "spacer";
+  const td = document.createElement("td");
+  td.className = "rowhdr sticky-left";
+  td.textContent = "";
+  tr.appendChild(td);
+  const td2 = document.createElement("td");
+  td2.colSpan = cols;
+  td2.className = "cell spacer-cell";
+  tr.appendChild(td2);
+  return tr;
+}
+function sectionHeaderRow(title, cols, compact=false){
+  const tr = document.createElement("tr");
+  tr.className = compact ? "row block-title compact" : "row block-title";
+  const td = document.createElement("td");
+  td.className = "rowhdr sticky-left block-hdr";
+  td.innerHTML = `<span class="block-title-text">${escapeHtml(title)}</span>`;
+  tr.appendChild(td);
+  const fill = document.createElement("td");
+  fill.colSpan = cols;
+  fill.className = "cell block-fill";
+  tr.appendChild(fill);
+  return tr;
+}
+function labelRow(label, dates, byDay){
+  const tr = document.createElement("tr");
+  tr.className = "row sum-row";
+  tr.appendChild(leftRowHdrCell(label, "sticky-left sum-label"));
+  for(const d of dates){
+    const iso = toISODate(d);
+    const h = byDay[iso] || 0;
+    const td = document.createElement("td");
+    td.className = `cell sum-cell ${isWeekend(d) ? "wknd" : ""}`;
+    td.textContent = formatHoursCell(h);
+    tr.appendChild(td);
+  }
+  return tr;
+}
+function infoRow(text, cols){
+  const tr = document.createElement("tr");
+  tr.className = "row info-row";
+  tr.appendChild(leftRowHdrCell(text, "sticky-left info-left"));
+  const td = document.createElement("td");
+  td.colSpan = cols;
+  td.className = "cell info-cell";
+  td.textContent = "";
+  tr.appendChild(td);
   return tr;
 }
 
-// ====== modal: add work ======
-function openWorkModal({section, date}){
-  el("mTitle").textContent = `Uren toevoegen — ${section.paragraaf ?? ""}`;
-  el("mDate").textContent = dayLabel(date);
-
-  // fill employee select
-  const selEmp = el("mEmployee");
-  selEmp.innerHTML = "";
-  const opt0 = document.createElement("option");
-  opt0.value = "";
-  opt0.textContent = "Kies werknemer...";
-  selEmp.appendChild(opt0);
-  for (const e of employees){
-    const opt = document.createElement("option");
-    opt.value = getEmployeeId(e);
-    opt.textContent = getEmployeeName(e);
-    selEmp.appendChild(opt);
-  }
-
-  const selType = el("mWorkType");
-  selType.innerHTML = "";
-  for (const o of WORK_TYPES){
-    const opt = document.createElement("option");
-    opt.value = o.value;
-    opt.textContent = o.label;
-    selType.appendChild(opt);
-  }
-  selType.value = "prod";
-
-  el("mHours").value = "";
-  el("mNote").value = "";
-  el("mError").textContent = "";
-
-  const backdrop = el("modal");
-  backdrop.classList.add("show");
-
-  const close = ()=>{
-    backdrop.classList.remove("show");
-    el("mSave").onclick = null;
-  };
-
-  el("mClose").onclick = close;
-  el("mCancel").onclick = close;
-
-  el("mSave").onclick = async()=>{
-    try{
-      const werknemer_id = selEmp.value;
-      const work_type = selType.value;
-      const hours = parseNum(el("mHours").value);
-      if (!werknemer_id) throw new Error("Kies een werknemer.");
-      if (!(hours > 0)) throw new Error("Vul uren in (>0).");
-
-      const payload = {
-        section_id: section[DB.sectionPkCol],
-        work_date: date,
-        werknemer_id,
-        work_type,
-        hours,
-      };
-
-      const { data, error } = await sb.from(DB.tables.sectionWork).insert(payload).select().maybeSingle();
-      if (error) throw error;
-
-      const key = `${payload.section_id}|${date}`;
-      if (!workMap.has(key)) workMap.set(key, []);
-      workMap.get(key).push(data);
-
-      close();
-      renderOverview();
-      renderProjects();
-    }catch(err){
-      el("mError").textContent = String(err?.message || err);
-    }
-  };
+function formatHoursCell(n){
+  const v = Number(n||0);
+  if(!v) return "0";
+  // 2 decimal NL met komma, maar kort
+  const s = (Math.round(v*100)/100).toString().replace(".", ",");
+  return s;
 }
 
+function pickKey(obj, keys){
+  if(!obj) return keys[0];
+  for(const k of keys){
+    if(Object.prototype.hasOwnProperty.call(obj, k)) return k;
+  }
+  return keys[0];
+}
+
+function escapeHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(s){
+  return escapeHtml(String(s ?? "")).replaceAll('"', "&quot;");
+}
+function cssEsc(s){
+  return String(s ?? "").replaceAll('"','\\"');
+}

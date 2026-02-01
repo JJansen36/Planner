@@ -3,160 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LOVD Planning — Capaciteit</title>
+  <title>Planning</title>
+
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
 </head>
+
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div class="row">
-        <a class="btn" href="index.html">← Menu</a>
-        <div class="brand"><span class="dot"></span> Planning</div>
-        <span id="rangeLabel" class="badge"></span>
+  <div class="planner-page">
+    <header class="planner-topbar">
+      <div class="planner-topbar-left">
+        <button class="btn" id="btnMenu">← Menu</button>
+        <div class="planner-title">Planning</div>
       </div>
-      <div class="row">
-        <button id="btnPrev" class="btn small">◀</button>
-        <button id="btnToday" class="btn small">Vandaag</button>
-        <button id="btnNext" class="btn small">▶</button>
-        <button id="btnRefresh" class="btn small">Ververs</button>
-        <button id="btnLogout" class="btn">Uitloggen</button>
+
+      <div class="planner-topbar-right">
+        <button class="btn" id="btnPrev">◀</button>
+        <button class="btn" id="btnToday">Vandaag</button>
+        <button class="btn" id="btnNext">▶</button>
+        <button class="btn" id="btnRefresh">Ververs</button>
+        <button class="btn" id="btnLogout">Uitloggen</button>
       </div>
-    </div>
+    </header>
 
-    <div class="card">
-      <div class="hd">
-        <h1>Overzicht</h1>
-        <div class="row">
-          <input id="q" class="input" style="min-width:320px" placeholder="Zoek projectnr / klant / projectnaam..." />
-          <label class="row" style="gap:8px">
-            <input id="chkShowConcept" type="checkbox" />
-            <span class="muted">Toon offertes (status 0)</span>
-          </label>
-        </div>
-      </div>
-      <div class="bd">
-        <div id="msg" class="notice" style="display:none"></div>
-        <div id="err" class="error" style="display:none"></div>
+    <div class="planner-wrap">
+      <div id="plannerStatus" class="planner-status"></div>
 
-        <div class="planner" style="margin-top:12px">
-          <table>
-            <thead>
-              <tr>
-                <th class="sticky-col col-name">Dag</th>
-                <th class="day" id="d0"></th>
-                <th class="day" id="d1"></th>
-                <th class="day" id="d2"></th>
-                <th class="day" id="d3"></th>
-                <th class="day" id="d4"></th>
-                <th class="day" id="d5"></th>
-                <th class="day" id="d6"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="sticky-col col-name"><b>Capaciteit</b></td>
-                <td class="cell" id="cap0"></td>
-                <td class="cell" id="cap1"></td>
-                <td class="cell" id="cap2"></td>
-                <td class="cell" id="cap3"></td>
-                <td class="cell" id="cap4"></td>
-                <td class="cell" id="cap5"></td>
-                <td class="cell" id="cap6"></td>
-              </tr>
-              <tr>
-                <td class="sticky-col col-name"><b>Gepland</b> <span class="tiny muted">(prod+mont)</span></td>
-                <td class="cell" id="pln0"></td>
-                <td class="cell" id="pln1"></td>
-                <td class="cell" id="pln2"></td>
-                <td class="cell" id="pln3"></td>
-                <td class="cell" id="pln4"></td>
-                <td class="cell" id="pln5"></td>
-                <td class="cell" id="pln6"></td>
-              </tr>
-              <tr>
-                <td class="sticky-col col-name"><b>Beschikbaar</b></td>
-                <td class="cell" id="ava0"></td>
-                <td class="cell" id="ava1"></td>
-                <td class="cell" id="ava2"></td>
-                <td class="cell" id="ava3"></td>
-                <td class="cell" id="ava4"></td>
-                <td class="cell" id="ava5"></td>
-                <td class="cell" id="ava6"></td>
-              </tr>
-              <tr>
-                <td class="sticky-col col-name"><b>Concept</b> <span class="tiny muted">(offertes)</span></td>
-                <td class="cell" id="cpt0"></td>
-                <td class="cell" id="cpt1"></td>
-                <td class="cell" id="cpt2"></td>
-                <td class="cell" id="cpt3"></td>
-                <td class="cell" id="cpt4"></td>
-                <td class="cell" id="cpt5"></td>
-                <td class="cell" id="cpt6"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="row" style="justify-content:space-between; align-items:flex-start">
-          <div>
-            <h2 style="margin:0 0 6px">Projecten</h2>
-            <div class="muted" style="font-size:13px">Klik op een project om secties te zien. Per sectie kun je per dag medewerkers + uren toevoegen.</div>
-          </div>
-          <a class="btn" href="capacity.html">Capaciteit tabel →</a>
-        </div>
-
-        <div id="projectList" style="margin-top:12px"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: add work entry -->
-  <div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
-    <div class="modal">
-      <div class="hd">
-        <div>
-          <div class="muted" style="font-size:12px">Nieuwe planning</div>
-          <h2 id="modalTitle" style="margin:0">Sectie</h2>
-        </div>
-        <button id="modalClose" class="btn">✕</button>
-      </div>
-      <div class="bd">
-        <div class="split2">
-          <div>
-            <div class="label">Datum</div>
-            <div id="modalDate" class="value"></div>
-          </div>
-          <div>
-            <div class="label">Type</div>
-            <select id="modalType" class="input">
-              <option value="prod">Productie</option>
-              <option value="mont">Montage</option>
-              <option value="reis">Reis</option>
-              <option value="wvb">WVB</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="split2">
-          <div>
-            <div class="label">Medewerker</div>
-            <select id="modalEmp" class="input"></select>
-          </div>
-          <div>
-            <div class="label">Uren</div>
-            <input id="modalHours" class="input" type="number" step="0.25" min="0" placeholder="bv. 2" />
-          </div>
-        </div>
-
-        <div id="modalError" class="error" style="display:none; margin-top:12px"></div>
-      </div>
-      <div class="ft">
-        <button id="modalCancel" class="btn">Annuleren</button>
-        <button id="modalSave" class="btn primary">Opslaan</button>
+      <!-- GRID -->
+      <div class="planner-grid" id="plannerGrid">
+        <!-- gevuld door JS -->
       </div>
     </div>
   </div>

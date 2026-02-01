@@ -296,3 +296,102 @@ a{color:inherit; text-decoration:none}
   border-radius:12px;
   color:#7f1d1d;
 }
+
+
+/* =========================
+   PLANNER (PDF-style grid)
+========================= */
+.planner-page{ background:#fff; color:#111; min-height:100vh; }
+.planner-topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid #e6e8ef; position:sticky; top:0; background:#fff; z-index:50;
+}
+.planner-title{ font-weight:700; font-size:18px; margin-left:10px; }
+.planner-topbar-left{ display:flex; align-items:center; gap:10px; }
+.planner-topbar-right{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.planner-wrap{ padding:12px 10px 30px; }
+.planner-status{ color:#667085; padding:6px 2px; }
+
+.planner-grid{ overflow:auto; border:1px solid #e6e8ef; border-radius:12px; background:#fff; }
+
+.planner-table{
+  border-collapse:collapse;
+  width:max-content;
+  min-width:100%;
+  table-layout:fixed;
+  font-size:12px;
+}
+.planner-table th, .planner-table td{
+  border:1px solid #e6e8ef;
+  padding:3px 4px;
+  text-align:center;
+  white-space:nowrap;
+}
+.rowhdr{
+  text-align:left !important;
+  min-width:420px;
+  background:#fff;
+}
+.hdr-cell{
+  background:#f2f4f7;
+  font-weight:700;
+}
+.hdr-month th{ font-size:12px; }
+.hdr-week th{ font-size:11px; }
+.hdr-day th{ font-size:11px; font-weight:600; }
+
+.sticky-left{ position:sticky; left:0; z-index:20; }
+.sticky-top{ position:sticky; top:0; z-index:30; }
+.sticky-top2{ position:sticky; top:28px; z-index:29; }
+.sticky-top3{ position:sticky; top:54px; z-index:28; }
+
+.project-cell{ background:#fff; font-weight:700; }
+.section-cell{ background:#fff; color:#344054; }
+.sectext{ opacity:.95; }
+
+.expander{
+  border:1px solid #d0d5dd; background:#fff; border-radius:8px;
+  width:26px; height:22px; cursor:pointer; margin-right:8px;
+}
+.projtext{ vertical-align:middle; }
+
+.hidden{ display:none; }
+
+.cell{ min-width:32px; max-width:32px; }
+.wknd{ background:#dbeafe !important; } /* weekend-blauw zoals je PDF */
+
+.plan-cell{ background:#fff; }
+.plan-cell .bar{
+  width:100%; height:18px; line-height:18px;
+  border-radius:6px; font-size:11px;
+  overflow:hidden; text-overflow:ellipsis;
+  padding:0 6px;
+  text-align:left;
+}
+.bar-prep .bar{ background:#c7e0ff; }
+.bar-prod .bar{ background:#b7f0c2; }
+.bar-mont .bar{ background:#f6c1f3; }
+.bar-delivery .bar{ background:#ffd7b5; }
+.bar-generic .bar{ background:#e5e7eb; }
+
+.spacer td{ border:none; padding:6px 0; }
+.spacer-cell{ background:#fff; }
+
+.block-title .block-hdr{
+  background:#f2f4f7;
+  font-weight:800;
+}
+.block-title .block-fill{ background:#f2f4f7; }
+.block-title.compact .block-hdr{ font-weight:700; }
+
+.cap-emp-row .cap-name{ background:#fff; font-weight:600; }
+.cap-cell{ background:#fff; }
+
+.sum-row .sum-label{ background:#fff; font-weight:700; }
+.sum-cell{ background:#fff7d6; } /* lichtgeel zoals PDF */
+.sum-cell.ok{ background:#c7f7cf; }
+.sum-cell.warn{ background:#ffe7b5; }
+.sum-cell.bad{ background:#ffc6c6; }
+
+.info-row .info-left{ color:#667085; font-style:italic; }
