@@ -123,9 +123,11 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
   const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
 
-  const sectIdKey = pickKey(secties[0], ["section_id","id"]);
-  const sectProjKey = pickKey(secties[0], ["project_id","projectid","project"]);
-  const sectNameKey = pickKey(secties[0], ["naam","name","titel","title","omschrijving"]);
+  const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
+  const sectProjKey = pickKey(secties[0], ["project_id","projectid","project","project_ref"]);
+  const sectNameKey = pickKey(secties[0], ["name","naam","section_name","titel","title","omschrijving"]);
+
+
 
   // map secties per project
   const sectiesByProject = new Map();
