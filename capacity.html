@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Capaciteit tabel</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="left">
+        <button class="btn" onclick="location.href='./planning.html'">← Terug</button>
+        <div class="title">Capaciteit tabel</div>
+      </div>
+
+      <div class="right">
+        <button class="btn" id="btnLogout">Uitloggen</button>
+      </div>
+    </header>
+
+    <main class="card">
+      <h2>Capaciteit</h2>
+      <p class="muted">
+        Deze pagina bestond nog niet in de zip. Hier kunnen we jouw capaciteit-overzicht bouwen.
+      </p>
+
+      <div class="toolbar">
+        <button class="btn" id="btnRefresh">Ververs</button>
+      </div>
+
+      <div id="status" class="muted"></div>
+
+      <div class="table-wrap">
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Medewerker</th>
+              <th>Uren</th>
+              <th>Type</th>
+              <th>Notitie</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="capacity.js"></script>
+</body>
+</html>
