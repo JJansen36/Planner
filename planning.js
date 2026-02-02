@@ -163,6 +163,14 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   console.log("sectIdKey:", sectIdKey, "sectProjKey:", sectProjKey, "sectNameKey:", sectNameKey);
 
 
+
+  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
+  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
+  for (const s of secties || []) {
+    if (s?.id) sectLookup.set(String(s.id), String(s.id));
+    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
+  }
+
   // map secties per project
   const sectiesByProject = new Map();
   for(const s of secties || []){
@@ -176,6 +184,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   const workMap = new Map(); // sectionId -> dateISO -> array rows
   for(const r of work || []){
     const rawSid = r.section_id;
+    const d = r.work_date;
     const sid = rawSid ? sectLookup.get(String(rawSid)) || String(rawSid) : null;
     if(!sid || !d) continue;
 
@@ -227,7 +236,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   // fixed column widths so header == body
   const colgroup = document.createElement("colgroup");
   const colLeft = document.createElement("col");
-  colLeft.style.width = "340px";
+  colLeft.style.width = "380px";
   colgroup.appendChild(colLeft);
   for(let i=0;i<dates.length;i++){
     const c = document.createElement("col");
@@ -240,12 +249,6 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   // THEAD (3 rijen: maand / week / dag)
   const thead = document.createElement("thead");
 
-  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
-  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
-  for (const s of secties || []) {
-    if (s?.id) sectLookup.set(String(s.id), String(s.id));
-    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
-  }
 
 
   // Row: months
@@ -570,7 +573,7 @@ function spacerRow(cols){
 }
 function sectionHeaderRow(title, cols, compact=false){
   const tr = document.createElement("tr");
-  tr.className = compact ? "block-title compact" : "block-title";
+  tr.className = compact ? "row block-title compact" : "row block-title";
   const td = document.createElement("td");
   td.className = "rowhdr sticky-left block-hdr";
   td.innerHTML = `<span class="block-title-text">${escapeHtml(title)}</span>`;
