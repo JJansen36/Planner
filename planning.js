@@ -604,7 +604,7 @@ function normalizeType(t){
   if(s.includes("werkvoor")) return "werkvoorbereiding";
   if(s.includes("prod")) return "productie";
   if(s.includes("mont")) return "montage";
-  if(s.includes("oplever")) return "DL";
+  if(s.includes("oplever")) return "oplevering";
   return s;
 }
 
