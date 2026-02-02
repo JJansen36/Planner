@@ -125,7 +125,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
   const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
   const sectProjKey = pickKey(secties[0], ["project_id","projectid","project","project_ref"]);
-  const sectNameKey = pickKey(secties[0], ["name","naam","section_name","titel","title","omschrijving"]);
+  const sectNameKey = pickKey(secties[0], ["name","naam","section_name","sectionname","titel","title","omschrijving","description"]);
+
 
   console.log("secties keys:", Object.keys(secties?.[0] || {}));
   console.log("projecten keys:", Object.keys(projecten?.[0] || {}));
@@ -278,23 +279,29 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     const secList = (sectiesByProject.get(pid) || []).slice()
       .sort((a,b)=>String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||"")));
 
-    for(const s of secList){
-      const sid = s?.[sectIdKey] ? String(s[sectIdKey]) : (s?.section_id ? String(s.section_id) : null);
-      const sectNameKey = pickKey(secties[0], ["name","naam","section_name","sectionname","titel","title","omschrijving","description"]);
-
+    for (const s of secList) {
       const secRow = document.createElement("tr");
       secRow.className = "row section-row hidden";
       secRow.dataset.parent = String(pid);
 
       const leftS = document.createElement("td");
       leftS.className = "rowhdr sticky-left section-cell";
+
+      const sid = s?.[sectIdKey]
+        ? String(s[sectIdKey])
+        : (s?.section_id ? String(s.section_id) : null);
+
+      const sn = s?.[sectNameKey] || "sectie";
+
       leftS.innerHTML = `<span class="sectext">↳ ${escapeHtml(sn)}</span>`;
       secRow.appendChild(leftS);
 
       const runs = buildBarRunsForSection(sid, workMap, dates);
       appendRunCells(secRow, dates, runs);
+
       tbody.appendChild(secRow);
     }
+
   }
 
   // CAPACITY BLOCK
