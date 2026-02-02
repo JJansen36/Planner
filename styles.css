@@ -435,16 +435,6 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   table-layout: fixed;              /* super belangrijk */
 }
 
-.planner-table th.hdr-cell,
-.planner-table td.cell{
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
-  text-align: center;
-  border: 1px solid #e6eaf0;
-  box-sizing: border-box;
-  padding: 0;
-}
 
 .planner-table thead th.hdr-cell{
   background:#f2f4f7;
