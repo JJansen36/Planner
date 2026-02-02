@@ -219,42 +219,6 @@ a{color:inherit; text-decoration:none}
   border-top:1px solid var(--line);
 }
 
-/* Planning grid */
-.planner{
-  overflow:auto;
-  border:1px solid var(--line);
-  border-radius:12px;
-}
-.planner table{width:100%; border-collapse:collapse; min-width: 980px;}
-.planner th, .planner td{border-bottom:1px solid var(--line); padding:8px 10px; font-size:13px; vertical-align:top;}
-.planner thead th{position:sticky; top:0; background:#f8fafc; z-index:2; color:var(--muted); font-weight:800;}
-.planner .sticky-col{position:sticky; left:0; background:#fff; z-index:3; border-right:1px solid var(--line);}
-.planner .sticky-col2{position:sticky; left:260px; background:#fff; z-index:3; border-right:1px solid var(--line);}
-.planner .col-name{min-width:260px; max-width:260px;}
-.planner .col-meta{min-width:180px; max-width:180px;}
-.planner .day{min-width:110px;}
-.planner .cell{
-  background:#fff;
-}
-.planner .cell .tiny{font-size:12px; color:var(--muted)}
-.planner .cell .sum{font-weight:850}
-.planner .cap-good{color:var(--good)}
-.planner .cap-warn{color:var(--warn)}
-.planner .cap-bad{color:var(--bad)}
-
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:4px 8px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:#fff;
-  font-size:12px;
-  font-weight:800;
-  color:var(--muted);
-}
-
 /* Modal */
 .modal-backdrop{
   position:fixed; inset:0;
@@ -428,31 +392,8 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
 }
 .hdr-day .hdr-cell{ height: 40px; }
 
-/* === HARD FIX: header en body altijd exact dezelfde kolombreedte === */
-.planner-table{
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;              /* super belangrijk */
-}
+/* === DEFINITIEVE FIX: alleen echte dagcellen hebben vaste breedte === */
 
-
-.planner-table thead th.hdr-cell{
-  background:#f2f4f7;
-  font-size:11px;
-  line-height:1.1;
-  height: 40px;
-  vertical-align: bottom;
-}
-
-/* linker kolom */
-.planner-table .rowhdr{
-  min-width: 380px;
-  width: 380px;
-  max-width: 380px;
-}
-
-
-/* === HARD FIX (correct): alleen dag-cellen hebben vaste breedte === */
 .planner-table{
   border-collapse: separate;
   border-spacing: 0;
@@ -504,7 +445,13 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   max-width: 380px;
 }
 
-.planner-table td.cell,
+
+
+/* --- Dagcellen strak (hoogte + geen padding) --- */
+.planner-table td.cell{
+  height: 22px;
+  line-height: 22px;
+}
 .planner-table thead tr.hdr-day th.hdr-cell{
-  outline: 1px dashed red;
+  padding: 0;
 }
