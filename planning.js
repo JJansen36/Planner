@@ -502,11 +502,11 @@ function availabilityClass(v){
 }
 
 // -------- small row helpers --------
-function hdrCell(html, cls="", colspan=1){
+function hdrCell(html, cls="", colspan=null){
   const th = document.createElement("th");
-  th.className = `hdr-cell ${cls}`.trim();
-  if(colspan>1) th.colSpan = colspan;
-  th.innerHTML = html;
+  th.className = ["hdr-cell", cls].filter(Boolean).join(" ");
+  th.innerHTML = html ?? "";
+  if (colspan) th.colSpan = colspan;
   return th;
 }
 function leftRowHdrCell(text, cls=""){

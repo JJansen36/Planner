@@ -424,10 +424,44 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   background-clip: padding-box;
 }
 /* TEMP: header zichtbaar maken (sticky uit) */
-.sticky-top, .sticky-top2, .sticky-top3 { position: static !important; top:auto !important; }
+.sticky-top, .sticky-top2, .sticky-top3 { position: static !important; }
+
 
 .hdr-cell{
   height: 26px;
   vertical-align: middle;
 }
 .hdr-day .hdr-cell{ height: 40px; }
+
+/* === HARD FIX: header en body altijd exact dezelfde kolombreedte === */
+.planner-table{
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;              /* super belangrijk */
+}
+
+.planner-table th.hdr-cell,
+.planner-table td.cell{
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  text-align: center;
+  border: 1px solid #e6eaf0;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.planner-table thead th.hdr-cell{
+  background:#f2f4f7;
+  font-size:11px;
+  line-height:1.1;
+  height: 40px;
+  vertical-align: bottom;
+}
+
+/* linker kolom */
+.planner-table .rowhdr{
+  min-width: 380px;
+  width: 380px;
+  max-width: 380px;
+}
