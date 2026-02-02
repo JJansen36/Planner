@@ -395,6 +395,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
   // TBODY
   const tbody = document.createElement("tbody");
 
+  console.log("render projecten:", (projecten || []).length);
+
   // Projects + sections (expand/collapse)
   for(const p of projecten || []){
     const pid = p?.[projIdKey];
