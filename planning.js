@@ -500,17 +500,27 @@ gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
     const open = btn.classList.toggle("open");
     btn.textContent = open ? "▼" : "▶";
 
-    gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
-      if (String(tr.dataset.parent || "") === pid) {
-        // als project dicht gaat: alles weg
-        tr.classList.toggle("hidden", !open);
+// 1) toon/verberg alleen de sectie-rijen
+gridEl.querySelectorAll("tr.section-row").forEach(tr => {
+  if (String(tr.dataset.parent || "") === pid) {
+    tr.classList.toggle("hidden", !open);
+  }
+});
 
-        // extra: als project dicht is, zorg dat sectie-details ook dicht blijft
-        if (!open && tr.classList.contains("section-details-row")) {
-          tr.classList.add("hidden");
-        }
-      }
-    });
+// 2) sectie-details nooit automatisch open; bij project toggle altijd dicht
+gridEl.querySelectorAll("tr.section-details-row").forEach(tr => {
+  if (String(tr.dataset.parent || "") === pid) {
+    tr.classList.add("hidden");
+  }
+});
+
+// 3) als project dichtklapt: sectie pijltjes resetten naar ▶
+if (!open) {
+  gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"] .expander-sec`).forEach(b => {
+    b.textContent = "▶";
+  });
+}
+
 
     // als project dichtklapt: zet sectie-pijltjes terug op ▶
     if (!open) {
