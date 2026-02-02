@@ -319,6 +319,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     const complRaw = p?.[completionKey] ?? "";
     const complTxt = formatDateNL(complRaw);
 
+    console.log("completionKey:", completionKey, "value:", p?.[completionKey]);
+
 
     const projRow = document.createElement("tr");
     projRow.className = "project-row";
