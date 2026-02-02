@@ -460,3 +460,38 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   width: 380px;
   max-width: 380px;
 }
+
+:root {
+  --day-w: 26px;
+}
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--days-count), var(--day-w));
+}
+
+.day-cell {
+  width: var(--day-w);
+  min-width: var(--day-w);
+  max-width: var(--day-w);
+  height: 22px;
+
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb;
+  padding: 0;
+  margin: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planning-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: stretch;
+}
+
+.day-cell {
+  outline: 1px dashed red;
+}
