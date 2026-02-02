@@ -658,3 +658,6 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
 .details-fill{
   background:#fff;
 }
+
+.expander-sec{ margin-right:6px; }
+.section-details-cell .details-box{ padding:6px 8px; font-size:12px; line-height:1.3; }

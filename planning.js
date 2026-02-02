@@ -337,60 +337,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     `;
     projRow.appendChild(left);
 
-    // project-level: we render bars aggregated from all sections (simple view)
-    const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-    appendDayCells(projRow, dates, projLabels, complISO);
-    tbody.appendChild(projRow);
-
-        // ---- Project details row (hidden, shows on expand) ----
-    const detailsRow = document.createElement("tr");
-    detailsRow.className = "project-details-row hidden";
-    detailsRow.dataset.parent = String(pid);
-
-    const detailsLeft = document.createElement("td");
-    detailsLeft.className = "rowhdr sticky-left project-details-cell";
-
-    // simpele totals in huidige range (op basis van work[] die al in range is)
-    let sumPrep = 0, sumProd = 0, sumMont = 0;
-    for (const r of work || []) {
-      // alleen rows die bij dit project horen via section -> project
-      // (we lopen secList later nog; dus hier sneller: check via sectiesByProject)
-    }
-    // we rekenen via secties van dit project:
-    const secsForPid = sectiesByProject.get(pid) || [];
-    const secIds = new Set(secsForPid.map(s => String(s?.[sectIdKey] ?? s?.section_id ?? "")));
-
-    for (const r of work || []) {
-      const sid = String(r.section_id || "");
-      if (!secIds.has(sid)) continue;
-
-      const wt = String(r.work_type || "");
-      const h = Number(r.hours || 0);
-      if (isPrepType(wt)) sumPrep += h;
-      if (isProdType(wt)) sumProd += h;
-      if (isMontType(wt)) sumMont += h;
-    }
-
-    detailsLeft.innerHTML = `
-      <div class="details-box">
-        <div class="details-title">Sectie gegevens</div>
-        <div class="details-line">Opleverdatum: <b>${escapeHtml(complTxt || "-")}</b></div>
-        <div class="details-line">Werkvoorbereiding: <b>${escapeHtml(formatHoursCell(sumPrep))}</b> uur</div>
-        <div class="details-line">Productie: <b>${escapeHtml(formatHoursCell(sumProd))}</b> uur</div>
-        <div class="details-line">Montage: <b>${escapeHtml(formatHoursCell(sumMont))}</b> uur</div>
-      </div>
-    `;
-
-    detailsRow.appendChild(detailsLeft);
-
-    // rechts: 1 cel die over de hele kalender spant (leeg)
-    const detailsFill = document.createElement("td");
-    detailsFill.colSpan = dates.length;
-    detailsFill.className = "cell details-fill";
-    detailsRow.appendChild(detailsFill);
-
-    tbody.appendChild(detailsRow);
-
+   
 
     // section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
@@ -410,13 +357,60 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
       const sn = s?.[sectNameKey] || "sectie";
 
-      leftS.innerHTML = `<span class="sectext">↳ ${escapeHtml(sn)}</span>`;
+      leftS.innerHTML = `<button class="expander expander-sec" data-sect="${escapeAttr(sid)}" aria-label="toggle sectie">▶</button> <span class="sectext">↳ ${escapeHtml(sn)}</span>`;
+
       secRow.appendChild(leftS);
 
       const labels = buildDayLabelsForSection(sid, workMap, dates);
       appendDayCells(secRow, dates, labels);
 
       tbody.appendChild(secRow);
+
+            // ---- Sectie details row (hidden, shows on section expand) ----
+      const secDetails = document.createElement("tr");
+      secDetails.className = "section-details-row hidden";
+      secDetails.dataset.parent = String(pid); // zodat project open/dicht ook alles meeneemt
+      secDetails.dataset.sect = String(sid);
+
+      const secDetailsLeft = document.createElement("td");
+      secDetailsLeft.className = "rowhdr sticky-left section-details-cell";
+
+      // totals per sectie in huidige range
+      let sumPrepS = 0, sumProdS = 0, sumMontS = 0;
+      const dmS = workMap.get(String(sid));
+      if (dmS) {
+        for (const d of dates) {
+          const iso = toISODate(d);
+          const rows = dmS.get(iso) || [];
+          for (const r of rows) {
+            const wt = String(r.work_type || "");
+            const h  = Number(r.hours || 0);
+            if (isPrepType(wt)) sumPrepS += h;
+            if (isProdType(wt)) sumProdS += h;
+            if (isMontType(wt)) sumMontS += h;
+          }
+        }
+      }
+
+      secDetailsLeft.innerHTML = `
+        <div class="details-box">
+          <div class="details-title">Sectie gegevens</div>
+          <div class="details-line">Opleverdatum: <b>${escapeHtml(complTxt || "-")}</b></div>
+          <div class="details-line">Werkvoorbereiding: <b>${escapeHtml(formatHoursCell(sumPrepS))}</b> uur</div>
+          <div class="details-line">Productie: <b>${escapeHtml(formatHoursCell(sumProdS))}</b> uur</div>
+          <div class="details-line">Montage: <b>${escapeHtml(formatHoursCell(sumMontS))}</b> uur</div>
+        </div>
+      `;
+      secDetails.appendChild(secDetailsLeft);
+
+      // rechts: 1 cel over de hele kalenderbreedte
+      const secDetailsFill = document.createElement("td");
+      secDetailsFill.colSpan = dates.length;
+      secDetailsFill.className = "cell details-fill";
+      secDetails.appendChild(secDetailsFill);
+
+      tbody.appendChild(secDetails);
+
     }
 
   }
@@ -501,14 +495,48 @@ gridEl.querySelectorAll(".expander").forEach(btn => {
     const open = btn.classList.toggle("open");
     btn.textContent = open ? "▼" : "▶";
 
-    gridEl.querySelectorAll("tr.section-row, tr.project-details-row").forEach(tr => {
+    gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
       if (String(tr.dataset.parent || "") === pid) {
+        // als project dicht gaat: alles weg
         tr.classList.toggle("hidden", !open);
+
+        // extra: als project dicht is, zorg dat sectie-details ook dicht blijft
+        if (!open && tr.classList.contains("section-details-row")) {
+          tr.classList.add("hidden");
+        }
       }
     });
 
+    // als project dichtklapt: zet sectie-pijltjes terug op ▶
+    if (!open) {
+      gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"] .expander-sec`).forEach(b => {
+        b.textContent = "▶";
+      });
+    }
+
+
   });
 });
+
+// section expanders
+gridEl.querySelectorAll(".expander-sec").forEach(btn => {
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+
+    const sid = String(btn.dataset.sect || "");
+    const parentTr = btn.closest("tr");
+    const pid = String(parentTr?.dataset?.parent || "");
+
+    // vind de details row van deze sectie
+    const rows = Array.from(gridEl.querySelectorAll("tr.section-details-row"));
+    const match = rows.find(r => String(r.dataset.sect || "") === sid && String(r.dataset.parent || "") === pid);
+    if (!match) return;
+
+    const nowHidden = match.classList.toggle("hidden");
+    btn.textContent = nowHidden ? "▶" : "▼";
+  });
+});
+
 
 }
 
