@@ -423,8 +423,7 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
 .planner-table th, .planner-table td{
   background-clip: padding-box;
 }
-/* TEMP: header zichtbaar maken (sticky uit) */
-.sticky-top, .sticky-top2, .sticky-top3 { position: static !important; }
+
 
 
 .hdr-cell{
@@ -465,3 +464,14 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   width: 380px;
   max-width: 380px;
 }
+
+
+/* kleur ook de hele cel (zodat je een “balk” over meerdere dagcellen ziet) */
+.plan-cell.bar-prep    { background:#c7e0ff; }
+.plan-cell.bar-prod    { background:#b7f0c2; }
+.plan-cell.bar-mont    { background:#f6c1f3; }
+.plan-cell.bar-delivery{ background:#ffd7b5; }
+.plan-cell.bar-generic { background:#e5e7eb; }
+
+/* labelbalk zelf mag transparant blijven of licht */
+.plan-cell .bar{ background: transparent; }

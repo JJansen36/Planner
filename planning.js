@@ -271,8 +271,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     projRow.appendChild(left);
 
     // project-level: we render bars aggregated from all sections (simple view)
-    const projBars = buildBarRunsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-    appendRunCells(projRow, dates, projBars);
+    const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
+    appendDayCells(projRow, dates, projLabels);
     tbody.appendChild(projRow);
 
     // section rows (hidden by default)
@@ -296,8 +296,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
       leftS.innerHTML = `<span class="sectext">↳ ${escapeHtml(sn)}</span>`;
       secRow.appendChild(leftS);
 
-      const runs = buildBarRunsForSection(sid, workMap, dates);
-      appendRunCells(secRow, dates, runs);
+      const labels = buildDayLabelsForSection(sid, workMap, dates);
+      appendDayCells(secRow, dates, labels);
 
       tbody.appendChild(secRow);
     }
@@ -596,4 +596,61 @@ function escapeAttr(s){
 }
 function cssEsc(s){
   return String(s ?? "").replaceAll('"','\\"');
+}
+
+// -------- DAY LABEL BUILDERS (1 cel per dag) --------
+function buildDayLabelsForSection(sectionId, workMap, dates){
+  const dm = workMap.get(sectionId);
+  return dates.map(d=>{
+    const iso = toISODate(d);
+    const rows = dm?.get(iso) || [];
+    if(!rows.length) return "";
+    const byType = {};
+    for(const r of rows){
+      const t = normalizeType(r.work_type);
+      byType[t] = (byType[t]||0) + Number(r.hours||0);
+    }
+    let bestT = "", bestH = 0;
+    for(const [t,h] of Object.entries(byType)){
+      if(h > bestH){ bestH = h; bestT = t; }
+    }
+    return bestT || "";
+  });
+}
+
+function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates){
+  const secs = sectiesByProject.get(projectId) || [];
+  return dates.map(d=>{
+    const iso = toISODate(d);
+    const counts = {};
+    for(const s of secs){
+      const sid = s?.[sectIdKey];
+      const rows = workMap.get(sid)?.get(iso) || [];
+      for(const r of rows){
+        const t = normalizeType(r.work_type);
+        counts[t] = (counts[t]||0) + Number(r.hours||0);
+      }
+    }
+    let bestT="", bestH=0;
+    for(const [t,h] of Object.entries(counts)){
+      if(h>bestH){ bestH=h; bestT=t; }
+    }
+    return bestT || "";
+  });
+}
+
+function appendDayCells(tr, dates, labels){
+  for(let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const label = labels[i] || "";
+
+    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+
+    const td = document.createElement("td");
+    td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+    // tekst alleen op 1e dag van blok
+    td.innerHTML = isStart ? `<div class="bar">${escapeHtml(label)}</div>` : "";
+    tr.appendChild(td);
+  }
 }
