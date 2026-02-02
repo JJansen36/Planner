@@ -322,19 +322,17 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
     tr.appendChild(leftRowHdrCell(wnm, "sticky-left cap-name"));
 
-    for(const d of dates){
-      const d = parseISODate(String(rawDate));
-      if(!d) continue;
-      const iso = toISODate(d);
+    for (const dt of dates) {
+      const iso = toISODate(dt);
       const h = capByEmp.get(wid)?.get(iso) || 0;
+
       const td = document.createElement("td");
-      td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+      td.className = `cell cap-cell ${isWeekend(dt) ? "wknd" : ""}`;
       td.textContent = formatHoursCell(h);
+
       tr.appendChild(td);
     }
-    tbody.appendChild(tr);
-  }
-
+    
   // Totals / beschikbaar rows (zoals PDF onderin)
   tbody.appendChild(spacerRow(dates.length));
 
