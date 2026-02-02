@@ -337,7 +337,11 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     `;
     projRow.appendChild(left);
 
-   
+      // project-level: render planning + oplever marker
+    const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
+    appendDayCells(projRow, dates, projLabels, complISO);
+    tbody.appendChild(projRow);
+
 
     // section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
@@ -489,7 +493,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
   // expanders
 // expanders
-gridEl.querySelectorAll(".expander").forEach(btn => {
+gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
+
   btn.addEventListener("click", () => {
     const pid = String(btn.dataset.proj || "");
     const open = btn.classList.toggle("open");
