@@ -342,6 +342,56 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     appendDayCells(projRow, dates, projLabels, complISO);
     tbody.appendChild(projRow);
 
+        // ---- Project details row (hidden, shows on expand) ----
+    const detailsRow = document.createElement("tr");
+    detailsRow.className = "project-details-row hidden";
+    detailsRow.dataset.parent = String(pid);
+
+    const detailsLeft = document.createElement("td");
+    detailsLeft.className = "rowhdr sticky-left project-details-cell";
+
+    // simpele totals in huidige range (op basis van work[] die al in range is)
+    let sumPrep = 0, sumProd = 0, sumMont = 0;
+    for (const r of work || []) {
+      // alleen rows die bij dit project horen via section -> project
+      // (we lopen secList later nog; dus hier sneller: check via sectiesByProject)
+    }
+    // we rekenen via secties van dit project:
+    const secsForPid = sectiesByProject.get(pid) || [];
+    const secIds = new Set(secsForPid.map(s => String(s?.[sectIdKey] ?? s?.section_id ?? "")));
+
+    for (const r of work || []) {
+      const sid = String(r.section_id || "");
+      if (!secIds.has(sid)) continue;
+
+      const wt = String(r.work_type || "");
+      const h = Number(r.hours || 0);
+      if (isPrepType(wt)) sumPrep += h;
+      if (isProdType(wt)) sumProd += h;
+      if (isMontType(wt)) sumMont += h;
+    }
+
+    detailsLeft.innerHTML = `
+      <div class="details-box">
+        <div class="details-title">Sectie gegevens</div>
+        <div class="details-line">Opleverdatum: <b>${escapeHtml(complTxt || "-")}</b></div>
+        <div class="details-line">Werkvoorbereiding: <b>${escapeHtml(formatHoursCell(sumPrep))}</b> uur</div>
+        <div class="details-line">Productie: <b>${escapeHtml(formatHoursCell(sumProd))}</b> uur</div>
+        <div class="details-line">Montage: <b>${escapeHtml(formatHoursCell(sumMont))}</b> uur</div>
+      </div>
+    `;
+
+    detailsRow.appendChild(detailsLeft);
+
+    // rechts: 1 cel die over de hele kalender spant (leeg)
+    const detailsFill = document.createElement("td");
+    detailsFill.colSpan = dates.length;
+    detailsFill.className = "cell details-fill";
+    detailsRow.appendChild(detailsFill);
+
+    tbody.appendChild(detailsRow);
+
+
     // section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
       .sort((a,b)=>String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||"")));
@@ -451,11 +501,12 @@ gridEl.querySelectorAll(".expander").forEach(btn => {
     const open = btn.classList.toggle("open");
     btn.textContent = open ? "▼" : "▶";
 
-    gridEl.querySelectorAll("tr.section-row").forEach(tr => {
+    gridEl.querySelectorAll("tr.section-row, tr.project-details-row").forEach(tr => {
       if (String(tr.dataset.parent || "") === pid) {
         tr.classList.toggle("hidden", !open);
       }
     });
+
   });
 });
 
@@ -553,7 +604,7 @@ function normalizeType(t){
   if(s.includes("werkvoor")) return "werkvoorbereiding";
   if(s.includes("prod")) return "productie";
   if(s.includes("mont")) return "montage";
-  if(s.includes("oplever")) return "oplevering";
+  if(s.includes("oplever")) return "DL";
   return s;
 }
 

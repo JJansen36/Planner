@@ -642,3 +642,19 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   font-weight:600;
   white-space:nowrap;
 }
+
+.project-details-cell .details-box{
+  padding:6px 8px;
+  font-size:12px;
+  line-height:1.3;
+}
+.details-title{
+  font-weight:700;
+  margin-bottom:4px;
+}
+.details-line{
+  opacity:.9;
+}
+.details-fill{
+  background:#fff;
+}
