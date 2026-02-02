@@ -423,3 +423,11 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
 .planner-table th, .planner-table td{
   background-clip: padding-box;
 }
+/* TEMP: header zichtbaar maken (sticky uit) */
+.sticky-top, .sticky-top2, .sticky-top3 { position: static !important; top:auto !important; }
+
+.hdr-cell{
+  height: 26px;
+  vertical-align: middle;
+}
+.hdr-day .hdr-cell{ height: 40px; }
