@@ -295,14 +295,6 @@ a{color:inherit; text-decoration:none}
   background: #fff;
 }
 
-/* generieke header cell */
-.planner-table th.hdr-cell{
-  box-sizing: border-box;
-  border: 1px solid var(--grid-line);
-  background: var(--hdr-bg);
-  color: #111827;
-  font-weight: 600;
-}
 
 /* maand/week rows: colspan mag bepalen */
 .planner-table thead tr.hdr-month th.hdr-cell{
@@ -330,18 +322,10 @@ a{color:inherit; text-decoration:none}
   vertical-align: bottom;
 }
 
-/* body dagcellen */
+.planner-table th.hdr-cell,
 .planner-table td.cell{
-  width: var(--day-w);
-  min-width: var(--day-w);
-  max-width: var(--day-w);
-  height: var(--cell-h);
-  line-height: var(--cell-h);
-  padding: 0 !important;
+  border: 1px solid #e6eaf0;
   box-sizing: border-box;
-  border: 1px solid var(--grid-line);
-  text-align: center;
-  background: #fff;
 }
 
 /* weekend */
