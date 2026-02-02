@@ -127,6 +127,11 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   const sectProjKey = pickKey(secties[0], ["project_id","projectid","project","project_ref"]);
   const sectNameKey = pickKey(secties[0], ["name","naam","section_name","titel","title","omschrijving"]);
 
+  console.log("secties keys:", Object.keys(secties?.[0] || {}));
+  console.log("projecten keys:", Object.keys(projecten?.[0] || {}));
+  console.log("sample sectie:", secties?.[0]);
+  console.log("sample work row:", work?.[0]);
+  console.log("sectIdKey:", sectIdKey, "sectProjKey:", sectProjKey, "sectNameKey:", sectNameKey);
 
 
   // map secties per project
@@ -141,10 +146,12 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   // map work per section -> date -> {type->hours}
   const workMap = new Map(); // sectionId -> dateISO -> array rows
   for(const r of work || []){
-    const sid = r.section_id;
-    const d = r.work_date;
+    const rawSid = r.section_id;
+    const sid = rawSid ? sectLookup.get(String(rawSid)) || String(rawSid) : null;
     if(!sid || !d) continue;
+
     if(!workMap.has(sid)) workMap.set(sid, new Map());
+
     const dm = workMap.get(sid);
     if(!dm.has(d)) dm.set(d, []);
     dm.get(d).push(r);
@@ -191,6 +198,14 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
   // THEAD (3 rijen: maand / week / dag)
   const thead = document.createElement("thead");
+
+  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
+  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
+  for (const s of secties || []) {
+    if (s?.id) sectLookup.set(String(s.id), String(s.id));
+    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
+  }
+
 
   // Row: months
   const trMonth = document.createElement("tr");
@@ -264,8 +279,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
       .sort((a,b)=>String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||"")));
 
     for(const s of secList){
-      const sid = s?.[sectIdKey];
-      const sn  = s?.[sectNameKey] ?? "sectie";
+      const sid = s?.[sectIdKey] ? String(s[sectIdKey]) : (s?.section_id ? String(s.section_id) : null);
+      const sectNameKey = pickKey(secties[0], ["name","naam","section_name","sectionname","titel","title","omschrijving","description"]);
 
       const secRow = document.createElement("tr");
       secRow.className = "row section-row hidden";
