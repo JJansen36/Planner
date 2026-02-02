@@ -649,11 +649,12 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
 
     saveBtn.onclick = async () => {
       // delete existing for this section+day
-      const del = await sb
-        .from("section_assignments")
-        .delete()
-        .eq("section_id", sid)
-        .eq("work_date", dateISO);
+    const del = await sb
+      .from("section_assignments")
+      .delete()
+      .eq("section_id", sid)
+      .eq("work_date", dateISO);
+
 
       if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
 
