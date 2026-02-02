@@ -111,6 +111,34 @@ async function loadAndRender(){
     werknemers
   });
 }
+/* ======================
+   SECTION WORK MAP (section_id -> date -> rows[])
+====================== */
+function buildWorkMap(workRows){
+  const map = new Map();
+  if(!Array.isArray(workRows) || workRows.length===0) return map;
+
+  const sidKey  = pickKey(workRows[0], ["section_id","sectionid","sectie_id","sectieid"]);
+  const dateKey = pickKey(workRows[0], ["work_date","date","datum","dag"]);
+  if(!sidKey || !dateKey) return map;
+
+  for(const r of workRows){
+    const sidRaw = r?.[sidKey];
+    if(!sidRaw) continue;
+    const sid = String(sidRaw);
+
+    const d = parseISODate(String(r?.[dateKey] || ""));
+    if(!d) continue;
+    const iso = toISODate(d);
+
+    if(!map.has(sid)) map.set(sid, new Map());
+    const byDate = map.get(sid);
+    if(!byDate.has(iso)) byDate.set(iso, []);
+    byDate.get(iso).push(r);
+  }
+  return map;
+}
+
 
 // -------- RENDER --------
 function renderPlanner({ start, days, projecten, secties, work, cap, werknemers }){
@@ -145,13 +173,6 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   }
 
   // map work per section -> date -> {type->hours}
-  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
-  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
-  for (const s of secties || []) {
-    if (s?.id) sectLookup.set(String(s.id), String(s.id));
-    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
-  }
-
   const workMap = new Map(); // sectionId -> dateISO -> array rows
   for(const r of work || []){
     const rawSid = r.section_id;
@@ -203,9 +224,28 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   // build table
   const table = document.createElement("table");
   table.className = "planner-table";
+  // fixed column widths so header == body
+  const colgroup = document.createElement("colgroup");
+  const colLeft = document.createElement("col");
+  colLeft.style.width = "340px";
+  colgroup.appendChild(colLeft);
+  for(let i=0;i<dates.length;i++){
+    const c = document.createElement("col");
+    c.style.width = "32px";
+    colgroup.appendChild(c);
+  }
+  table.appendChild(colgroup);
+
 
   // THEAD (3 rijen: maand / week / dag)
   const thead = document.createElement("thead");
+
+  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
+  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
+  for (const s of secties || []) {
+    if (s?.id) sectLookup.set(String(s.id), String(s.id));
+    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
+  }
 
 
   // Row: months
@@ -271,8 +311,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     projRow.appendChild(left);
 
     // project-level: we render bars aggregated from all sections (simple view)
-    const projBars = buildBarRunsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-    appendRunCells(projRow, dates, projBars);
+    const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
+    appendDayCells(projRow, dates, projLabels);
     tbody.appendChild(projRow);
 
     // section rows (hidden by default)
@@ -296,8 +336,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
       leftS.innerHTML = `<span class="sectext">↳ ${escapeHtml(sn)}</span>`;
       secRow.appendChild(leftS);
 
-      const runs = buildBarRunsForSection(sid, workMap, dates);
-      appendRunCells(secRow, dates, runs);
+      const labels = buildDayLabelsForSection(sid, workMap, dates);
+      appendDayCells(secRow, dates, labels);
 
       tbody.appendChild(secRow);
     }
@@ -322,17 +362,17 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
     tr.appendChild(leftRowHdrCell(wnm, "sticky-left cap-name"));
 
-    for (const dt of dates) {
-      const iso = toISODate(dt);
+    for(const d of dates){
+      const iso = toISODate(d);
       const h = capByEmp.get(wid)?.get(iso) || 0;
-
       const td = document.createElement("td");
-      td.className = `cell cap-cell ${isWeekend(dt) ? "wknd" : ""}`;
+      td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
       td.textContent = formatHoursCell(h);
-
       tr.appendChild(td);
     }
-    
+    tbody.appendChild(tr);
+  }
+
   // Totals / beschikbaar rows (zoals PDF onderin)
   tbody.appendChild(spacerRow(dates.length));
 
@@ -596,4 +636,61 @@ function escapeAttr(s){
 }
 function cssEsc(s){
   return String(s ?? "").replaceAll('"','\\"');
+}
+
+// -------- DAY LABEL BUILDERS (1 cel per dag) --------
+function buildDayLabelsForSection(sectionId, workMap, dates){
+  const dm = workMap.get(sectionId);
+  return dates.map(d=>{
+    const iso = toISODate(d);
+    const rows = dm?.get(iso) || [];
+    if(!rows.length) return "";
+    const byType = {};
+    for(const r of rows){
+      const t = normalizeType(r.work_type);
+      byType[t] = (byType[t]||0) + Number(r.hours||0);
+    }
+    let bestT = "", bestH = 0;
+    for(const [t,h] of Object.entries(byType)){
+      if(h > bestH){ bestH = h; bestT = t; }
+    }
+    return bestT || "";
+  });
+}
+
+function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates){
+  const secs = sectiesByProject.get(projectId) || [];
+  return dates.map(d=>{
+    const iso = toISODate(d);
+    const counts = {};
+    for(const s of secs){
+      const sid = s?.[sectIdKey];
+      const rows = workMap.get(sid)?.get(iso) || [];
+      for(const r of rows){
+        const t = normalizeType(r.work_type);
+        counts[t] = (counts[t]||0) + Number(r.hours||0);
+      }
+    }
+    let bestT="", bestH=0;
+    for(const [t,h] of Object.entries(counts)){
+      if(h>bestH){ bestH=h; bestT=t; }
+    }
+    return bestT || "";
+  });
+}
+
+function appendDayCells(tr, dates, labels){
+  for(let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const label = labels[i] || "";
+
+    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+
+    const td = document.createElement("td");
+    td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+    // tekst alleen op 1e dag van blok
+    td.innerHTML = isStart ? `<div class="bar">${escapeHtml(label)}</div>` : "";
+    tr.appendChild(td);
+  }
 }
