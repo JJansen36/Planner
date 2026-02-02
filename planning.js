@@ -44,6 +44,18 @@ function weekNumberISO(date){
   return Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
 }
 
+function formatDateNL(v){
+  if(!v) return "";
+  // v kan "YYYY-MM-DD" zijn (Supabase date), of timestamp.
+  const d = parseISODate(String(v).slice(0,10));
+  if(!d) return "";
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = d.getFullYear();
+  return `${dd}-${mm}-${yy}`;
+}
+
+
 // -------- DATA LOAD --------
 async function loadAndRender(){
   const start = new Date(rangeStart);
@@ -150,6 +162,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   const projNrKey = pickKey(projecten[0], ["offerno","projectnr","project_nr","nummer","nr"]);
   const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
   const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
+  const completionKey = pickKey(projecten[0], ["completiondate","completion_date","opleverdatum","end_date"]);
+
 
   const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
   const sectProjKey = pickKey(secties[0], ["project_id","projectid","project","project_ref"]);
@@ -302,6 +316,9 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     const nr  = p?.[projNrKey] ?? "";
     const nm  = p?.[projNameKey] ?? "";
     const kl  = p?.[klantKey] ?? "";
+    const complRaw = p?.[completionKey] ?? "";
+    const complTxt = formatDateNL(complRaw);
+
 
     const projRow = document.createElement("tr");
     projRow.className = "project-row";
@@ -309,7 +326,10 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     left.className = "rowhdr sticky-left project-cell";
     left.innerHTML = `
       <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
-      <span class="projtext">${escapeHtml(nr)} - ${escapeHtml(kl)} - ${escapeHtml(nm)}</span>
+      <span class="projtext">
+        ${escapeHtml(nr)} - ${escapeHtml(kl)} - ${escapeHtml(nm)}
+        ${complTxt ? `<span class="completiondate"> • oplever: ${escapeHtml(complTxt)}</span>` : ""}
+      </span>
     `;
     projRow.appendChild(left);
 

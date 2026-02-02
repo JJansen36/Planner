@@ -623,3 +623,10 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   margin: 0;
   border-radius: 6px;
 }
+
+.completiondate{
+  opacity: .75;
+  font-size: 12px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
