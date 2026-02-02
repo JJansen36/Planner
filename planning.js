@@ -370,15 +370,21 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   gridEl.appendChild(table);
 
   // expanders
-  gridEl.querySelectorAll(".expander").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const pid = btn.dataset.proj;
-      const open = btn.classList.toggle("open");
-      btn.textContent = open ? "▼" : "▶";
-      gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"]`)
-        .forEach(tr=>tr.classList.toggle("hidden", !open));
+// expanders
+gridEl.querySelectorAll(".expander").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const pid = String(btn.dataset.proj || "");
+    const open = btn.classList.toggle("open");
+    btn.textContent = open ? "▼" : "▶";
+
+    gridEl.querySelectorAll("tr.section-row").forEach(tr => {
+      if (String(tr.dataset.parent || "") === pid) {
+        tr.classList.toggle("hidden", !open);
+      }
     });
   });
+});
+
 }
 
 // -------- RUN BUILDERS (bars via colspan) --------
