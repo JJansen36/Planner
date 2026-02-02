@@ -55,6 +55,51 @@ function formatDateNL(v){
   return `${dd}-${mm}-${yy}`;
 }
 
+// -------- ASSIGNMENTS MODAL (productie/montage + collega's) --------
+let assignModal = null;
+
+function ensureAssignModal(){
+  if (assignModal) return assignModal;
+
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML = `
+    <div class="modal assign-modal">
+      <div class="hd">
+        <div>
+          <div class="assign-title">Inplannen</div>
+          <div class="assign-sub" id="amSub"></div>
+        </div>
+        <button class="btn small" id="amClose" type="button">✕</button>
+      </div>
+      <div class="bd">
+        <div class="assign-tabs">
+          <button class="btn small assign-tab" data-tab="productie" type="button">Productie</button>
+          <button class="btn small assign-tab" data-tab="montage" type="button">Montage</button>
+        </div>
+        <div class="hr"></div>
+        <div id="amList" class="assign-list"></div>
+      </div>
+      <div class="ft">
+        <button class="btn" id="amCancel" type="button">Annuleren</button>
+        <button class="btn primary" id="amSave" type="button">Opslaan</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(wrap);
+
+  const close = () => wrap.classList.remove("show");
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap) close();
+  });
+  wrap.querySelector("#amClose").onclick = close;
+  wrap.querySelector("#amCancel").onclick = close;
+
+  assignModal = { wrap, close };
+  return assignModal;
+}
+
 
 // -------- DATA LOAD --------
 async function loadAndRender(){
@@ -111,6 +156,19 @@ async function loadAndRender(){
 
   if (eErr) { statusEl.textContent = "Fout werknemers: " + eErr.message; return; }
 
+  // 6) section_assignments in range (collega's per sectie/dag + type)
+  const { data: assigns, error: aErr } = await sb
+    .from("section_assignments")
+    .select("section_id, work_date, werknemer_id, work_type")
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
+
+  // Als tabel nog niet bestaat of er zijn geen rechten, wil je de planner niet "slopen".
+  // We gaan dan verder zonder assignments.
+  const safeAssigns = aErr ? [] : (assigns || []);
+  if (aErr) console.warn("section_assignments niet geladen:", aErr.message);
+
   statusEl.textContent = "";
 
   renderPlanner({
@@ -120,7 +178,8 @@ async function loadAndRender(){
     secties,
     work,
     cap,
-    werknemers
+    werknemers,
+    assigns: safeAssigns
   });
 }
 /* ======================
@@ -153,7 +212,7 @@ function buildWorkMap(workRows){
 
 
 // -------- RENDER --------
-function renderPlanner({ start, days, projecten, secties, work, cap, werknemers }){
+function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, assigns }){
   const dates = [];
   for(let i=0;i<days;i++) dates.push(addDays(start, i));
 
@@ -209,6 +268,23 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     dm.get(d).push(r);
   }
 
+  // assignments map: sectionId -> dateISO -> {productie:Set(empId), montage:Set(empId)}
+  const assignMap = new Map();
+  for (const a of assigns || []) {
+    const sid = String(a.section_id || "");
+    const d = String(a.work_date || "");
+    const emp = String(a.werknemer_id || "");
+    const wt = String(a.work_type || "").toLowerCase();
+    if (!sid || !d || !emp || !wt) continue;
+
+    if (!assignMap.has(sid)) assignMap.set(sid, new Map());
+    const dmA = assignMap.get(sid);
+    if (!dmA.has(d)) dmA.set(d, { productie: new Set(), montage: new Set() });
+
+    if (wt === "productie") dmA.get(d).productie.add(emp);
+    if (wt === "montage") dmA.get(d).montage.add(emp);
+  }
+
   // capacity: per werknemer per dag
   const capByEmp = new Map(); // empId -> dateISO -> sumHours
   for(const r of cap || []){
@@ -233,15 +309,20 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   }
 
   // planned prod/mont per day
+  // -> op basis van section_assignments + capacity_entries (capByEmp)
   const plannedProdByDay = {};
   const plannedMontByDay = {};
-  for(const r of work || []){
-    const d = r.work_date;
-    const h = Number(r.hours || 0);
-    const wt = String(r.work_type || "");
-    if(!d) continue;
-    if(isProdType(wt)) plannedProdByDay[d] = (plannedProdByDay[d] || 0) + h;
-    if(isMontType(wt)) plannedMontByDay[d] = (plannedMontByDay[d] || 0) + h;
+
+  for (const a of assigns || []) {
+    const d = String(a.work_date || "");
+    const emp = String(a.werknemer_id || "");
+    const wt = String(a.work_type || "").toLowerCase();
+    if (!d || !emp || !wt) continue;
+
+    const h = Number(capByEmp.get(emp)?.get(d) || 0);
+
+    if (wt === "productie") plannedProdByDay[d] = (plannedProdByDay[d] || 0) + h;
+    if (wt === "montage")  plannedMontByDay[d]  = (plannedMontByDay[d]  || 0) + h;
   }
 
   // build table
@@ -337,13 +418,15 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     `;
     projRow.appendChild(left);
 
-      // project-level: render planning + oplever marker
+   
+
+    
+    // project dagcellen + oplever-marker
     const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
     appendDayCells(projRow, dates, projLabels, complISO);
     tbody.appendChild(projRow);
 
-
-    // section rows (hidden by default)
+// section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
       .sort((a,b)=>String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||"")));
 
@@ -366,7 +449,16 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
       secRow.appendChild(leftS);
 
       const labels = buildDayLabelsForSection(sid, workMap, dates);
-      appendDayCells(secRow, dates, labels);
+      // badge = aantal ingeplande collega's (productie+montage) op die dag
+      const dmA = assignMap.get(String(sid));
+      const countByDay = {};
+      for (const dd of dates) {
+        const iso = toISODate(dd);
+        const entry = dmA?.get(iso);
+        countByDay[iso] = entry ? (entry.productie.size + entry.montage.size) : 0;
+      }
+
+      appendSectionDayCells(secRow, dates, labels, sid, countByDay);
 
       tbody.appendChild(secRow);
 
@@ -491,36 +583,115 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   gridEl.innerHTML = "";
   gridEl.appendChild(table);
 
-  // expanders
-// expanders
-gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
+  // click on section cell -> assignments modal
+  gridEl.onclick = async (ev) => {
+    const td = ev.target.closest("td.section-click");
+    if (!td) return;
 
+    const sid = String(td.dataset.sectionId || "");
+    const dateISO = String(td.dataset.workDate || "");
+    if (!sid || !dateISO) return;
+
+    const modal = ensureAssignModal();
+    modal.wrap.classList.add("show");
+
+    // current selection
+    const cur = assignMap.get(sid)?.get(dateISO) || { productie: new Set(), montage: new Set() };
+    const selected = {
+      productie: new Set(cur.productie),
+      montage: new Set(cur.montage),
+    };
+
+    const subEl = modal.wrap.querySelector("#amSub");
+    const listEl = modal.wrap.querySelector("#amList");
+    const tabs = Array.from(modal.wrap.querySelectorAll(".assign-tab"));
+    const saveBtn = modal.wrap.querySelector("#amSave");
+
+    subEl.textContent = `${dateISO} • sectie`;
+
+    const empIdKey = pickKey(werknemers?.[0], ["id","werknemer_id","employee_id"]);
+    const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
+
+    let activeTab = "productie";
+
+    const renderList = () => {
+      tabs.forEach(t => t.classList.toggle("primary", t.dataset.tab === activeTab));
+      listEl.innerHTML = "";
+
+      for (const w of werknemers || []) {
+        const eid = String(w?.[empIdKey] || "");
+        const name = String(w?.[empNameKey] || eid);
+        if (!eid) continue;
+
+        const row = document.createElement("label");
+        row.className = "assign-item";
+        const checked = selected[activeTab].has(eid);
+        row.innerHTML = `
+          <input type="checkbox" ${checked ? "checked" : ""} data-eid="${escapeAttr(eid)}" />
+          <span>${escapeHtml(name)}</span>
+        `;
+        row.querySelector("input").onchange = (e) => {
+          const id = String(e.target.dataset.eid || "");
+          if (!id) return;
+          if (e.target.checked) selected[activeTab].add(id);
+          else selected[activeTab].delete(id);
+        };
+        listEl.appendChild(row);
+      }
+    };
+
+    tabs.forEach(t => {
+      t.onclick = () => {
+        activeTab = String(t.dataset.tab || "productie");
+        renderList();
+      };
+    });
+
+    renderList();
+
+    saveBtn.onclick = async () => {
+      // delete existing for this section+day
+      const del = await sb
+        .from("section_assignments")
+        .delete()
+        .eq("section_id", sid)
+        .eq("work_date", dateISO);
+
+      if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+
+      const rows = [];
+      for (const eid of selected.productie) rows.push({ section_id: sid, work_date: dateISO, werknemer_id: eid, work_type: "productie" });
+      for (const eid of selected.montage)  rows.push({ section_id: sid, work_date: dateISO, werknemer_id: eid, work_type: "montage" });
+
+      if (rows.length) {
+        const ins = await sb.from("section_assignments").insert(rows);
+        if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+      }
+
+      modal.close();
+      loadAndRender();
+    };
+  };
+
+  // expanders
+// expanders (projects)
+gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
   btn.addEventListener("click", () => {
     const pid = String(btn.dataset.proj || "");
     const open = btn.classList.toggle("open");
     btn.textContent = open ? "▼" : "▶";
 
-// 1) toon/verberg alleen de sectie-rijen
-gridEl.querySelectorAll("tr.section-row").forEach(tr => {
-  if (String(tr.dataset.parent || "") === pid) {
-    tr.classList.toggle("hidden", !open);
-  }
-});
+    gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
+      if (String(tr.dataset.parent || "") === pid) {
+        // als project dicht gaat: alles weg
+        tr.classList.toggle("hidden", !open);
 
-// 2) sectie-details nooit automatisch open; bij project toggle altijd dicht
-gridEl.querySelectorAll("tr.section-details-row").forEach(tr => {
-  if (String(tr.dataset.parent || "") === pid) {
-    tr.classList.add("hidden");
-  }
-});
-
-// 3) als project dichtklapt: sectie pijltjes resetten naar ▶
-if (!open) {
-  gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"] .expander-sec`).forEach(b => {
-    b.textContent = "▶";
-  });
-}
-
+        // extra: als project dicht is, zorg dat sectie-details ook dicht blijft
+        if (!open && tr.classList.contains("section-details-row")) {
+          tr.classList.add("hidden");
+        }
+      }
+    });
 
     // als project dichtklapt: zet sectie-pijltjes terug op ▶
     if (!open) {
@@ -818,6 +989,30 @@ function appendDayCells(tr, dates, labels, markerISO = ""){
 
     // Oplever-marker: altijd tekenen als het die dag is
     if (isMarker) html += `<div class="deadline">oplever</div>`;
+
+    td.innerHTML = html;
+    tr.appendChild(td);
+  }
+}
+
+// like appendDayCells, but makes section-day cells clickable for assignments
+function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
+  for(let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const iso = toISODate(d);
+    const label = labels[i] || "";
+    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+
+    const td = document.createElement("td");
+    td.className = `cell plan-cell section-click ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+    td.dataset.sectionId = String(sectionId || "");
+    td.dataset.workDate = iso;
+
+    let html = "";
+    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
+
+    const cnt = Number(assignCountByDay?.[iso] || 0);
+    if (cnt > 0) html += `<div class="assign-badge">${cnt}</div>`;
 
     td.innerHTML = html;
     tr.appendChild(td);
