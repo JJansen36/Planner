@@ -424,7 +424,7 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   background-clip: padding-box;
 }
 /* TEMP: header zichtbaar maken (sticky uit) */
-/* NOTE: keep sticky headers enabled for the planning grid */
+.sticky-top, .sticky-top2, .sticky-top3 { position: static !important; }
 
 
 .hdr-cell{
@@ -465,3 +465,15 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   width: 380px;
   max-width: 380px;
 }
+
+
+/* --- FIX: planner table rows must NOT be flex (global .row rule breaks <tr>) --- */
+.planner-table tr.row{ display: table-row !important; }
+.planner-table tr.row > th,
+.planner-table tr.row > td{ display: table-cell !important; }
+.planner-table tr.row{ gap: 0 !important; flex-wrap: nowrap !important; align-items: stretch !important; }
+
+/* Make sure header rows behave as table rows too */
+.planner-table thead tr{ display: table-row !important; }
+.planner-table thead th{ display: table-cell !important; }
+

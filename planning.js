@@ -145,6 +145,13 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   }
 
   // map work per section -> date -> {type->hours}
+  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
+  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
+  for (const s of secties || []) {
+    if (s?.id) sectLookup.set(String(s.id), String(s.id));
+    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
+  }
+
   const workMap = new Map(); // sectionId -> dateISO -> array rows
   for(const r of work || []){
     const rawSid = r.section_id;
@@ -197,28 +204,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   const table = document.createElement("table");
   table.className = "planner-table";
 
-  // Col widths: 1 fixed left column + N day columns.
-  // With table-layout: fixed in CSS this guarantees header and body stay aligned.
-  const colgroup = document.createElement("colgroup");
-  const colLeft = document.createElement("col");
-  colLeft.style.width = "380px";
-  colgroup.appendChild(colLeft);
-  for(let k=0;k<dates.length;k++){
-    const c = document.createElement("col");
-    c.style.width = "32px";
-    colgroup.appendChild(c);
-  }
-  table.appendChild(colgroup);
-
   // THEAD (3 rijen: maand / week / dag)
   const thead = document.createElement("thead");
-
-  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
-  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
-  for (const s of secties || []) {
-    if (s?.id) sectLookup.set(String(s.id), String(s.id));
-    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
-  }
 
 
   // Row: months
@@ -283,10 +270,9 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     `;
     projRow.appendChild(left);
 
-    // project-level: show a per-day grid so empty planning still renders as cells
-    // (runs are expanded to day cells; later we can optimize again)
+    // project-level: we render bars aggregated from all sections (simple view)
     const projBars = buildBarRunsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-    appendDayCellsFromRuns(projRow, dates, projBars);
+    appendRunCells(projRow, dates, projBars);
     tbody.appendChild(projRow);
 
     // section rows (hidden by default)
@@ -311,7 +297,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
       secRow.appendChild(leftS);
 
       const runs = buildBarRunsForSection(sid, workMap, dates);
-      appendDayCellsFromRuns(secRow, dates, runs);
+      appendRunCells(secRow, dates, runs);
 
       tbody.appendChild(secRow);
     }
@@ -337,6 +323,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     tr.appendChild(leftRowHdrCell(wnm, "sticky-left cap-name"));
 
     for(const d of dates){
+      const d = parseISODate(String(rawDate));
+      if(!d) continue;
       const iso = toISODate(d);
       const h = capByEmp.get(wid)?.get(iso) || 0;
       const td = document.createElement("td");
@@ -471,32 +459,6 @@ function compressRuns(labels){
     i += span;
   }
   return runs;
-}
-
-// Render per-day cells (grid) but still allow simple "blocks" by repeating the label.
-// This makes the calendar/header alignment predictable, even when there is no work data yet.
-function appendDayCellsFromRuns(tr, dates, runs){
-  let idx = 0;
-  for(const run of runs || []){
-    const label = run?.label || "";
-    const span = Number(run?.span || 0);
-    for(let j=0; j<span && idx<dates.length; j++){
-      const d = dates[idx];
-      const td = document.createElement("td");
-      td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`;
-      td.innerHTML = label ? `<div class="bar">${escapeHtml(label)}</div>` : "";
-      tr.appendChild(td);
-      idx++;
-    }
-  }
-  // safety: if runs were empty/invalid, still fill remaining days
-  while(idx < dates.length){
-    const d = dates[idx];
-    const td = document.createElement("td");
-    td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`;
-    tr.appendChild(td);
-    idx++;
-  }
 }
 
 function appendRunCells(tr, dates, runs){
