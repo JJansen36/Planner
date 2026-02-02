@@ -424,7 +424,7 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   background-clip: padding-box;
 }
 /* TEMP: header zichtbaar maken (sticky uit) */
-.sticky-top, .sticky-top2, .sticky-top3 { position: static !important; }
+/* NOTE: keep sticky headers enabled for the planning grid */
 
 
 .hdr-cell{
@@ -465,54 +465,3 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   width: 380px;
   max-width: 380px;
 }
-
-
-/* =========================================================
-   FINAL PLANNER OVERRIDES (zorgt dat header/kolommen niet "verspringen")
-   Plak dit helemaal ONDERAAN styles.css (laat het bestaan, dit wint met !important)
-========================================================= */
-.planner-grid{
-  overflow:auto !important;
-  position:relative;
-}
-
-/* vaste kolommen + vaste dag-cellen */
-.planner-table{
-  border-collapse: collapse !important;
-  border-spacing: 0 !important;
-  table-layout: fixed !important;
-  width: max-content !important;
-}
-
-/* als je eerder sticky uit hebt gezet, zetten we het hier weer aan */
-.sticky-left{ position: sticky !important; left: 0 !important; z-index: 20 !important; background:#fff !important; }
-.sticky-top{  position: sticky !important; top: 0 !important; z-index: 30 !important; background:#f2f4f7 !important; }
-.sticky-top2{ position: sticky !important; top: 26px !important; z-index: 30 !important; background:#f2f4f7 !important; }
-.sticky-top3{ position: sticky !important; top: 52px !important; z-index: 30 !important; background:#f2f4f7 !important; }
-
-/* linker header moet boven alles liggen */
-.rowhdr.sticky-top,
-.rowhdr.sticky-top2,
-.rowhdr.sticky-top3{ z-index: 40 !important; background:#f2f4f7 !important; }
-
-/* dagcellen exact gelijk aan header-cellen */
-.planner-table td.cell,
-.planner-table th.hdr-cell{
-  width: 32px !important;
-  min-width: 32px !important;
-  max-width: 32px !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* zichtbare gridlijnen */
-.planner-table td.cell{
-  border: 1px solid #e6eaf0 !important;
-  height: 22px;
-}
-.planner-table thead th.hdr-cell{
-  border: 1px solid #e6eaf0 !important;
-}
-
-/* weekenden */
-.planner-table .wknd{ background: #e9f2ff !important; }
