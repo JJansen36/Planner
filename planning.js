@@ -118,8 +118,16 @@ function buildWorkMap(workRows){
   const map = new Map();
   if(!Array.isArray(workRows) || workRows.length===0) return map;
 
-  const sidKey  = pickKey(workRows[0], ["section_id","sectionid","sectie_id","sectieid"]);
-  const dateKey = pickKey(workRows[0], ["work_date","date","datum","dag"]);
+  // In jouw schema (section_work) horen deze velden vast te zijn:
+  // section_id (uuid) + work_date (date)
+  const sidKey  = Object.prototype.hasOwnProperty.call(workRows[0], "section_id")
+    ? "section_id"
+    : pickKey(workRows[0], ["section_id","sectionid","sectie_id","sectieid"]);
+
+  const dateKey = Object.prototype.hasOwnProperty.call(workRows[0], "work_date")
+    ? "work_date"
+    : pickKey(workRows[0], ["work_date","date","datum","dag"]);
+
   if(!sidKey || !dateKey) return map;
 
   for(const r of workRows){
@@ -140,20 +148,21 @@ function buildWorkMap(workRows){
 }
 
 
+
 // -------- RENDER --------
 function renderPlanner({ start, days, projecten, secties, work, cap, werknemers }){
   const dates = [];
   for(let i=0;i<days;i++) dates.push(addDays(start, i));
 
   // indexes
-  const projIdKey = pickKey(projecten[0], ["project_id","id"]);
-  const projNrKey = pickKey(projecten[0], ["offerno","projectnr","project_nr","nummer","nr"]);
-  const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
-  const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
+  const projIdKey = pickKey(projecten?.[0], ["project_id","id"]);
+  const projNrKey = pickKey(projecten?.[0], ["offerno","projectnr","project_nr","nummer","nr"]);
+  const projNameKey = pickKey(projecten?.[0], ["projectname","naam","name","omschrijving","titel","title"]);
+  const klantKey = pickKey(projecten?.[0], ["klantnaam","klant_name","klant","customer","relatie"]);
 
-  const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
-  const sectProjKey = pickKey(secties[0], ["project_id","projectid","project","project_ref"]);
-  const sectNameKey = pickKey(secties[0], ["name","naam","section_name","sectionname","titel","title","omschrijving","description"]);
+  const sectIdKey   = pickKey(secties?.[0], ["section_id","id"]);
+  const sectProjKey = pickKey(secties?.[0], ["project_id","projectid","project","project_ref"]);
+  const sectNameKey = pickKey(secties?.[0], ["description","omschrijving","name","naam","section_name","sectionname","titel","title"]);
 
 
   console.log("secties keys:", Object.keys(secties?.[0] || {}));
@@ -171,20 +180,9 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     if(!sectiesByProject.has(pid)) sectiesByProject.set(pid, []);
     sectiesByProject.get(pid).push(s);
   }
-
-  // map work per section -> date -> {type->hours}
-  const workMap = new Map(); // sectionId -> dateISO -> array rows
-  for(const r of work || []){
-    const rawSid = r.section_id;
-    const sid = rawSid ? sectLookup.get(String(rawSid)) || String(rawSid) : null;
-    if(!sid || !d) continue;
-
-    if(!workMap.has(sid)) workMap.set(sid, new Map());
-
-    const dm = workMap.get(sid);
-    if(!dm.has(d)) dm.set(d, []);
-    dm.get(d).push(r);
-  }
+  // map work per section -> date -> rows[]
+  // NOTE: we gebruiken vaste kolommen uit section_work: section_id + work_date
+  const workMap = buildWorkMap(work);
 
   // capacity: per werknemer per dag
   const capByEmp = new Map(); // empId -> dateISO -> sumHours
@@ -239,14 +237,6 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
   // THEAD (3 rijen: maand / week / dag)
   const thead = document.createElement("thead");
-
-  // Map: secties lookup zodat we altijd een juiste key hebben (id <-> section_id)
-  const sectLookup = new Map(); // anyKey -> canonicalIdUsedInWork
-  for (const s of secties || []) {
-    if (s?.id) sectLookup.set(String(s.id), String(s.id));
-    if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
-  }
-
 
   // Row: months
   const trMonth = document.createElement("tr");
@@ -351,8 +341,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
   tbody.appendChild(sectionHeaderRow("Capaciteit", dates.length));
 
   // per werknemer rows
-  const empIdKey = pickKey(werknemers[0], ["id","werknemer_id","employee_id"]);
-  const empNameKey = pickKey(werknemers[0], ["naam","name","fullname","display_name"]);
+  const empIdKey = pickKey(werknemers?.[0], ["id","werknemer_id","employee_id"]);
+  const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
 
   for(const w of werknemers || []){
     const wid = w?.[empIdKey];
