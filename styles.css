@@ -513,3 +513,8 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   min-width: 380px;
   max-width: 380px;
 }
+
+.planner-table td.cell,
+.planner-table thead tr.hdr-day th.hdr-cell{
+  outline: 1px dashed red;
+}
