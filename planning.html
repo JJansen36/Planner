@@ -2,41 +2,33 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Planning</title>
-
+  <title>LOVD Planning — Capaciteit</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="config.js"></script>
 </head>
-
 <body>
-  <div class="planner-page">
-    <header class="planner-topbar">
-      <div class="planner-topbar-left">
-        <button class="btn" id="btnMenu">← Menu</button>
-        <div class="planner-title">Planning</div>
+  <div class="container full-width">
+    <div class="topbar">
+      <div class="row" style="gap:12px">
+        <a class="btn ghost" href="index.html">← Menu</a>
+        <div class="brand">Capaciteitsplanning</div>
       </div>
+    </div>
 
-      <div class="planner-topbar-right">
-        <button class="btn" id="btnPrev">◀</button>
-        <button class="btn" id="btnToday">Vandaag</button>
-        <button class="btn" id="btnNext">▶</button>
-        <button class="btn" id="btnRefresh">Ververs</button>
-        <button class="btn" id="btnLogout">Uitloggen</button>
+    <div class="card">
+      <div class="hd row" style="justify-content:space-between">
+        <div id="week-nav" class="row" style="gap:10px">
+          <button id="btnPrev" class="btn">Vorige week</button>
+          <h2 id="current-week-label">Week --</h2>
+          <button id="btnNext" class="btn">Volgende week</button>
+        </div>
       </div>
-    </header>
-
-    <div class="planner-wrap">
-      <div id="plannerStatus" class="planner-status"></div>
-
-      <!-- GRID -->
-      <div class="planner-grid" id="plannerGrid">
-        <!-- gevuld door JS -->
+      <div class="bd">
+        <div id="status"></div>
+        <div class="planning-grid" id="planningGrid">
+          </div>
       </div>
     </div>
   </div>
-
   <script type="module" src="planning.js"></script>
 </body>
 </html>
