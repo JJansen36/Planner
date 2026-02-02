@@ -318,6 +318,8 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
     const kl  = p?.[klantKey] ?? "";
     const complRaw = p?.[completionKey] ?? "";
     const complTxt = formatDateNL(complRaw);
+    const complISO = String(complRaw || "").slice(0,10); // "2026-03-15"
+
 
     console.log("completionKey:", completionKey, "value:", p?.[completionKey]);
 
@@ -337,7 +339,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers 
 
     // project-level: we render bars aggregated from all sections (simple view)
     const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-    appendDayCells(projRow, dates, projLabels);
+    appendDayCells(projRow, dates, projLabels, complISO);
     tbody.appendChild(projRow);
 
     // section rows (hidden by default)
@@ -704,18 +706,26 @@ function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMa
   });
 }
 
-function appendDayCells(tr, dates, labels){
+function appendDayCells(tr, dates, labels, markerISO = ""){
   for(let i=0;i<dates.length;i++){
     const d = dates[i];
+    const iso = toISODate(d);
     const label = labels[i] || "";
 
     const isStart = !!label && (i === 0 || labels[i-1] !== label);
+    const isMarker = markerISO && iso === markerISO;
 
     const td = document.createElement("td");
     td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
 
-    // tekst alleen op 1e dag van blok
-    td.innerHTML = isStart ? `<div class="bar">${escapeHtml(label)}</div>` : "";
+    // Bar tekst alleen op start van blok
+    let html = "";
+    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
+
+    // Oplever-marker: altijd tekenen als het die dag is
+    if (isMarker) html += `<div class="deadline">oplever</div>`;
+
+    td.innerHTML = html;
     tr.appendChild(td);
   }
 }
