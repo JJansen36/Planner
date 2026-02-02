@@ -22,6 +22,10 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init(){
   await requireSession(sb);
+
+  const { data: sess } = await sb.auth.getSession();
+console.log("session:", sess?.session?.user?.id, "role authenticated expected");
+
   loadAndRender();
 }
 
