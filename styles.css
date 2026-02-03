@@ -744,6 +744,31 @@ td.section-click{
 .assign-badge.mont{
   background: #7b61ff;
 }
-td.section-click{ position:relative; }
-td.section-click .assign-badge{ position:absolute; top:2px; right:2px; }
-td.section-click .assign-badge.mont{ right:24px; }
+
+
+/* Split bar (groen + paars in 1 cel) */
+.bar.bar-split{
+  padding:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+.bar.bar-split .bar-half{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;              /* match jouw bar-tekst */
+  line-height:1;
+}
+
+/* Zorg dat boven/onder afgerond blijven */
+.bar.bar-split .bar-half:first-child{
+  border-top-left-radius:999px;
+  border-top-right-radius:999px;
+}
+.bar.bar-split .bar-half:last-child{
+  border-bottom-left-radius:999px;
+  border-bottom-right-radius:999px;
+}
