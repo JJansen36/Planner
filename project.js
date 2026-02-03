@@ -1174,20 +1174,43 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
   for(let i=0;i<dates.length;i++){
     const d = dates[i];
     const iso = toISODate(d);
+
     const label = labels[i] || "";
-    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+
+    // ✅ bepaal "effective label" (als er geen section_work label is, maar wel assignments)
+    const effectiveLabel =
+      label ||
+      (prod > 0 && mont === 0 ? "productie" :
+       mont > 0 && prod === 0 ? "montage" :
+       prod > 0 && mont > 0 ? "productie" : ""); // bij beide: label kan iets zijn, kleur doen we met split
+
+    const isStart = !!effectiveLabel && (i === 0 || (labels[i-1] || "") !== (labels[i] || ""));
 
     const td = document.createElement("td");
-    td.className = `cell plan-cell section-click ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+    td.className = `cell plan-cell section-click ${effectiveLabel ? barClass(effectiveLabel) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
     td.dataset.sectionId = String(sectionId || "");
     td.dataset.workDate = iso;
 
     let html = "";
-    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
 
-    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
-    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+    // ✅ bar tekenen zodra er iets gepland is (via label OF via assignments)
+    if (effectiveLabel) {
+      if (prod > 0 && mont > 0) {
+        // split bar: groen boven, paars onder (samen even hoog als 1 pill)
+        html += `
+          <div class="bar bar-split">
+            <div class="bar-half prod"></div>
+            <div class="bar-half mont"></div>
+          </div>
+        `;
+      } else {
+        html += `<div class="bar">${isStart ? escapeHtml(effectiveLabel) : "&nbsp;"}</div>`;
+      }
+    }
 
+    // badges blijven zoals je al had
     if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
     if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
 
@@ -1195,3 +1218,4 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
     tr.appendChild(td);
   }
 }
+
