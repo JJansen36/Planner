@@ -859,3 +859,5 @@ td.details-fill .details-box{
   display: block !important;     /* i.p.v. inline-block */
   margin: 0 !important;
 }
+
+td.details-fill{ padding-left: 2px !important; }
