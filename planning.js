@@ -563,7 +563,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
   tbody.appendChild(sectionHeaderRow("Capaciteit", dates.length));
 
   // per werknemer rows
-  const empIdKey = pickKey(werknemers[0], ["id","werknemer_id","employee_id"]);
+  const empIdKey = pickKey(werknemers[0], ["werknemer_id","id","employee_id"]);
   const empNameKey = pickKey(werknemers[0], ["naam","name","fullname","display_name"]);
 
   for(const w of werknemers || []){
@@ -654,7 +654,7 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
 
     subEl.textContent = `${dateISO} • sectie`;
 
-    const empIdKey = pickKey(werknemers?.[0], ["id","werknemer_id","employee_id"]);
+    const empIdKey = pickKey(werknemers?.[0], ["werknemer_id","id","employee_id"]);
     const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
 
     let activeTab = "productie";
