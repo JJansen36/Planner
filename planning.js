@@ -654,8 +654,14 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
 
     subEl.textContent = `${dateISO} • sectie`;
 
-    const empIdKey = pickKey(werknemers?.[0], ["werknemer_id","id","employee_id"]);
+    const empIdKey = getEmployeeUuidKey(werknemers);
     const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
+
+    if (!empIdKey) {
+      alert("Kan geen werknemer UUID-kolom vinden. Check werknemers tabel (verwacht werknemer_id).");
+      console.log("werknemers keys:", Object.keys(werknemers?.[0] || {}));
+      return;
+    }
 
     let activeTab = "productie";
 
@@ -704,9 +710,26 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
 
       if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
 
+
+
       const rows = [];
-      for (const eid of selected.productie) rows.push({ section_id: sid, work_date: dateISO, werknemer_id: eid, work_type: "productie" });
-      for (const eid of selected.montage)  rows.push({ section_id: sid, work_date: dateISO, werknemer_id: eid, work_type: "montage" });
+      for (const eid of selected.productie) {
+        if (!isUuid(eid)) {
+          alert(`Onjuiste werknemer_id (geen UUID): "${eid}". Check werknemers.${empIdKey}`);
+          console.log("Gekozen eid:", eid, "empIdKey:", empIdKey, "werknemers[0]:", werknemers?.[0]);
+          return;
+        }
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: eid, work_type: "productie" });
+      }
+
+      for (const eid of selected.montage) {
+        if (!isUuid(eid)) {
+          alert(`Onjuiste werknemer_id (geen UUID): "${eid}". Check werknemers.${empIdKey}`);
+          console.log("Gekozen eid:", eid, "empIdKey:", empIdKey, "werknemers[0]:", werknemers?.[0]);
+          return;
+        }
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: eid, work_type: "montage" });
+      }
 
       if (rows.length) {
         const ins = await sb.from("section_assignments").insert(rows);
@@ -958,6 +981,20 @@ function pickKey(obj, keys){
     if(Object.prototype.hasOwnProperty.call(obj, k)) return k;
   }
   return keys[0];
+}
+
+function isUuid(v){
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ""));
+}
+
+function getEmployeeUuidKey(werknemers){
+  const row = werknemers?.[0] || {};
+  // voorkeur: werknemer_id (uuid) → employee_id → auth_user_id
+  const candidates = ["werknemer_id", "employee_id", "auth_user_id", "user_id"];
+  for (const k of candidates){
+    if (k in row) return k;
+  }
+  return null; // niets gevonden
 }
 
 function escapeHtml(s){
