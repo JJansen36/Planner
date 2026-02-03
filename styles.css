@@ -863,3 +863,21 @@ td.details-fill-wide .details-box{
 td.details-fill-wide .details-box{
   transform: translateX(-1px);
 }
+
+/* Sectie gegevens: force links in de kalendercel */
+td.details-fill{
+  text-align: left !important;
+  padding: 0 !important;
+}
+
+td.details-fill .details-wrap{
+  display: block;
+  width: 100%;
+  text-align: left !important;
+  padding-left: 6px;   /* <-- zet op 0 als je nóg verder naar links wil */
+}
+
+td.details-fill .details-box{
+  margin: 0 !important;
+  display: inline-block;
+}
