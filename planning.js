@@ -466,10 +466,34 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
    
 
     
-    // project dagcellen + oplever-marker
-    const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-    appendDayCells(projRow, dates, projLabels, complISO);
-    tbody.appendChild(projRow);
+// project dagcellen + oplever-marker
+const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
+
+// tel ingeplande mensen per dag op over alle secties van dit project
+const projAssignByDay = {};
+const secs = sectiesByProject.get(pid) || [];
+for (const dd of dates) {
+  const iso = toISODate(dd);
+  let prod = 0, mont = 0;
+
+  for (const s of secs) {
+    const sid = s?.[sectIdKey]
+      ? String(s[sectIdKey])
+      : (s?.section_id ? String(s.section_id) : null);
+    if (!sid) continue;
+
+    const entry = assignMap.get(String(sid))?.get(iso);
+    if (entry) {
+      prod += entry.productie.size;
+      mont += entry.montage.size;
+    }
+  }
+
+  projAssignByDay[iso] = { prod, mont };
+}
+
+// gebruik een project-variant van appendDayCells zodat badges zichtbaar worden
+appendProjectDayCells(projRow, dates, projLabels, complISO, projAssignByDay);
 
 // section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
@@ -1037,17 +1061,25 @@ function buildDayLabelsForSection(sectionId, workMap, dates){
 
 function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates){
   const secs = sectiesByProject.get(projectId) || [];
+
   return dates.map(d=>{
     const iso = toISODate(d);
     const counts = {};
+
     for(const s of secs){
-      const sid = s?.[sectIdKey];
+      const sid = s?.[sectIdKey]
+        ? String(s[sectIdKey])
+        : (s?.section_id ? String(s.section_id) : null);
+
+      if(!sid) continue;
+
       const rows = workMap.get(sid)?.get(iso) || [];
       for(const r of rows){
         const t = normalizeType(r.work_type);
         counts[t] = (counts[t]||0) + Number(r.hours||0);
       }
     }
+
     let bestT="", bestH=0;
     for(const [t,h] of Object.entries(counts)){
       if(h>bestH){ bestH=h; bestT=t; }
@@ -1055,6 +1087,7 @@ function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMa
     return bestT || "";
   });
 }
+
 
 function appendDayCells(tr, dates, labels, markerISO = ""){
   for(let i=0;i<dates.length;i++){
@@ -1074,6 +1107,47 @@ function appendDayCells(tr, dates, labels, markerISO = ""){
 
     // Oplever-marker: altijd tekenen als het die dag is
     if (isMarker) html += `<div class="deadline">oplever</div>`;
+
+    td.innerHTML = html;
+    tr.appendChild(td);
+  }
+}
+
+function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = {}){
+  for(let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const iso = toISODate(d);
+    const label = labels[i] || "";
+
+    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+    const isMarker = markerISO && iso === markerISO;
+
+    const td = document.createElement("td");
+
+    // KLEUR:
+    // - Als er een label is (productie/montage) → dezelfde kleur als nu (10-2)
+    // - Als er géén label is maar er zijn wel assignments → kleur op basis van assignments
+    let cls = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+    if (label) {
+      cls += ` ${barClass(label)}`;
+    } else {
+      const prod = Number(assignByDay?.[iso]?.prod || 0);
+      const mont = Number(assignByDay?.[iso]?.mont || 0);
+      if (prod > 0 && mont === 0) cls += " bar-prod";
+      if (mont > 0 && prod === 0) cls += " bar-mont";
+      if (prod > 0 && mont > 0) cls += " bar-generic"; // of kies zelf (bijv. bar-prod)
+    }
+    td.className = cls;
+
+    // TEKST + BADGES
+    let html = "";
+    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
+    if (isMarker) html += `<div class="deadline">oplever</div>`;
+
+    const prod = Number(assignByDay?.[iso]?.prod || 0);
+    const mont = Number(assignByDay?.[iso]?.mont || 0);
+    if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
+    if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
 
     td.innerHTML = html;
     tr.appendChild(td);
