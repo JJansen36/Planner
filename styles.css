@@ -440,7 +440,6 @@ a{color:inherit; text-decoration:none}
 }
 .rowhdr{
   text-align:left !important;
-  min-width:420px;
   background:#fff;
 }
 .hdr-cell{
@@ -772,20 +771,57 @@ td.section-click{
   border-bottom-left-radius:999px;
   border-bottom-right-radius:999px;
 }
-/* split pill (groen + paars in 1 bar) */
-.bar.bar-split{
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 18px;          /* moet gelijk zijn aan jouw normale .bar hoogte */
-  border-radius: 999px;  /* pill */
-}
+
 
 .bar.bar-split .bar-half{
   flex: 1;
 }
 
-/* kleuren (pas aan als jij al variabelen gebruikt) */
-.bar.bar-split .bar-half.prod{ background: #86efac; }  /* groen */
-.bar.bar-split .bar-half.mont{ background: #a78bfa; }  /* paars */
+
+/* split bar: 2 lijntjes samen even hoog als 1 bar */
+.bar.bar-split{
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 18px;            /* pas aan als jouw bar hoger/lager is */
+  justify-content: center;
+}
+
+.bar.bar-split .bar-half{
+  height: calc((18px - 2px) / 2);  /* 2 helften + gap */
+  border-radius: 6px;
+  width: 100%;
+}
+
+.bar.bar-split .bar-half.prod{ background: #86efac; }  /* zelfde groen als productie */
+.bar.bar-split .bar-half.mont{ background: #a78bfa; }  /* zelfde paars als montage */
+
+/* optioneel: als je een neutrale cel-achtergrond wil bij beide */
+td.bar-both{ /* laat leeg of geef subtiele achtergrond */ }
+
+/* ===== Split bar (productie + montage in 1 cel) ===== */
+
+/* Zorg dat split niet wordt “gesloopt” door .plan-cell .bar */
+.plan-cell .bar.bar-split{
+  padding:0 !important;
+  text-align: initial !important;
+  height: 18px !important;          /* match .plan-cell .bar hoogte */
+  line-height: normal !important;
+  display:flex !important;
+  flex-direction: column !important;
+  gap: 2px;
+  overflow:hidden;
+  border-radius:6px;
+}
+
+/* 2 helften samen exact 18px hoog */
+.plan-cell .bar.bar-split .bar-half{
+  height: calc((18px - 2px) / 2);
+  width: 100%;
+  border-radius: 6px;
+}
+
+/* kleuren exact gelijk aan je bestaande bar-prod / bar-mont */
+.plan-cell .bar.bar-split .bar-half.prod{ background:#b7f0c2; }
+.plan-cell .bar.bar-split .bar-half.mont{ background:#f6c1f3; }
