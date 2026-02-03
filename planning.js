@@ -494,16 +494,21 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
       secRow.appendChild(leftS);
 
       const labels = buildDayLabelsForSection(sid, workMap, dates);
-      // badge = aantal ingeplande collega's (productie+montage) op die dag
+      
+      // badge = aantal ingeplande collega's per type (productie / montage)
       const dmA = assignMap.get(String(sid));
-      const countByDay = {};
+      const assignByDay = {};
       for (const dd of dates) {
         const iso = toISODate(dd);
         const entry = dmA?.get(iso);
-        countByDay[iso] = entry ? (entry.productie.size + entry.montage.size) : 0;
+        assignByDay[iso] = {
+          prod: entry ? entry.productie.size : 0,
+          mont: entry ? entry.montage.size : 0,
+        };
       }
 
-      appendSectionDayCells(secRow, dates, labels, sid, countByDay);
+appendSectionDayCells(secRow, dates, labels, sid, assignByDay);
+
 
       tbody.appendChild(secRow);
 
@@ -1091,8 +1096,11 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
     let html = "";
     if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
 
-    const cnt = Number(assignCountByDay?.[iso] || 0);
-    if (cnt > 0) html += `<div class="assign-badge">${cnt}</div>`;
+    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+
+    if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
+    if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
 
     td.innerHTML = html;
     tr.appendChild(td);
