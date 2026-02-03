@@ -720,3 +720,27 @@ td.section-click{
   border-radius: 10px;
 }
 .assign-item input{ transform: scale(1.05); }
+
+.assign-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:999px;
+  font-size:11px;
+  line-height:18px;
+  color:#fff;
+  margin-left:2px;
+}
+
+/* groen = productie */
+.assign-badge.prod{
+  background: #2fbf71;
+}
+
+/* paars = montage */
+.assign-badge.mont{
+  background: #7b61ff;
+}
