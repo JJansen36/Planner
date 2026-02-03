@@ -545,7 +545,8 @@ tbody.appendChild(projRow);
         };
       }
 
-appendSectionDayCells(secRow, dates, labels, sid, assignByDay);
+appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werknemers);
+
 
 
       tbody.appendChild(secRow);
@@ -1189,7 +1190,14 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
 
 
 // like appendDayCells, but makes section-day cells clickable for assignments
-function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay) {
+function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, assignMap, werknemers) {
+
+    // map werknemer_id -> naam (1x per render)
+  const empIdKey = "id";
+  const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
+  const empNameById = new Map((werknemers || []).map(w => [String(w?.[empIdKey]), String(w?.[empNameKey] || w?.[empIdKey] || "")]));
+
+
   for (let i = 0; i < dates.length; i++) {
     const d = dates[i];
     const iso = toISODate(d);
@@ -1203,6 +1211,20 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay) {
     const td = document.createElement("td");
     td.dataset.sectionId = String(sectionId || "");
     td.dataset.workDate = iso;
+
+        // tooltip met namen (alleen tonen als er assignments zijn)
+    const entry = assignMap?.get(String(sectionId))?.get(iso);
+    if (entry) {
+      const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
+      const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
+
+      let tip = "";
+      if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
+      if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
+
+      if (tip) td.dataset.tip = tip;
+    }
+
 
     // cel-kleur bepalen op basis van assignments, zodat het altijd klopt
     let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
@@ -1237,4 +1259,5 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay) {
     tr.appendChild(td);
   }
 }
+
 
