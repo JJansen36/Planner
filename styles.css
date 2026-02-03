@@ -809,3 +809,41 @@ td.details-fill{
   text-align:left !important;
   vertical-align: top;
 }
+
+
+/* verberg de nummer-badges */
+.assign-badge{ display:none !important; }
+
+
+/* tooltip op planningcellen */
+td.section-click{
+  position: relative;           /* had je al, maar houden */
+}
+
+td.section-click[data-tip]:hover::after{
+  content: attr(data-tip);
+  position: absolute;
+  left: 6px;
+  top: calc(100% + 6px);
+  z-index: 200;
+  background: #111827;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: pre-line;        /* \n tonen als nieuwe regel */
+  min-width: 160px;
+  max-width: 320px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.18);
+}
+
+td.section-click[data-tip]:hover::before{
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: calc(100% + 2px);
+  border: 6px solid transparent;
+  border-bottom-color: #111827;
+  z-index: 201;
+}
