@@ -494,6 +494,7 @@ for (const dd of dates) {
 
 // gebruik een project-variant van appendDayCells zodat badges zichtbaar worden
 appendProjectDayCells(projRow, dates, projLabels, complISO, projAssignByDay);
+tbody.appendChild(projRow);
 
 // section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
