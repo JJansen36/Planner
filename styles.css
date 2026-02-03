@@ -847,3 +847,15 @@ td.section-click[data-tip]:hover::before{
   border-bottom-color: #111827;
   z-index: 201;
 }
+
+/* Sectie gegevens: helemaal links in de dag-zone */
+td.details-fill{
+  text-align: left !important;
+  padding: 4px 6px !important;   /* kleiner = meer naar links */
+}
+
+/* laat de box gewoon links starten */
+td.details-fill .details-box{
+  display: block !important;     /* i.p.v. inline-block */
+  margin: 0 !important;
+}
