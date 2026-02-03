@@ -1140,36 +1140,33 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
 
     let html = "";
 
-    // ✅ Als er een label is: altijd een pill tonen (met tekst alleen op start)
+    // assignments telling
+    const prod = Number(assignByDay?.[iso]?.prod || 0);
+    const mont = Number(assignByDay?.[iso]?.mont || 0);
+
+    // ✅ precies 1 bar renderen
     if (label) {
-      html += `<div class="bar">${isStart ? escapeHtml(label) : "&nbsp;"}</div>`;
-    }
-
-    if (isMarker) html += `<div class="deadline">oplever</div>`;
-
-    // ✅ Als er een label is: altijd een pill tonen (met tekst alleen op start)
-    if (label) {
-      const prod = Number(assignByDay?.[iso]?.prod || 0);
-      const mont = Number(assignByDay?.[iso]?.mont || 0);
-
-      // beide gepland? -> split bar
       if (prod > 0 && mont > 0) {
+        // split bar (groen + paars in 1 pill)
         html += `
           <div class="bar bar-split">
-            <div class="bar-half bar-prod">${isStart ? "pro" : "&nbsp;"}</div>
-            <div class="bar-half bar-mont">${isStart ? "mon" : "&nbsp;"}</div>
+            <div class="bar-half bar-prod">${isStart ? "" : "&nbsp;"}</div>
+            <div class="bar-half bar-mont">${isStart ? "" : "&nbsp;"}</div>
           </div>
         `;
       } else {
-        // enkel 1 type -> normale bar
+        // normale bar
         html += `<div class="bar">${isStart ? escapeHtml(label) : "&nbsp;"}</div>`;
       }
     }
+
+    if (isMarker) html += `<div class="deadline">oplever</div>`;
 
     td.innerHTML = html;
     tr.appendChild(td);
   }
 }
+
 
 
 // like appendDayCells, but makes section-day cells clickable for assignments
