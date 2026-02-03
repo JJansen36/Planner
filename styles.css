@@ -29,10 +29,10 @@ body{
 }
 
 a{color:inherit; text-decoration:none}
-.container{
-  max-width:1200px;
-  margin:0 auto;
-  padding:18px;
+
+.container.full-width{
+  max-width: none !important;
+  width: 100%;
 }
 
 .topbar{
@@ -265,7 +265,8 @@ a{color:inherit; text-decoration:none}
    PLANNER (table-based) — SINGLE SOURCE OF TRUTH
    Doel: header (maand/week/dag) exact uitgelijnd met body dagcellen
 ========================= */
-:root{
+/* planner vars (los van theme vars) */
+.planner-table{
   --left-w: 380px;
   --day-w: 32px;
   --hdr-month-h: 26px;
@@ -276,6 +277,7 @@ a{color:inherit; text-decoration:none}
   --hdr-bg: #f2f4f7;
   --wknd-bg: #dbeafe;
 }
+
 
 .planner-table{
   width: 100%;
@@ -371,47 +373,7 @@ a{color:inherit; text-decoration:none}
   box-shadow: 1px 0 0 var(--grid-line);
 }
 
-/* Modal */
-.modal-backdrop{
-  position:fixed; inset:0;
-  background:rgba(15,23,42,.35);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:18px;
-  z-index:50;
-}
-.modal-backdrop.show{display:flex;}
-.modal{
-  width:min(720px, 100%);
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:18px;
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
-.modal .hd{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px;}
-.modal .bd{padding:16px;}
-.modal .ft{padding:14px 16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px;}
 
-.split2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-@media (max-width:720px){.split2{grid-template-columns:1fr}}
-.hr{height:1px;background:var(--line);margin:10px 0}
-
-.notice{
-  padding:10px 12px;
-  border:1px solid #bae6fd;
-  background:#eff6ff;
-  border-radius:12px;
-  color:#0c4a6e;
-}
-.error{
-  padding:10px 12px;
-  border:1px solid #fecaca;
-  background:#fff1f2;
-  border-radius:12px;
-  color:#7f1d1d;
-}
 
 
 /* =========================
@@ -450,10 +412,6 @@ a{color:inherit; text-decoration:none}
 .hdr-week th{ font-size:11px; }
 .hdr-day th{ font-size:11px; font-weight:600; }
 
-.sticky-left{ position:sticky; left:0; z-index:20; }
-.sticky-top{ position:sticky; top:0; z-index:30; }
-.sticky-top2{ position:sticky; top:28px; z-index:29; }
-.sticky-top3{ position:sticky; top:54px; z-index:28; }
 
 .project-cell{ background:#fff; font-weight:700; }
 .section-cell{ background:#fff; color:#344054; }
@@ -659,14 +617,13 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
   padding: 10px;
 }
 
-.details-box{
-    max-width: 520px; 
-}
-
 .expander-sec{ margin-right:6px; }
 .section-details-cell .details-box{ padding:6px 8px; font-size:12px; line-height:1.3; }
 
-
+.details-box{
+  margin: 0 !important;
+  display: inline-block; /* voorkomt rare stretch/center gedrag */
+}
 /* =========================
    Section assignments popup
 ========================= */
@@ -725,19 +682,7 @@ td.section-click{
 }
 .assign-item input{ transform: scale(1.05); }
 
-.assign-badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:18px;
-  height:18px;
-  padding:0 5px;
-  border-radius:999px;
-  font-size:11px;
-  line-height:18px;
-  color:#fff;
-  margin-left:2px;
-}
+
 
 /* groen = productie */
 .assign-badge.prod{
@@ -750,13 +695,7 @@ td.section-click{
 }
 
 
-/* Split bar (groen + paars in 1 cel) */
-.bar.bar-split{
-  padding:0;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-}
+
 
 .bar.bar-split .bar-half{
   flex:1;
@@ -803,7 +742,7 @@ td.section-click{
 .bar.bar-split .bar-half.mont{ background: #a78bfa; }  /* zelfde paars als montage */
 
 /* optioneel: als je een neutrale cel-achtergrond wil bij beide */
-td.bar-both{ /* laat leeg of geef subtiele achtergrond */ }
+td.bar-both{ background: rgba(0,0,0,.02); }/* laat leeg of geef subtiele achtergrond */ 
 
 /* ===== Split bar (productie + montage in 1 cel) ===== */
 
@@ -853,4 +792,20 @@ td.bar-both{ /* laat leeg of geef subtiele achtergrond */ }
   min-height: 34px;
   border-right: 1px solid var(--line, #e5e7eb);
   border-bottom: 1px solid var(--line, #e5e7eb);
+}
+
+
+.planning-grid{
+  width: 100%;
+  overflow-x: auto; /* handig bij veel dagen */
+}
+
+table.planner-table{
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td.details-fill{
+  text-align:left !important;
+  vertical-align: top;
 }
