@@ -1238,4 +1238,3 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay) {
   }
 }
 
-
