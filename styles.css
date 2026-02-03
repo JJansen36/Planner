@@ -656,6 +656,11 @@ td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
 }
 .details-fill{
   background:#fff;
+  padding: 10px;
+}
+
+.details-box{
+    max-width: 520px; 
 }
 
 .expander-sec{ margin-right:6px; }
@@ -825,3 +830,27 @@ td.bar-both{ /* laat leeg of geef subtiele achtergrond */ }
 /* kleuren exact gelijk aan je bestaande bar-prod / bar-mont */
 .plan-cell .bar.bar-split .bar-half.prod{ background:#b7f0c2; }
 .plan-cell .bar.bar-split .bar-half.mont{ background:#f6c1f3; }
+
+
+/* 2-koloms layout: links vaste breedte, rechts de dagen */
+.grid-row{
+  display:grid;
+  grid-template-columns: 360px 1fr; /* pas aan naar wens */
+  align-items: stretch;
+}
+
+.row-left{
+  padding: 10px 12px;
+  border-right: 1px solid var(--line, #e5e7eb);
+}
+
+.row-cells{
+  display:grid;
+  grid-template-columns: repeat(var(--days, 7), 1fr);
+}
+
+.day-cell{
+  min-height: 34px;
+  border-right: 1px solid var(--line, #e5e7eb);
+  border-bottom: 1px solid var(--line, #e5e7eb);
+}
