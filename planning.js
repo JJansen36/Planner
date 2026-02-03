@@ -466,12 +466,10 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
    
 
     
-// project dagcellen + oplever-marker
-const projLabels = buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates);
-
 // tel ingeplande mensen per dag op over alle secties van dit project
 const projAssignByDay = {};
 const secs = sectiesByProject.get(pid) || [];
+
 for (const dd of dates) {
   const iso = toISODate(dd);
   let prod = 0, mont = 0;
@@ -492,9 +490,24 @@ for (const dd of dates) {
   projAssignByDay[iso] = { prod, mont };
 }
 
-// gebruik een project-variant van appendDayCells zodat badges zichtbaar worden
+// ✅ labels voor projectregel: op basis van assignments
+// - alleen prod => "productie"
+// - alleen mont => "montage"
+// - beide => "productie" (of kies "bar-generic" als je liever neutraal wil)
+const projLabels = dates.map(d => {
+  const iso = toISODate(d);
+  const prod = Number(projAssignByDay?.[iso]?.prod || 0);
+  const mont = Number(projAssignByDay?.[iso]?.mont || 0);
+
+  if (prod > 0 && mont === 0) return "productie";
+  if (mont > 0 && prod === 0) return "montage";
+  if (prod > 0 && mont > 0) return "productie"; // of return "" en kleur generic
+  return "";
+});
+
 appendProjectDayCells(projRow, dates, projLabels, complISO, projAssignByDay);
 tbody.appendChild(projRow);
+
 
 // section rows (hidden by default)
     const secList = (sectiesByProject.get(pid) || []).slice()
@@ -1114,35 +1127,24 @@ function appendDayCells(tr, dates, labels, markerISO = ""){
   }
 }
 
-function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = {}){
-  for(let i=0;i<dates.length;i++){
+function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = {}) {
+  for (let i = 0; i < dates.length; i++) {
     const d = dates[i];
     const iso = toISODate(d);
     const label = labels[i] || "";
-
-    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+    const isStart = !!label && (i === 0 || labels[i - 1] !== label);
     const isMarker = markerISO && iso === markerISO;
 
     const td = document.createElement("td");
+    td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
 
-    // KLEUR:
-    // - Als er een label is (productie/montage) → dezelfde kleur als nu (10-2)
-    // - Als er géén label is maar er zijn wel assignments → kleur op basis van assignments
-    let cls = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
-    if (label) {
-      cls += ` ${barClass(label)}`;
-    } else {
-      const prod = Number(assignByDay?.[iso]?.prod || 0);
-      const mont = Number(assignByDay?.[iso]?.mont || 0);
-      if (prod > 0 && mont === 0) cls += " bar-prod";
-      if (mont > 0 && prod === 0) cls += " bar-mont";
-      if (prod > 0 && mont > 0) cls += " bar-generic"; // of kies zelf (bijv. bar-prod)
-    }
-    td.className = cls;
-
-    // TEKST + BADGES
     let html = "";
-    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
+
+    // ✅ Als er een label is: altijd een pill tonen (met tekst alleen op start)
+    if (label) {
+      html += `<div class="bar">${isStart ? escapeHtml(label) : "&nbsp;"}</div>`;
+    }
+
     if (isMarker) html += `<div class="deadline">oplever</div>`;
 
     const prod = Number(assignByDay?.[iso]?.prod || 0);
@@ -1154,6 +1156,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
     tr.appendChild(td);
   }
 }
+
 
 // like appendDayCells, but makes section-day cells clickable for assignments
 function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
