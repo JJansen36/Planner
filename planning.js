@@ -4,8 +4,9 @@ import { startOfISOWeek, addDays, toISODate, parseISODate } from "./utils.js";
 const sb = makeSupabaseClient();
 
 const el = (id) => document.getElementById(id);
-const gridEl = el("plannerGrid");
-const statusEl = el("plannerStatus");
+let gridEl = null;
+let statusEl = null;
+
 
 const RANGE_DAYS = 56; // 8 weken zoals je PDF-screens
 let rangeStart = startOfISOWeek(new Date()); // maandag
@@ -40,6 +41,19 @@ async function init(){
 
   const { data: sess } = await sb.auth.getSession();
   console.log("session:", sess?.session?.user?.id, "role authenticated expected");
+
+  gridEl = el("plannerGrid");
+statusEl = el("plannerStatus");
+
+// Als status ontbreekt: maak een dummy zodat je script niet crasht
+if (!statusEl) statusEl = { textContent: "" };
+
+// Als grid ontbreekt: stop met nette melding (anders kun je toch niets renderen)
+if (!gridEl) {
+  console.error("plannerGrid ontbreekt in HTML (id='plannerGrid').");
+  return;
+}
+
 
   loadAndRender();
 }
