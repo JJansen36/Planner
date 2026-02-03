@@ -1131,74 +1131,34 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
   for (let i = 0; i < dates.length; i++) {
     const d = dates[i];
     const iso = toISODate(d);
+
+    const prod = Number(assignByDay?.[iso]?.prod || 0);
+    const mont = Number(assignByDay?.[iso]?.mont || 0);
+
     const label = labels[i] || "";
     const isStart = !!label && (i === 0 || labels[i - 1] !== label);
     const isMarker = markerISO && iso === markerISO;
 
     const td = document.createElement("td");
-    td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+    // cel-kleur bepalen op basis van assignments (niet alleen label)
+    let cls = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+    if (prod > 0 && mont > 0) cls += " bar-both";
+    else if (prod > 0) cls += " bar-prod";
+    else if (mont > 0) cls += " bar-mont";
+    else if (label) cls += ` ${barClass(label)}`; // fallback
+
+    td.className = cls;
 
     let html = "";
 
-    // assignments telling
-    const prod = Number(assignByDay?.[iso]?.prod || 0);
-    const mont = Number(assignByDay?.[iso]?.mont || 0);
-
-    // ✅ precies 1 bar renderen
-    if (label) {
-      if (prod > 0 && mont > 0) {
-        // split bar (groen + paars in 1 pill)
-        html += `
-          <div class="bar bar-split">
-            <div class="bar-half bar-prod">${isStart ? "" : "&nbsp;"}</div>
-            <div class="bar-half bar-mont">${isStart ? "" : "&nbsp;"}</div>
-          </div>
-        `;
-      } else {
-        // normale bar
-        html += `<div class="bar">${isStart ? escapeHtml(label) : "&nbsp;"}</div>`;
-      }
-    }
-
+    // deadline marker
     if (isMarker) html += `<div class="deadline">oplever</div>`;
 
-    td.innerHTML = html;
-    tr.appendChild(td);
-  }
-}
-
-
-
-// like appendDayCells, but makes section-day cells clickable for assignments
-function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
-  for(let i=0;i<dates.length;i++){
-    const d = dates[i];
-    const iso = toISODate(d);
-
-    const label = labels[i] || "";
-    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
-    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
-
-    // ✅ bepaal "effective label" (als er geen section_work label is, maar wel assignments)
-    const effectiveLabel =
-      label ||
-      (prod > 0 && mont === 0 ? "productie" :
-       mont > 0 && prod === 0 ? "montage" :
-       prod > 0 && mont > 0 ? "productie" : ""); // bij beide: label kan iets zijn, kleur doen we met split
-
-    const isStart = !!effectiveLabel && (i === 0 || (labels[i-1] || "") !== (labels[i] || ""));
-
-    const td = document.createElement("td");
-    td.className = `cell plan-cell section-click ${effectiveLabel ? barClass(effectiveLabel) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
-    td.dataset.sectionId = String(sectionId || "");
-    td.dataset.workDate = iso;
-
-    let html = "";
-
-    // ✅ bar tekenen zodra er iets gepland is (via label OF via assignments)
-    if (effectiveLabel) {
+    // bar tekenen als er iets gepland is
+    if (prod > 0 || mont > 0 || label) {
       if (prod > 0 && mont > 0) {
-        // split bar: groen boven, paars onder (samen even hoog als 1 pill)
+        // split bar (2 lijntjes samen hoogte van 1 blokje)
         html += `
           <div class="bar bar-split">
             <div class="bar-half prod"></div>
@@ -1206,11 +1166,13 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
           </div>
         `;
       } else {
-        html += `<div class="bar">${isStart ? escapeHtml(effectiveLabel) : "&nbsp;"}</div>`;
+        // normale bar, tekst alleen op start
+        const txt = isStart ? (label || (prod > 0 ? "pro" : "mon")) : "&nbsp;";
+        html += `<div class="bar">${txt}</div>`;
       }
     }
 
-    // badges blijven zoals je al had
+    // badges (aantallen)
     if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
     if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
 
@@ -1218,4 +1180,58 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
     tr.appendChild(td);
   }
 }
+
+
+
+
+// like appendDayCells, but makes section-day cells clickable for assignments
+function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay) {
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i];
+    const iso = toISODate(d);
+
+    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+
+    const label = labels[i] || "";
+    const isStart = !!label && (i === 0 || labels[i - 1] !== label);
+
+    const td = document.createElement("td");
+    td.dataset.sectionId = String(sectionId || "");
+    td.dataset.workDate = iso;
+
+    // cel-kleur bepalen op basis van assignments, zodat het altijd klopt
+    let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
+    if (prod > 0 && mont > 0) cls += " bar-both";
+    else if (prod > 0) cls += " bar-prod";
+    else if (mont > 0) cls += " bar-mont";
+    else if (label) cls += ` ${barClass(label)}`;
+
+    td.className = cls;
+
+    let html = "";
+
+    // bar tekenen
+    if (prod > 0 && mont > 0) {
+      html += `
+        <div class="bar bar-split">
+          <div class="bar-half prod"></div>
+          <div class="bar-half mont"></div>
+        </div>
+      `;
+    } else if (prod > 0 || mont > 0 || label) {
+      // normale bar (tekst alleen op start)
+      const txt = isStart ? (label || (prod > 0 ? "pro" : "mon")) : "&nbsp;";
+      html += `<div class="bar">${txt}</div>`;
+    }
+
+    // badges
+    if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
+    if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
+
+    td.innerHTML = html;
+    tr.appendChild(td);
+  }
+}
+
 
