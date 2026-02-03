@@ -7,11 +7,31 @@ const el = (id) => document.getElementById(id);
 let gridEl = null;
 let statusEl = null;
 
+function ensureContainers(){
+  gridEl = el("plannerGrid");
+  statusEl = el("plannerStatus");
+
+  // status kan ontbreken in HTML: maak hem aan
+  if (!statusEl) {
+    statusEl = document.createElement("div");
+    statusEl.id = "plannerStatus";
+    statusEl.style.margin = "8px 0";
+  }
+
+  // grid kan ontbreken in HTML: maak hem aan
+  if (!gridEl) {
+    gridEl = document.createElement("div");
+    gridEl.id = "plannerGrid";
+  }
+
+  const host = document.querySelector(".planner-page") || document.querySelector("main") || document.body;
+  if (!statusEl.parentElement) host.appendChild(statusEl);
+  if (!gridEl.parentElement) host.appendChild(gridEl);
+}
 
 const RANGE_DAYS = 56; // 8 weken zoals je PDF-screens
 let rangeStart = startOfISOWeek(new Date()); // maandag
 
-// UI
 function bindUI(){
   const btnMenu = el("btnMenu");
   if (btnMenu) btnMenu.onclick = () => (location.href = "./index.html");
@@ -36,28 +56,19 @@ document.addEventListener("DOMContentLoaded", init);
 
 async function init(){
   await requireSession(sb);
+  bindUI();
+  ensureContainers();
 
-  bindUI(); // <-- toevoegen
+  // als statusEl om wat voor reden dan ook nog ontbreekt: dummy zodat je script niet crasht
+  if (!statusEl) statusEl = { textContent: "" };
 
-  const { data: sess } = await sb.auth.getSession();
-  console.log("session:", sess?.session?.user?.id, "role authenticated expected");
-
-  gridEl = el("plannerGrid");
-statusEl = el("plannerStatus");
-
-// Als status ontbreekt: maak een dummy zodat je script niet crasht
-if (!statusEl) statusEl = { textContent: "" };
-
-// Als grid ontbreekt: stop met nette melding (anders kun je toch niets renderen)
-if (!gridEl) {
-  console.error("plannerGrid ontbreekt in HTML (id='plannerGrid').");
-  return;
-}
-
+  if (!gridEl) {
+    console.error("plannerGrid ontbreekt in HTML (id='plannerGrid') en kon niet aangemaakt worden.");
+    return;
+  }
 
   loadAndRender();
 }
-
 
 function monthNameNL(m){
   return ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"][m];
@@ -948,94 +959,107 @@ function pickKey(obj, keys){
   }
   return keys[0];
 }
-// -------- HELPERS, RENDERERS & FIXES (Vanaf hier plakken) --------
 
-function escapeHtml(s) {
+function escapeHtml(s){
   return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(s){
+  return escapeHtml(String(s ?? "")).replaceAll('"', "&quot;");
+}
+function cssEsc(s){
+  return String(s ?? "").replaceAll('"','\\"');
 }
 
-function escapeAttr(s) {
-  return String(s ?? "").replaceAll('"', "&quot;");
-}
-
-function cssEsc(s) {
-  return String(s ?? "").replace(/(:|\.|\[|\]|,|=|@)/g, "\\$1");
-}
-
-// Deze functies ontbraken in je script maar zijn nodig voor de project-balken:
-function buildDayLabelsForProject(pid, sectiesByProject, sectIdKey, workMap, dates) {
-  const labels = {};
-  const projectSections = sectiesByProject.get(pid) || [];
-  dates.forEach(d => {
-    const iso = toISODate(d);
-    let type = "";
-    // Check alle secties van dit project of er op deze dag werk is
-    for (const s of projectSections) {
-      const sid = String(s[sectIdKey] || s.section_id || "");
-      const workRows = workMap.get(sid)?.get(iso) || [];
-      if (workRows.length > 0) {
-        type = normalizeType(workRows[0].work_type);
-        break; 
-      }
-    }
-    labels[iso] = type;
-  });
-  return labels;
-}
-
-function buildDayLabelsForSection(sid, workMap, dates) {
-  const labels = {};
-  const dm = workMap.get(String(sid));
-  dates.forEach(d => {
+// -------- DAY LABEL BUILDERS (1 cel per dag) --------
+function buildDayLabelsForSection(sectionId, workMap, dates){
+  const dm = workMap.get(sectionId);
+  return dates.map(d=>{
     const iso = toISODate(d);
     const rows = dm?.get(iso) || [];
-    labels[iso] = rows.length > 0 ? normalizeType(rows[0].work_type) : "";
-  });
-  return labels;
-}
-
-function appendDayCells(tr, dates, labels, complISO) {
-  dates.forEach(d => {
-    const iso = toISODate(d);
-    const td = document.createElement("td");
-    const label = labels[iso] || "";
-    
-    // Bepaal de klasse voor de kleur (bar-prod, bar-mont, etc)
-    td.className = `cell ${isWeekend(d) ? "wknd" : ""} ${label ? "has-work " + barClass(label) : ""}`;
-    
-    // Teken de deadline marker uit de PDF als de datum matcht
-    if (complISO && iso === complISO) {
-      const marker = document.createElement("div");
-      marker.className = "deadline-marker-dot";
-      marker.title = "Opleverdatum";
-      td.appendChild(marker);
+    if(!rows.length) return "";
+    const byType = {};
+    for(const r of rows){
+      const t = normalizeType(r.work_type);
+      byType[t] = (byType[t]||0) + Number(r.hours||0);
     }
-    
-    tr.appendChild(td);
+    let bestT = "", bestH = 0;
+    for(const [t,h] of Object.entries(byType)){
+      if(h > bestH){ bestH = h; bestT = t; }
+    }
+    return bestT || "";
   });
 }
 
-function appendSectionDayCells(tr, dates, labels, sid, countByDay) {
-  dates.forEach(d => {
+function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates){
+  const secs = sectiesByProject.get(projectId) || [];
+  return dates.map(d=>{
     const iso = toISODate(d);
+    const counts = {};
+    for(const s of secs){
+      const sid = s?.[sectIdKey];
+      const rows = workMap.get(sid)?.get(iso) || [];
+      for(const r of rows){
+        const t = normalizeType(r.work_type);
+        counts[t] = (counts[t]||0) + Number(r.hours||0);
+      }
+    }
+    let bestT="", bestH=0;
+    for(const [t,h] of Object.entries(counts)){
+      if(h>bestH){ bestH=h; bestT=t; }
+    }
+    return bestT || "";
+  });
+}
+
+function appendDayCells(tr, dates, labels, markerISO = ""){
+  for(let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const iso = toISODate(d);
+    const label = labels[i] || "";
+
+    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+    const isMarker = markerISO && iso === markerISO;
+
     const td = document.createElement("td");
-    const label = labels[iso] || "";
-    const count = countByDay[iso] || 0;
-    
-    td.className = `cell section-click ${isWeekend(d) ? "wknd" : ""} ${label ? "has-work " + barClass(label) : ""}`;
-    td.dataset.sectionId = sid;
+    td.className = `cell plan-cell ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+    // Bar tekst alleen op start van blok
+    let html = "";
+    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
+
+    // Oplever-marker: altijd tekenen als het die dag is
+    if (isMarker) html += `<div class="deadline">oplever</div>`;
+
+    td.innerHTML = html;
+    tr.appendChild(td);
+  }
+}
+
+// like appendDayCells, but makes section-day cells clickable for assignments
+function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay){
+  for(let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const iso = toISODate(d);
+    const label = labels[i] || "";
+    const isStart = !!label && (i === 0 || labels[i-1] !== label);
+
+    const td = document.createElement("td");
+    td.className = `cell plan-cell section-click ${label ? barClass(label) : ""} ${isWeekend(d) ? "wknd" : ""}`.trim();
+    td.dataset.sectionId = String(sectionId || "");
     td.dataset.workDate = iso;
-    
-    // Toon het aantal ingeplande mensen (zoals in de PDF)
-    if (count > 0) {
-      td.innerHTML = `<span class="assign-count">${count}</span>`;
-    }
-    
+
+    let html = "";
+    if (isStart) html += `<div class="bar">${escapeHtml(label)}</div>`;
+
+    const cnt = Number(assignCountByDay?.[iso] || 0);
+    if (cnt > 0) html += `<div class="assign-badge">${cnt}</div>`;
+
+    td.innerHTML = html;
     tr.appendChild(td);
-  });
+  }
 }
