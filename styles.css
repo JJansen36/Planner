@@ -772,3 +772,20 @@ td.section-click{
   border-bottom-left-radius:999px;
   border-bottom-right-radius:999px;
 }
+/* split pill (groen + paars in 1 bar) */
+.bar.bar-split{
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 18px;          /* moet gelijk zijn aan jouw normale .bar hoogte */
+  border-radius: 999px;  /* pill */
+}
+
+.bar.bar-split .bar-half{
+  flex: 1;
+}
+
+/* kleuren (pas aan als jij al variabelen gebruikt) */
+.bar.bar-split .bar-half.prod{ background: #86efac; }  /* groen */
+.bar.bar-split .bar-half.mont{ background: #a78bfa; }  /* paars */
