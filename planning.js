@@ -11,19 +11,39 @@ const RANGE_DAYS = 56; // 8 weken zoals je PDF-screens
 let rangeStart = startOfISOWeek(new Date()); // maandag
 
 // UI
-el("btnMenu").onclick = () => (location.href = "./index.html");
-el("btnLogout").onclick = async () => { await sb.auth.signOut(); location.href = "./login.html"; };
-el("btnToday").onclick = () => { rangeStart = startOfISOWeek(new Date()); loadAndRender(); };
-el("btnPrev").onclick = () => { rangeStart = addDays(rangeStart, -RANGE_DAYS); loadAndRender(); };
-el("btnNext").onclick = () => { rangeStart = addDays(rangeStart, +RANGE_DAYS); loadAndRender(); };
-el("btnRefresh").onclick = () => loadAndRender();
+function bindUI(){
+  const btnMenu = el("btnMenu");
+  if (btnMenu) btnMenu.onclick = () => (location.href = "./index.html");
+
+  const btnLogout = el("btnLogout");
+  if (btnLogout) btnLogout.onclick = async () => { await sb.auth.signOut(); location.href = "./login.html"; };
+
+  const btnToday = el("btnToday");
+  if (btnToday) btnToday.onclick = () => { rangeStart = startOfISOWeek(new Date()); loadAndRender(); };
+
+  const btnPrev = el("btnPrev");
+  if (btnPrev) btnPrev.onclick = () => { rangeStart = addDays(rangeStart, -RANGE_DAYS); loadAndRender(); };
+
+  const btnNext = el("btnNext");
+  if (btnNext) btnNext.onclick = () => { rangeStart = addDays(rangeStart, +RANGE_DAYS); loadAndRender(); };
+
+  const btnRefresh = el("btnRefresh");
+  if (btnRefresh) btnRefresh.onclick = () => loadAndRender();
+}
 
 document.addEventListener("DOMContentLoaded", init);
 
 async function init(){
   await requireSession(sb);
+
+  bindUI(); // <-- toevoegen
+
+  const { data: sess } = await sb.auth.getSession();
+  console.log("session:", sess?.session?.user?.id, "role authenticated expected");
+
   loadAndRender();
 }
+
 
 function monthNameNL(m){
   return ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"][m];
