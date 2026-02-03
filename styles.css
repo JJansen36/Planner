@@ -859,3 +859,7 @@ td.details-fill-wide .details-box{
   margin: 0 !important;
   padding: 8px 10px;                  /* padding binnen de box, niet in de td */
 }
+
+td.details-fill-wide .details-box{
+  transform: translateX(-1px);
+}
