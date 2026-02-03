@@ -586,15 +586,18 @@ appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werkne
       secDetailsFill.colSpan = dates.length;
       secDetailsFill.className = "cell details-fill details-fill-wide";
 
-      secDetailsFill.innerHTML = `
-        <div class="details-box">
-          <div class="details-title">Sectie gegevens</div>
-          <div class="details-line">Opleverdatum: <b>${escapeHtml(complTxt || "-")}</b></div>
-          <div class="details-line">Werkvoorbereiding: <b>${escapeHtml(formatHoursCell(sumPrepS))}</b> uur</div>
-          <div class="details-line">Productie: <b>${escapeHtml(formatHoursCell(sumProdS))}</b> uur</div>
-          <div class="details-line">Montage: <b>${escapeHtml(formatHoursCell(sumMontS))}</b> uur</div>
-        </div>
-      `;
+secDetailsFill.innerHTML = `
+  <div class="details-wrap">
+    <div class="details-box">
+      <div class="details-title">Sectie gegevens</div>
+      <div class="details-line">Opleverdatum: <b>${escapeHtml(complTxt || "-")}</b></div>
+      <div class="details-line">Werkvoorbereiding: <b>${escapeHtml(formatHoursCell(sumPrepS))}</b> uur</div>
+      <div class="details-line">Productie: <b>${escapeHtml(formatHoursCell(sumProdS))}</b> uur</div>
+      <div class="details-line">Montage: <b>${escapeHtml(formatHoursCell(sumMontS))}</b> uur</div>
+    </div>
+  </div>
+`;
+
       secDetails.appendChild(secDetailsFill);
 
 
