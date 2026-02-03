@@ -584,7 +584,7 @@ appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werkne
       // rechts: details-box over de hele kalenderbreedte (groene vlak)
       const secDetailsFill = document.createElement("td");
       secDetailsFill.colSpan = dates.length;
-      secDetailsFill.className = "cell details-fill";
+      secDetailsFill.className = "cell details-fill details-fill-wide";
 
       secDetailsFill.innerHTML = `
         <div class="details-box">
