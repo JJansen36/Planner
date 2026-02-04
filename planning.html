@@ -55,6 +55,37 @@
   </div>
 
   <script type="module" src="planning.js"></script>
+
+  <div class="modal-backdrop" id="settingsBackdrop" hidden></div>
+
+<div class="modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="settingsTitle">Instellingen</div>
+      <button class="icon-btn" id="btnSettingsClose" aria-label="Sluiten">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <label class="field">
+        <div class="field-label">Planningsfactor</div>
+        <div class="field-row">
+          <input type="range" id="planFactor" min="50" max="120" step="5" />
+          <div class="chip" id="planFactorLabel">80%</div>
+        </div>
+        <div class="field-help">
+          Hiermee kun je plannen op bv. 80% van de beschikbare uren (buffer). Later uitbreidbaar met meer regels.
+        </div>
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" id="btnSettingsCancel">Annuleren</button>
+      <button class="btn primary" id="btnSettingsSave">Opslaan</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
+
 
