@@ -7,6 +7,8 @@ const el = (id) => document.getElementById(id);
 let gridEl = null;
 let statusEl = null;
 
+const HOURS_PER_PERSON_DAY = 7.75;
+
 // ---- Settings (uitbreidbaar) ----
 const SETTINGS_KEY = "lovd_planner_settings_v1";
 
@@ -49,6 +51,40 @@ function openSettingsModal(){
 function closeSettingsModal(){
   el("settingsBackdrop").hidden = true;
   el("settingsModal").hidden = true;
+}
+
+function buildPlannedSetsByDay(planningItems){
+  // output: { "2026-02-10": { pro:Set(uuid), mo:Set(uuid) }, ... }
+  const out = Object.create(null);
+
+  for (const it of (planningItems || [])) {
+    const d = it.work_date;                 // "YYYY-MM-DD"
+    const wid = it.werknemer_id;            // uuid
+    const kind = (it.work_type || it.kind || it.type || "").toLowerCase();
+
+
+    if (!d || !wid) continue;
+
+    // normaliseer
+    const bucket =
+      kind === "pro" || kind === "productie" ? "pro" :
+      kind === "mo"  || kind === "montage"  ? "mo"  :
+      null;
+
+    if (!bucket) continue;
+
+    if (!out[d]) out[d] = { pro: new Set(), mo: new Set() };
+    out[d][bucket].add(wid);
+  }
+
+  return out;
+}
+
+function fmtHours(n){
+  // 31 -> "31", 23.25 -> "23,25"
+  const v = Math.round((n + Number.EPSILON) * 100) / 100;
+  const s = (v % 1 === 0) ? String(v) : v.toFixed(2);
+  return s.replace(".", ",").replace(/,00$/, "");
 }
 
 // Dit is de "haak" die jij straks laat verwijzen naar je eigen render-functie
@@ -570,20 +606,24 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
 
   // planned prod/mont per day
   // -> op basis van section_assignments + capacity_entries (capByEmp)
-  const plannedProdByDay = {};
-  const plannedMontByDay = {};
+// planned prod/mont per day (unieke medewerkers per dag * 7,75 * planFactor)
+const plannedProdByDay = {};
+const plannedMontByDay = {};
 
-  for (const a of assigns || []) {
-    const d = String(a.work_date || "");
-    const emp = String(a.werknemer_id || "");
-    const wt = String(a.work_type || "").toLowerCase();
-    if (!d || !emp || !wt) continue;
+const plannedSetsByDay = buildPlannedSetsByDay(assigns || []);
+const pf = (settings.planFactor ?? 1);
 
-    const h = Number(capByEmp.get(emp)?.get(d) || 0);
+for (const d of dates){
+  const iso = toISODate(d);
+  const sets = plannedSetsByDay[iso];
 
-    if (wt === "productie") plannedProdByDay[d] = (plannedProdByDay[d] || 0) + h;
-    if (wt === "montage")  plannedMontByDay[d]  = (plannedMontByDay[d]  || 0) + h;
-  }
+  const prodCount = sets?.pro?.size || 0;
+  const montCount = sets?.mo?.size || 0;
+
+  plannedProdByDay[iso] = prodCount * HOURS_PER_PERSON_DAY * pf;
+  plannedMontByDay[iso] = montCount * HOURS_PER_PERSON_DAY * pf;
+}
+
 
   // build table
   const table = document.createElement("table");
