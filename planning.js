@@ -716,7 +716,7 @@ const tdTotalLeft = document.createElement("td");
 tdTotalLeft.className = "rowhdr sticky-left cap-total-left";
 tdTotalLeft.innerHTML = `
   <button class="expander cap-expander" data-cap="${capKey}" aria-label="toggle capaciteit">▶</button>
-  <b>Totaal</b>
+  <b>Uren beschikbaar</b>
 `;
 trTotal.appendChild(tdTotalLeft);
 
@@ -762,31 +762,6 @@ for (const w of werknemers || []) {
   tbody.appendChild(tr);
 }
 
-
-
-  // Totals / beschikbaar rows (zoals PDF onderin)
-  tbody.appendChild(spacerRow(dates.length));
-
-  // Uren beschikbaar (cap - gepland prod - gepland mont)
-  tbody.appendChild(sectionHeaderRow("Uren beschikbaar", dates.length, true));
-
-  const trAvail = document.createElement("tr");
-  trAvail.className = "sum-row";
-  trAvail.appendChild(leftRowHdrCell("", "sticky-left"));
-
-  for(const d of dates){
-    const iso = toISODate(d);
-    const capT = capTotalByDay[iso] || 0;
-    const prod = plannedProdByDay[iso] || 0;
-    const mont = plannedMontByDay[iso] || 0;
-    const avail = capT - (prod + mont);
-
-    const td = document.createElement("td");
-    td.className = `cell sum-cell ${availabilityClass(avail)} ${isWeekend(d) ? "wknd" : ""}`;
-    td.textContent = formatHoursCell(avail);
-    trAvail.appendChild(td);
-  }
-  tbody.appendChild(trAvail);
 
   // Gepland productie
   tbody.appendChild(labelRow("Gepland productie", dates, plannedProdByDay));
