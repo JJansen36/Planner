@@ -913,7 +913,7 @@
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
-
+    applyZebraVisible();
 
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
@@ -1330,6 +1330,8 @@
     gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
       if (String(tr.dataset.parent || "") === pid) {
         tr.classList.toggle("hidden", !open);
+        applyZebraVisible();
+
 
         if (!open && tr.classList.contains("section-details-row")) {
           tr.classList.add("hidden");
@@ -1341,6 +1343,9 @@
       gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"] .expander-sec`).forEach(b => {
         b.textContent = "▶";
       });
+
+      applyZebraVisible();
+
     }
   }
 
@@ -1369,6 +1374,8 @@
 
       const nowHidden = match.classList.toggle("hidden");
       btn.textContent = nowHidden ? "▶" : "▼";
+      applyZebraVisible();
+
     });
   });
 
@@ -1381,6 +1388,7 @@
       const open = btn.classList.toggle("open");
       btn.textContent = open ? "▼" : "▶";
       toggleRowsByKey(key, open);
+      applyZebraVisible();
     });
   });
 
@@ -1607,6 +1615,7 @@
   function toggleRowsByKey(key, open){
     const rows = gridEl.querySelectorAll(`tr[data-cap-parent="${cssEsc(key)}"]`);
     rows.forEach(r => r.classList.toggle("hidden", !open));
+    applyZebraVisible();
   }
 
   // -------- DAY LABEL BUILDERS (1 cel per dag) --------
@@ -1813,4 +1822,32 @@
     }
   }
 
+function applyZebraVisible(){
+  const tbody = gridEl?.querySelector(".planner-table tbody");
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  let i = 0;
+
+  for (const tr of rows) {
+    // rijen die je nooit zebra wil geven
+    if (
+      tr.classList.contains("spacer") ||
+      tr.classList.contains("block-title") ||
+      tr.classList.contains("info-row")
+    ){
+      tr.classList.remove("zebra");
+      continue;
+    }
+
+    // verborgen rijen tellen NIET mee
+    if (tr.classList.contains("hidden")){
+      tr.classList.remove("zebra");
+      continue;
+    }
+
+    tr.classList.toggle("zebra", (i % 2) === 1);
+    i++;
+  }
+}
 
