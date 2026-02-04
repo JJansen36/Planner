@@ -1032,3 +1032,21 @@ td.cap-emp-click:hover{
 .planner-table tbody tr.zebra > td.wknd{
   background: var(--chip-blue);
 }
+
+/* Zebra rij: trek door over alle cellen */
+.planner-table tbody tr.zebra > td{
+  background: #f5f6f8; /* lichtgrijs */
+}
+
+/* Weekend blijft weekend-kleur (overschrijft zebra) */
+.planner-table tbody tr.zebra > td.wknd{
+  background: var(--chip-blue); /* of jouw weekend kleur */
+}
+
+/* Balkjes en deadline moeten gewoon blijven */
+.planner-table tbody tr.zebra > td .bar,
+.planner-table tbody tr.zebra > td .deadline,
+.planner-table tbody tr.zebra > td .assign-badge{
+  position: relative;
+  z-index: 1;
+}
