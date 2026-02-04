@@ -883,3 +883,5 @@ td.details-fill::after{
   display:block;
   clear:both;
 }
+
+td.details-fill{ outline:2px solid red; }
