@@ -1169,4 +1169,13 @@ td.cap-emp-click:hover{
   font-weight: 400 !important;
   font-size: 12px !important;
 }
+/* FIX: modal mag NIET fullscreen (die regel overschrijft je nette modal) */
+.modal{
+  position: relative !important;
+  inset: auto !important;
+  display: block !important;
+  padding: 0 !important;
+  align-items: unset !important;
+  justify-content: unset !important;
+}
 
