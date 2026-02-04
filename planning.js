@@ -875,7 +875,17 @@ if (nameEl) {
             return `
               <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
               <div class="value" style="gap:10px;">
-                <input class="input" type="number" step="0.5" min="0" data-iso="${iso}" value="${val ? String(val).replace(".", ",") : ""}" placeholder="0" />
+                <input
+                  class="input"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.25"
+                  min="0"
+                  data-iso="${iso}"
+                  value="${val ? String(val).replace(".", ",") : ""}"
+                  placeholder="0"
+                />
+
               </div>
             `;
           }).join("")}
@@ -892,7 +902,7 @@ if (nameEl) {
 
     btnPrevW.onclick = () => { wkStart = addDays(wkStart, -7); renderWeek(); };
     btnNextW.onclick = () => { wkStart = addDays(wkStart, +7); renderWeek(); };
-    
+
     btnApplyEven.onclick = () => applyToFutureWeeks("even");
     btnApplyOdd.onclick  = () => applyToFutureWeeks("odd");
     btnApplyAll.onclick  = () => applyToFutureWeeks("all");
