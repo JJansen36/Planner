@@ -546,7 +546,6 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
       <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
       <span class="projtext">
         ${escapeHtml(nr)} - ${escapeHtml(kl)} - ${escapeHtml(nm)}
-        ${complTxt ? `<span class="completiondate"> • oplever: ${escapeHtml(complTxt)}</span>` : ""}
       </span>
     `;
     projRow.appendChild(left);
