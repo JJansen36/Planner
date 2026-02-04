@@ -900,3 +900,11 @@ td.cap-emp-click:hover{
 .planner-table td.sum-label {
   font-size: 12px;
 }
+
+.cap-total-row .cap-total-left{
+  background: #fff; /* of jouw panel kleur */
+}
+
+.cap-expander{
+  margin-right: 8px;
+}
