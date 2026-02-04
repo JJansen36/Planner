@@ -104,6 +104,56 @@ function formatDateNL(v){
 let assignModal = null;
 
 function ensureAssignModal(){
+
+  // -------- SECTION DETAILS MODAL (sectie gegevens) --------
+let secModal = null;
+
+function ensureSecModal(){
+  if (secModal) return secModal;
+
+  const wrap = document.getElementById("secModalBackdrop");
+  if (!wrap) {
+    console.warn("secModalBackdrop ontbreekt in planning.html");
+    return null;
+  }
+
+  const close = () => wrap.classList.remove("show");
+
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap) close();
+  });
+
+  const c1 = document.getElementById("secModalClose");
+  const c2 = document.getElementById("secModalClose2");
+  if (c1) c1.onclick = close;
+  if (c2) c2.onclick = close;
+
+  secModal = { wrap, close };
+  return secModal;
+}
+
+function openSectionDetailsModal({ sid, dateISO, sectie, totals, complTxt }){
+  const modal = ensureSecModal();
+  if (!modal) return;
+
+  const sub = document.getElementById("secModalSub");
+  const body = document.getElementById("secModalBody");
+
+  if (sub) sub.textContent = `${dateISO} • ${sectie || "sectie"} • ${sid}`;
+  if (body) {
+    body.innerHTML = `
+      <div class="fieldgrid" style="grid-template-columns: 170px 1fr;">
+        <div class="label">Opleverdatum</div><div class="value">${escapeHtml(complTxt || "-")}</div>
+        <div class="label">Werkvoorbereiding</div><div class="value">${escapeHtml(formatHoursCell(totals.prep))} uur</div>
+        <div class="label">Productie</div><div class="value">${escapeHtml(formatHoursCell(totals.prod))} uur</div>
+        <div class="label">Montage</div><div class="value">${escapeHtml(formatHoursCell(totals.mont))} uur</div>
+      </div>
+    `;
+  }
+
+  modal.wrap.classList.add("show");
+}
+
   if (assignModal) return assignModal;
 
   const wrap = document.createElement("div");
@@ -287,6 +337,45 @@ function renderPlanner({ start, days, projecten, secties, work, cap, werknemers,
   for (const s of secties || []) {
     if (s?.id) sectLookup.set(String(s.id), String(s.id));
     if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
+  }
+  // snelle lookup: sectionId -> sectie object
+  const sectById = new Map();
+  for (const s of secties || []) {
+    const sid = s?.[sectIdKey]
+      ? String(s[sectIdKey])
+      : (s?.section_id ? String(s.section_id) : null);
+    if (sid) sectById.set(sid, s);
+  }
+
+  // snelle lookup: projectId -> { complTxt }
+  const projById = new Map();
+  for (const p of projecten || []) {
+    const pid = p?.[projIdKey];
+    if (!pid) continue;
+    const complRaw = p?.[completionKey] ?? "";
+    projById.set(String(pid), {
+      complTxt: formatDateNL(complRaw),
+    });
+  }
+
+  // helper: totals per sectie (op basis van workMap + huidige dates)
+  function calcSectionTotals(sid){
+    let sumPrepS = 0, sumProdS = 0, sumMontS = 0;
+    const dmS = workMap.get(String(sid));
+    if (dmS) {
+      for (const d of dates) {
+        const iso = toISODate(d);
+        const rows = dmS.get(iso) || [];
+        for (const r of rows) {
+          const wt = String(r.work_type || "");
+          const h  = Number(r.hours || 0);
+          if (isPrepType(wt)) sumPrepS += h;
+          if (isProdType(wt)) sumProdS += h;
+          if (isMontType(wt)) sumMontS += h;
+        }
+      }
+    }
+    return { prep: sumPrepS, prod: sumProdS, mont: sumMontS };
   }
 
   // map secties per project
@@ -687,6 +776,27 @@ secDetailsFill.innerHTML = `
     const sid = String(td.dataset.sectionId || "");
     const dateISO = String(td.dataset.workDate || "");
     if (!sid || !dateISO) return;
+
+        // ALT+klik => sectie gegevens popup (laat assignments modal met gewone klik)
+    if (ev.altKey) {
+      const sObj = sectById.get(String(sid));
+      const sectieNaam = sObj?.[sectNameKey] || sObj?.name || sObj?.naam || "sectie";
+
+      const pid = sObj?.[sectProjKey] ? String(sObj[sectProjKey]) : "";
+      const complTxt = projById.get(pid)?.complTxt || "";
+
+      const totals = calcSectionTotals(sid);
+
+      openSectionDetailsModal({
+        sid,
+        dateISO,
+        sectie: sectieNaam,
+        totals,
+        complTxt
+      });
+      return;
+    }
+
 
     const modal = ensureAssignModal();
     modal.wrap.classList.add("show");
