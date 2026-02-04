@@ -864,11 +864,11 @@ td.details-fill-wide .details-box{
   transform: translateX(-1px);
 }
 
-/* ===== Sectie gegevens: links uitlijnen in details-rij ===== */
+/* ===== Sectie gegevens: force links in de brede details-cel ===== */
 td.details-fill,
 td.details-fill-wide{
+  padding: 0 !important;
   text-align: left !important;
-  padding: 0 !important;              /* td padding uit */
   vertical-align: top !important;
 }
 
@@ -877,12 +877,7 @@ td.details-fill-wide .details-wrap{
   display: block !important;
   width: 100% !important;
   margin: 0 !important;
-  padding: 8px 10px !important;       /* padding IN de wrap */
+  padding: 8px 10px !important;     /* padding hier, niet op td */
   text-align: left !important;
 }
 
-td.details-fill .details-box,
-td.details-fill-wide .details-box{
-  display: block !important;
-  margin: 0 !important;
-}
