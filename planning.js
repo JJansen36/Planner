@@ -900,6 +900,17 @@
     // Gepland montage
     tbody.appendChild(labelRow("Gepland montage", dates, plannedMontByDay));
 
+    // Saldo (capaciteit - gepland)
+    const saldoByDay = {};
+    for (const d of dates) {
+      const iso = toISODate(d);
+      const capTot = Number(capTotalByDay?.[iso] || 0);
+      const planned = Number(plannedProdByDay?.[iso] || 0) + Number(plannedMontByDay?.[iso] || 0);
+      // afronden op 2 decimalen om “-0” en float-ruis te vermijden
+      saldoByDay[iso] = Math.round((capTot - planned) * 100) / 100;
+    }
+    tbody.appendChild(balanceRow("Saldo", dates, saldoByDay));
+
     // (optioneel) Capaciteit met nieuwe order / Nieuwe order: laat ik als “hook” staan
     // omdat ik jouw project_orders schema nog niet gezien heb.
     // Je kunt dit later 1-op-1 invullen.
@@ -1564,6 +1575,30 @@
     td.className = "cell info-cell";
     td.textContent = "";
     tr.appendChild(td);
+    return tr;
+  }
+  
+  function balanceRow(label, dates, byDay){
+    const tr = document.createElement("tr");
+    tr.className = "balance-row";
+    tr.appendChild(leftRowHdrCell(label, "sticky-left balance-label"));
+
+    for(const d of dates){
+      const iso = toISODate(d);
+      const v = Number(byDay?.[iso] || 0);
+
+      const td = document.createElement("td");
+      td.className = `cell balance-cell ${isWeekend(d) ? "wknd" : ""}`;
+
+      // status op basis van resultaat
+      const eps = 0.001; // tolerant voor -0.00001 etc.
+      if (v > eps) td.classList.add("pos");
+      else if (v < -eps) td.classList.add("neg");
+      else td.classList.add("zero");
+
+      td.textContent = formatHoursCell(v);
+      tr.appendChild(td);
+    }
     return tr;
   }
 
