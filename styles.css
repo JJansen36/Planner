@@ -1082,3 +1082,11 @@ td.cap-emp-click:hover{
 .planner-table tbody tr.zebra > td.sticky-left{
   background: #f5f6f8 !important;
 }
+
+/* Zebra UIT voor capaciteit + som-rijen */
+.planner-table tbody tr.cap-total-row.zebra > td,
+.planner-table tbody tr.cap-emp-row.zebra > td,
+.planner-table tbody tr.sum-row.zebra > td{
+  background: transparent !important;
+}
+
