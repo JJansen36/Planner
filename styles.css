@@ -1150,3 +1150,18 @@ td.cap-emp-click:hover{
   position: relative;
   z-index: 1;
 }
+
+/* Saldo rij (capaciteit - gepland) */
+.balance-row .balance-label{
+  background:#fff;
+  font-weight:700;
+}
+
+.planner-table td.balance-cell{
+  font-weight:700;
+}
+
+/* kleuren */
+.planner-table td.balance-cell.pos{ background:#c7f7cf !important; }  /* groen */
+.planner-table td.balance-cell.neg{ background:#ffc6c6 !important; }  /* rood */
+.planner-table td.balance-cell.zero{ background:#ffe7b5 !important; } /* oranje */
