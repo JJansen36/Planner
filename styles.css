@@ -881,3 +881,9 @@ td.details-fill-wide .details-wrap{
   text-align: left !important;
 }
 
+td.cap-emp-click{
+  cursor:pointer;
+}
+td.cap-emp-click:hover{
+  background:#f8fafc;
+}
