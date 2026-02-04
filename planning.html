@@ -2,29 +2,11 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LOVD Planning — Capaciteit</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-  <!-- Section details modal -->
-<div id="secModalBackdrop" class="modal-backdrop">
-  <div class="modal assign-modal" role="dialog" aria-modal="true" aria-labelledby="secModalTitle">
-    <div class="hd">
-      <div>
-        <div id="secModalTitle" class="assign-title">Sectie gegevens</div>
-        <div id="secModalSub" class="assign-sub"></div>
-      </div>
-      <button class="btn small" id="secModalCloseBtn">Sluiten</button>
-    </div>
 
-    <div class="bd" id="secModalBody">
-      <!-- wordt gevuld via JS -->
-    </div>
-
-    <div class="ft">
-      <button class="btn" id="secModalCloseBtn2">Sluiten</button>
-    </div>
-  </div>
-</div>
 <body>
   <div class="container full-width">
     <div class="topbar">
@@ -42,15 +24,33 @@
           <button id="btnNext" class="btn">Volgende week</button>
         </div>
       </div>
+
       <div class="bd">
         <div id="plannerStatus"></div>
         <div class="planning-grid" id="plannerGrid"></div>
-          </div>
       </div>
     </div>
   </div>
+
+  <!-- Section details modal (moet IN body) -->
+  <div id="secModalBackdrop" class="modal-backdrop">
+    <div class="modal assign-modal" role="dialog" aria-modal="true" aria-labelledby="secModalTitle">
+      <div class="hd">
+        <div>
+          <div id="secModalTitle" class="assign-title">Sectie gegevens</div>
+          <div id="secModalSub" class="assign-sub"></div>
+        </div>
+        <button class="btn small" id="secModalClose" type="button">✕</button>
+      </div>
+
+      <div class="bd" id="secModalBody"></div>
+
+      <div class="ft">
+        <button class="btn" id="secModalClose2" type="button">Sluiten</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="planning.js"></script>
 </body>
-
 </html>
-
