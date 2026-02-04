@@ -1022,8 +1022,13 @@ td.cap-emp-click:hover{
   background: #f6f7f9;
 }
 
-/* Weekend shading blijft zichtbaar (weekend wint) */
-.planner-table tbody tr.zebra > td.wknd,
-.planner-table tbody tr.zebra > th.wknd {
-  background: #dbeafe; /* jouw weekend kleur */
+
+/* zebra over hele rij (incl. kalendercellen) */
+.planner-table tbody tr.zebra > td{
+  background:#f6f7f9;
+}
+
+/* weekend blijft voorrang houden */
+.planner-table tbody tr.zebra > td.wknd{
+  background: var(--chip-blue);
 }
