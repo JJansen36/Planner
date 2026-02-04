@@ -1179,3 +1179,36 @@ td.cap-emp-click:hover{
   justify-content: unset !important;
 }
 
+
+/* =========================
+   FIX: Instellingen modal altijd boven alles
+========================= */
+
+/* Backdrop van instellingen */
+#settingsBackdrop{
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(2,6,23,.45) !important;
+  z-index: 5000 !important;
+}
+
+/* Als hidden=true in JS */
+#settingsBackdrop[hidden]{ display:none !important; }
+
+/* Het modal venster zelf */
+#settingsModal{
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+
+  z-index: 5001 !important;
+
+  width: min(520px, calc(100vw - 24px)) !important;
+  max-height: calc(100vh - 24px) !important;
+  overflow: auto !important;
+}
+
+/* Als hidden=true in JS */
+#settingsModal[hidden]{ display:none !important; }
+
