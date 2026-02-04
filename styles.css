@@ -1052,3 +1052,33 @@ td.cap-emp-click:hover{
 }
 
 .cell.plan-cell { background: transparent; }
+
+
+/* =========================
+   ZEBRA FIX (laatste in CSS)
+========================= */
+
+/* 1) verwijder de "altijd wit" regel effectief (override) */
+.planner-table td.cell:not(.wknd){
+  background: transparent !important;
+}
+
+/* 2) plan-cells ook transparant zodat zebra zichtbaar wordt */
+.planner-table td.plan-cell{
+  background: transparent !important;
+}
+
+/* 3) zebra bepaalt de rij-achtergrond */
+.planner-table tbody tr.zebra > td{
+  background: #f5f6f8 !important;
+}
+
+/* 4) weekend blijft blauw, ook in zebra */
+.planner-table tbody tr.zebra > td.wknd{
+  background: var(--wknd-bg) !important; /* of #dbeafe */
+}
+
+/* 5) sticky-left moet zebra volgen */
+.planner-table tbody tr.zebra > td.sticky-left{
+  background: #f5f6f8 !important;
+}
