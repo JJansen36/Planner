@@ -1165,3 +1165,17 @@ td.cap-emp-click:hover{
 .planner-table td.balance-cell.pos{ background:#c7f7cf !important; }  /* groen */
 .planner-table td.balance-cell.neg{ background:#ffc6c6 !important; }  /* rood */
 .planner-table td.balance-cell.zero{ background:#ffe7b5 !important; } /* oranje */
+
+/* Saldo rij: zelfde typografie als de andere cijfer-rijen */
+.planner-table td.balance-cell{
+  font-size: 12px !important;   /* gelijk aan cap/sum die je al kleiner hebt gezet */
+  font-weight: 400 !important;  /* niet dik */
+  line-height: 1.1;
+}
+
+/* Linker label ook niet dik */
+.balance-row .balance-label{
+  font-weight: 400 !important;
+  font-size: 12px !important;
+}
+
