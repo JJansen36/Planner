@@ -711,7 +711,7 @@ for (const d of dates){
     left.className = "rowhdr sticky-left project-cell";
     left.innerHTML = `
       <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
-      <span class="projtext">
+      <span class="projtext" data-proj="${escapeAttr(pid)}">
         ${escapeHtml(nr)} - ${escapeHtml(kl)} - ${escapeHtml(nm)}
       </span>
     `;
@@ -835,6 +835,7 @@ trTotal.appendChild(tdTotalLeft);
 for (const d of dates){
   const iso = toISODate(d);
   const td = document.createElement("td");
+  td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
   td.className = `cell sum-cell ${isWeekend(d) ? "wknd" : ""}`;
   td.textContent = formatHoursCell(capTotalByDay[iso] || 0);
   trTotal.appendChild(td);
@@ -898,32 +899,45 @@ for (const w of werknemers || []) {
   // click on section cell -> assignments modal
   gridEl.onclick = async (ev) => {
 
+    // klik op projectnaam OF projectcellen => secties openklappen
+    const projHit = ev.target.closest("[data-proj]");
+    if (projHit) {
+      const pid = String(projHit.dataset.proj || "");
+      if (pid) {
+        // force open: klik alsof je op de ▶ klikt (maar dan altijd open)
+        const btn = gridEl.querySelector(`.expander[data-proj="${cssEsc(pid)}"]`);
+        if (btn && !btn.classList.contains("open")) btn.click();
+      }
+      return;
+    }
+
+
     // klik op sectienaam (links) => sectie gegevens popup
-const nameEl = ev.target.closest(".sectname");
-if (nameEl) {
-  const sid = String(nameEl.dataset.sect || "");
-  if (!sid) return;
+    const nameEl = ev.target.closest(".sectname");
+    if (nameEl) {
+      const sid = String(nameEl.dataset.sect || "");
+      if (!sid) return;
 
-  const sObj = sectById.get(sid);
-  const sectieNaam = sObj?.[sectNameKey] || sObj?.name || sObj?.naam || "sectie";
+      const sObj = sectById.get(sid);
+      const sectieNaam = sObj?.[sectNameKey] || sObj?.name || sObj?.naam || "sectie";
 
-  const pid = sObj?.[sectProjKey] ? String(sObj[sectProjKey]) : "";
-  const complTxt = projById.get(pid)?.complTxt || "";
+      const pid = sObj?.[sectProjKey] ? String(sObj[sectProjKey]) : "";
+      const complTxt = projById.get(pid)?.complTxt || "";
 
-  const totals = calcSectionTotals(sid);
+      const totals = calcSectionTotals(sid);
 
-  // datum voor in de header van popup (ik pak de start van je range)
-  const dateISO = toISODate(start);
+      // datum voor in de header van popup (ik pak de start van je range)
+      const dateISO = toISODate(start);
 
-  openSectionDetailsModal({
-    sid,
-    dateISO,
-    sectie: sectieNaam,
-    totals,
-    complTxt
-  });
-  return;
-}
+      openSectionDetailsModal({
+        sid,
+        dateISO,
+        sectie: sectieNaam,
+        totals,
+        complTxt
+      });
+      return;
+    }
 
   // click op medewerkernaam (capaciteit) => popup week-invoer
   const empTd = ev.target.closest("td.cap-emp-click");
@@ -1281,35 +1295,39 @@ const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_n
     };
   };
 
-// expanders (projects)
+function toggleProject(pid, forceOpen = null){
+  const btn = gridEl.querySelector(`.expander[data-proj="${cssEsc(pid)}"]`);
+  if (!btn) return;
+
+  const open = (forceOpen !== null) ? forceOpen : !btn.classList.contains("open");
+
+  btn.classList.toggle("open", open);
+  btn.textContent = open ? "▼" : "▶";
+
+  gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
+    if (String(tr.dataset.parent || "") === pid) {
+      tr.classList.toggle("hidden", !open);
+
+      if (!open && tr.classList.contains("section-details-row")) {
+        tr.classList.add("hidden");
+      }
+    }
+  });
+
+  if (!open) {
+    gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"] .expander-sec`).forEach(b => {
+      b.textContent = "▶";
+    });
+  }
+}
+
+
 gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
   btn.addEventListener("click", () => {
-    const pid = String(btn.dataset.proj || "");
-    const open = btn.classList.toggle("open");
-    btn.textContent = open ? "▼" : "▶";
-
-    gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
-      if (String(tr.dataset.parent || "") === pid) {
-        // als project dicht gaat: alles weg
-        tr.classList.toggle("hidden", !open);
-
-        // extra: als project dicht is, zorg dat sectie-details ook dicht blijft
-        if (!open && tr.classList.contains("section-details-row")) {
-          tr.classList.add("hidden");
-        }
-      }
-    });
-
-    // als project dichtklapt: zet sectie-pijltjes terug op ▶
-    if (!open) {
-      gridEl.querySelectorAll(`tr.section-row[data-parent="${cssEsc(pid)}"] .expander-sec`).forEach(b => {
-        b.textContent = "▶";
-      });
-    }
-
-
+    toggleProject(String(btn.dataset.proj || ""));
   });
 });
+
 
 
 // section expanders
