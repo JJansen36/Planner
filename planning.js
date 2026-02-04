@@ -220,9 +220,16 @@ function ensureCapModal(){
           <button class="btn small" id="capNextWeek" type="button">Week ▶</button>
         </div>
 
-        <div class="hr"></div>
+      <div class="hr"></div>
 
-        <div id="capForm"></div>
+      <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button class="btn small" id="capApplyEven" type="button">Doorvoeren in even weken</button>
+        <button class="btn small" id="capApplyOdd" type="button">Doorvoeren in oneven weken</button>
+        <button class="btn small" id="capApplyAll" type="button">Doorvoeren in alle weken</button>
+      </div>
+
+      <div id="capForm"></div>
+
       </div>
 
       <div class="ft">
@@ -835,6 +842,10 @@ if (nameEl) {
     const btnPrevW = modal.wrap.querySelector("#capPrevWeek");
     const btnNextW = modal.wrap.querySelector("#capNextWeek");
     const btnSave  = modal.wrap.querySelector("#capSave");
+    const btnApplyEven = modal.wrap.querySelector("#capApplyEven");
+    const btnApplyOdd  = modal.wrap.querySelector("#capApplyOdd");
+    const btnApplyAll  = modal.wrap.querySelector("#capApplyAll");
+
 
     // start bij week van huidige view
     let wkStart = startOfISOWeek(new Date(rangeStart));
@@ -881,6 +892,109 @@ if (nameEl) {
 
     btnPrevW.onclick = () => { wkStart = addDays(wkStart, -7); renderWeek(); };
     btnNextW.onclick = () => { wkStart = addDays(wkStart, +7); renderWeek(); };
+    
+    btnApplyEven.onclick = () => applyToFutureWeeks("even");
+    btnApplyOdd.onclick  = () => applyToFutureWeeks("odd");
+    btnApplyAll.onclick  = () => applyToFutureWeeks("all");
+
+    // haal huidige ingevulde week uit de inputs
+    const readCurrentWeekInputs = () => {
+      const inputs = Array.from(formEl.querySelectorAll("input[data-iso]"));
+      const values = []; // index 0..6
+      for (const inp of inputs) {
+        const raw = String(inp.value || "").trim().replace(",", ".");
+        const h = raw ? Number(raw) : 0;
+        values.push(Number.isFinite(h) ? h : 0);
+      }
+      // garandeer 7 waarden
+      while (values.length < 7) values.push(0);
+      return values.slice(0,7);
+    };
+
+    // schrijft dezelfde 7 waarden naar een week-start (maandag)
+    const writeWeekToRows = (wkStartDate, values7) => {
+      const rows = [];
+      for (let i=0;i<7;i++){
+        const iso = toISODate(addDays(wkStartDate, i));
+        const h = Number(values7[i] || 0);
+        if (h > 0) {
+          rows.push({
+            work_date: iso,
+            werknemer_id: Number(empId),
+            hours: h,
+            type: "werk"
+          });
+        }
+      }
+      return rows;
+    };
+
+    // voer door naar toekomstige weken binnen huidige horizon (range) — alleen toekomst
+    const applyToFutureWeeks = async (mode /* "even"|"odd"|"all" */) => {
+      const values7 = readCurrentWeekInputs();
+
+      // toekomst = vanaf vandaag (ISO-week maandag van vandaag)
+      const today = new Date();
+      const todayWkStart = startOfISOWeek(today);
+
+      // we beperken tot jouw planner horizon: eind van huidige view-range
+      const viewEnd = addDays(new Date(rangeStart), RANGE_DAYS - 1);
+
+      // start vanaf de week NA de huidige geselecteerde week
+      let iter = addDays(wkStart, 7);
+
+      // collect rows + delete windows
+      const allInsertRows = [];
+      const deleteRanges = []; // [{startISO,endISO}] per week
+
+      while (iter <= viewEnd) {
+        // alleen toekomstige weken
+        if (iter >= todayWkStart) {
+          const wkNr = weekNumberISO(iter);
+
+          const ok =
+            mode === "all" ||
+            (mode === "even" && wkNr % 2 === 0) ||
+            (mode === "odd"  && wkNr % 2 === 1);
+
+          if (ok) {
+            const startISO = toISODate(iter);
+            const endISO = toISODate(addDays(iter, 6));
+            deleteRanges.push({ startISO, endISO });
+            allInsertRows.push(...writeWeekToRows(iter, values7));
+          }
+        }
+
+        iter = addDays(iter, 7);
+      }
+
+      if (!deleteRanges.length) {
+        alert("Geen toekomstige weken in bereik om door te voeren.");
+        return;
+      }
+
+      // 1) eerst verwijderen per week (simpel en veilig)
+      for (const r of deleteRanges) {
+        const del = await sb
+          .from("capacity_entries")
+          .delete()
+          .eq("werknemer_id", Number(empId))
+          .eq("type", "werk")
+          .gte("work_date", r.startISO)
+          .lte("work_date", r.endISO);
+
+        if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+      }
+
+      // 2) insert alles (als er uren > 0 zijn)
+      if (allInsertRows.length) {
+        const ins = await sb.from("capacity_entries").insert(allInsertRows);
+        if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+      }
+
+      modal.close();
+      loadAndRender();
+    };
 
     btnSave.onclick = async () => {
       const days = buildWeekDays();
