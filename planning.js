@@ -7,6 +7,75 @@ const el = (id) => document.getElementById(id);
 let gridEl = null;
 let statusEl = null;
 
+// ---- Settings (uitbreidbaar) ----
+const SETTINGS_KEY = "lovd_planner_settings_v1";
+
+const defaultSettings = {
+  planFactor: 0.80, // 80%
+};
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(!raw) return { ...defaultSettings };
+    const s = JSON.parse(raw);
+    return { ...defaultSettings, ...s };
+  }catch(e){
+    return { ...defaultSettings };
+  }
+}
+
+function saveSettings(s){
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+let settings = loadSettings();
+
+function openSettingsModal(){
+  const modal = el("settingsModal");
+  const back = el("settingsBackdrop");
+  const slider = el("planFactor");
+  const label = el("planFactorLabel");
+
+  slider.value = Math.round((settings.planFactor ?? 0.8) * 100);
+  label.textContent = `${slider.value}%`;
+
+  slider.oninput = () => { label.textContent = `${slider.value}%`; };
+
+  back.hidden = false;
+  modal.hidden = false;
+}
+
+function closeSettingsModal(){
+  el("settingsBackdrop").hidden = true;
+  el("settingsModal").hidden = true;
+}
+
+// Dit is de "haak" die jij straks laat verwijzen naar je eigen render-functie
+function refreshAfterSettingsChange(){
+  // VERVANG DIT door jouw bestaande functie(s):
+  // bv: loadAndRender(); of renderAll(); of renderPlanner();
+  if (typeof loadAndRender === "function") loadAndRender();
+  else if (typeof renderAll === "function") renderAll();
+}
+  
+function initSettingsUI(){
+  el("btnSettings")?.addEventListener("click", openSettingsModal);
+  el("btnSettingsClose")?.addEventListener("click", closeSettingsModal);
+  el("btnSettingsCancel")?.addEventListener("click", closeSettingsModal);
+  el("settingsBackdrop")?.addEventListener("click", closeSettingsModal);
+
+  el("btnSettingsSave")?.addEventListener("click", () => {
+    const pct = parseInt(el("planFactor").value, 10);
+    settings.planFactor = Math.max(0.1, Math.min(2.0, pct / 100));
+    saveSettings(settings);
+    closeSettingsModal();
+
+    refreshAfterSettingsChange();
+  });
+}
+
+
 function ensureContainers(){
   gridEl = el("plannerGrid");
   statusEl = el("plannerStatus");
@@ -58,6 +127,8 @@ async function init(){
   await requireSession(sb);
   bindUI();
   ensureContainers();
+
+  initSettingsUI();
 
   // als statusEl om wat voor reden dan ook nog ontbreekt: dummy zodat je script niet crasht
   if (!statusEl) statusEl = { textContent: "" };
