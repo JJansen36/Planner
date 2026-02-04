@@ -877,20 +877,34 @@ if (nameEl) {
               <div class="value" style="gap:10px;">
                 <input
                   class="input"
-                  type="number"
+                  type="text"
                   inputmode="decimal"
-                  step="0.25"
-                  min="0"
+                  pattern="[0-9]*[.,]?[0-9]*"
                   data-iso="${iso}"
                   value="${val ? String(val).replace(".", ",") : ""}"
                   placeholder="0"
                 />
-
               </div>
             `;
           }).join("")}
         </div>
       `;
+
+      formEl.querySelectorAll('input.input[data-iso]').forEach(inp => {
+  // Tijdens typen: NIET formatteren, alleen ongeldige tekens blokkeren
+  inp.addEventListener("input", () => {
+    inp.value = inp.value
+      .replace(/[^0-9.,]/g, "")   // alleen cijfers + , .
+      .replace(/(.*)[.,].*[.,]/, "$1$2"); // max 1 komma/punt
+  });
+
+  // Pas formatteren als je het veld verlaat (optioneel)
+  inp.addEventListener("blur", () => {
+    // maak het netjes NL: punt -> komma (maar pas na typen!)
+    inp.value = inp.value.replace(".", ",");
+  });
+});
+
 
       // kleine hulp: komma naar punt bij typen
       formEl.querySelectorAll("input[data-iso]").forEach(inp=>{
@@ -913,7 +927,9 @@ if (nameEl) {
       const values = []; // index 0..6
       for (const inp of inputs) {
         const raw = String(inp.value || "").trim().replace(",", ".");
-        const h = raw ? Number(raw) : 0;
+        const hours = raw ? Number(raw) : 0;
+        const hoursRounded = Math.round(hours * 4) / 4; // 0.25 stappen
+
         values.push(Number.isFinite(h) ? h : 0);
       }
       // garandeer 7 waarden
