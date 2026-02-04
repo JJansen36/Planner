@@ -5,6 +5,26 @@
   <title>LOVD Planning — Capaciteit</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
+  <!-- Section details modal -->
+<div id="secModalBackdrop" class="modal-backdrop">
+  <div class="modal assign-modal" role="dialog" aria-modal="true" aria-labelledby="secModalTitle">
+    <div class="hd">
+      <div>
+        <div id="secModalTitle" class="assign-title">Sectie gegevens</div>
+        <div id="secModalSub" class="assign-sub"></div>
+      </div>
+      <button class="btn small" id="secModalCloseBtn">Sluiten</button>
+    </div>
+
+    <div class="bd" id="secModalBody">
+      <!-- wordt gevuld via JS -->
+    </div>
+
+    <div class="ft">
+      <button class="btn" id="secModalCloseBtn2">Sluiten</button>
+    </div>
+  </div>
+</div>
 <body>
   <div class="container full-width">
     <div class="topbar">
@@ -33,3 +53,4 @@
 </body>
 
 </html>
+
