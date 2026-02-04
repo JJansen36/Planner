@@ -898,17 +898,21 @@ for (const w of werknemers || []) {
   // click on section cell -> assignments modal
   gridEl.onclick = async (ev) => {
 
-    // klik op projectnaam OF projectcellen => secties openklappen
-    const projHit = ev.target.closest("[data-proj]");
-    if (projHit) {
-      const pid = String(projHit.dataset.proj || "");
-      if (pid) {
-        // force open: klik alsof je op de ▶ klikt (maar dan altijd open)
-        const btn = gridEl.querySelector(`.expander[data-proj="${cssEsc(pid)}"]`);
-        if (btn && !btn.classList.contains("open")) btn.click();
-      }
-      return;
-    }
+// klik op projectnaam OF projectcellen => secties openklappen
+// MAAR: klik op het pijltje zelf moet gewoon togglen (dus hier negeren)
+const expBtn = ev.target.closest(".expander[data-proj]");
+if (expBtn) return; // laat de normale toggle listener z'n werk doen
+
+const projHit = ev.target.closest("[data-proj]");
+if (projHit) {
+  const pid = String(projHit.dataset.proj || "");
+  if (!pid) return;
+
+  // openklappen (alleen openen, niet togglen)
+  toggleProject(pid, true);
+  return;
+}
+
 
 
     // klik op sectienaam (links) => sectie gegevens popup
