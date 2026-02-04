@@ -887,3 +887,16 @@ td.cap-emp-click{
 td.cap-emp-click:hover{
   background:#f8fafc;
 }
+/* Kleinere tekst in capaciteit + totalen (zelfde gevoel als planning) */
+.planner-table td.cap-cell,
+.planner-table td.sum-cell {
+  font-size: 12px;          /* pas aan naar 11px als je 'm nog kleiner wilt */
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums; /* netjes uitlijnen van cijfers */
+}
+
+/* optioneel: als je ook de linker namen (Berry/Luuk/...) kleiner wilt */
+.planner-table td.cap-name,
+.planner-table td.sum-label {
+  font-size: 12px;
+}
