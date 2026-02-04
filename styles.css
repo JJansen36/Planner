@@ -1004,3 +1004,39 @@ td.cap-emp-click:hover{
   min-width:62px;
   text-align:center;
 }
+
+/* Zebra rows voor leesbaarheid */
+.planner-table tbody tr.project-row,
+.planner-table tbody tr.section-row,
+.planner-table tbody tr.cap-total-row,
+.planner-table tbody tr.cap-emp-row,
+.planner-table tbody tr.sum-row,
+.planner-table tbody tr.info-row {
+  background: transparent;
+}
+
+/* alleen echte "data-rijen" zebra’en */
+.planner-table tbody tr.project-row:nth-of-type(even),
+.planner-table tbody tr.section-row:nth-of-type(even),
+.planner-table tbody tr.cap-total-row:nth-of-type(even),
+.planner-table tbody tr.cap-emp-row:nth-of-type(even),
+.planner-table tbody tr.sum-row:nth-of-type(even),
+.planner-table tbody tr.info-row:nth-of-type(even) {
+  background: #f6f7f9; /* licht grijs */
+}
+
+/* Zorg dat sticky left cell dezelfde zebra kleur heeft */
+.planner-table tbody tr.project-row:nth-of-type(even) > td.rowhdr,
+.planner-table tbody tr.section-row:nth-of-type(even) > td.rowhdr,
+.planner-table tbody tr.cap-total-row:nth-of-type(even) > td.rowhdr,
+.planner-table tbody tr.cap-emp-row:nth-of-type(even) > td.rowhdr,
+.planner-table tbody tr.sum-row:nth-of-type(even) > td.rowhdr,
+.planner-table tbody tr.info-row:nth-of-type(even) > td.rowhdr {
+  background: #f6f7f9;
+}
+
+/* Laat blok-titels/spacers hun eigen styling houden */
+.planner-table tbody tr.spacer,
+.planner-table tbody tr.block-title {
+  background: transparent !important;
+}
