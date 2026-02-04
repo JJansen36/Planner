@@ -100,12 +100,7 @@ function formatDateNL(v){
   return `${dd}-${mm}-${yy}`;
 }
 
-// -------- ASSIGNMENTS MODAL (productie/montage + collega's) --------
-let assignModal = null;
-
-function ensureAssignModal(){
-
-  // -------- SECTION DETAILS MODAL (sectie gegevens) --------
+// -------- SECTION DETAILS MODAL (sectie gegevens) --------
 let secModal = null;
 
 function ensureSecModal(){
@@ -154,6 +149,10 @@ function openSectionDetailsModal({ sid, dateISO, sectie, totals, complTxt }){
   modal.wrap.classList.add("show");
 }
 
+// -------- ASSIGNMENTS MODAL (productie/montage + collega's) --------
+let assignModal = null;
+
+function ensureAssignModal(){
   if (assignModal) return assignModal;
 
   const wrap = document.createElement("div");
@@ -616,7 +615,10 @@ tbody.appendChild(projRow);
 
       const sn = s?.[sectNameKey] || "sectie";
 
-      leftS.innerHTML = `<button class="expander expander-sec" data-sect="${escapeAttr(sid)}" aria-label="toggle sectie">▶</button> <span class="sectext">↳ ${escapeHtml(sn)}</span>`;
+     leftS.innerHTML = `
+        <button class="expander expander-sec" data-sect="${escapeAttr(sid)}" aria-label="toggle sectie">▶</button>
+        <span class="sectext sectname" data-sect="${escapeAttr(sid)}">↳ ${escapeHtml(sn)}</span>
+      `;
 
       secRow.appendChild(leftS);
 
@@ -768,8 +770,38 @@ secDetailsFill.innerHTML = `
   gridEl.innerHTML = "";
   gridEl.appendChild(table);
 
+
+
   // click on section cell -> assignments modal
   gridEl.onclick = async (ev) => {
+
+    // klik op sectienaam (links) => sectie gegevens popup
+const nameEl = ev.target.closest(".sectname");
+if (nameEl) {
+  const sid = String(nameEl.dataset.sect || "");
+  if (!sid) return;
+
+  const sObj = sectById.get(sid);
+  const sectieNaam = sObj?.[sectNameKey] || sObj?.name || sObj?.naam || "sectie";
+
+  const pid = sObj?.[sectProjKey] ? String(sObj[sectProjKey]) : "";
+  const complTxt = projById.get(pid)?.complTxt || "";
+
+  const totals = calcSectionTotals(sid);
+
+  // datum voor in de header van popup (ik pak de start van je range)
+  const dateISO = toISODate(start);
+
+  openSectionDetailsModal({
+    sid,
+    dateISO,
+    sectie: sectieNaam,
+    totals,
+    complTxt
+  });
+  return;
+}
+
     const td = ev.target.closest("td.section-click");
     if (!td) return;
 
@@ -778,24 +810,7 @@ secDetailsFill.innerHTML = `
     if (!sid || !dateISO) return;
 
         // ALT+klik => sectie gegevens popup (laat assignments modal met gewone klik)
-    if (ev.altKey) {
-      const sObj = sectById.get(String(sid));
-      const sectieNaam = sObj?.[sectNameKey] || sObj?.name || sObj?.naam || "sectie";
 
-      const pid = sObj?.[sectProjKey] ? String(sObj[sectProjKey]) : "";
-      const complTxt = projById.get(pid)?.complTxt || "";
-
-      const totals = calcSectionTotals(sid);
-
-      openSectionDetailsModal({
-        sid,
-        dateISO,
-        sectie: sectieNaam,
-        totals,
-        complTxt
-      });
-      return;
-    }
 
 
     const modal = ensureAssignModal();
