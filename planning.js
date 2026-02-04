@@ -194,6 +194,55 @@ function ensureAssignModal(){
   return assignModal;
 }
 
+// -------- CAPACITY MODAL (uren per medewerker per week) --------
+let capModal = null;
+
+function ensureCapModal(){
+  if (capModal) return capModal;
+
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.id = "capModalBackdrop";
+  wrap.innerHTML = `
+    <div class="modal assign-modal" role="dialog" aria-modal="true" aria-labelledby="capModalTitle">
+      <div class="hd">
+        <div>
+          <div id="capModalTitle" class="assign-title">Beschikbaarheid</div>
+          <div id="capModalSub" class="assign-sub"></div>
+        </div>
+        <button class="btn small" id="capModalClose" type="button">✕</button>
+      </div>
+
+      <div class="bd">
+        <div class="row" style="justify-content:space-between; gap:10px; align-items:center;">
+          <button class="btn small" id="capPrevWeek" type="button">◀ Week</button>
+          <div class="muted" id="capWeekLabel"></div>
+          <button class="btn small" id="capNextWeek" type="button">Week ▶</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="capForm"></div>
+      </div>
+
+      <div class="ft">
+        <button class="btn" id="capCancel" type="button">Annuleren</button>
+        <button class="btn primary" id="capSave" type="button">Opslaan</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(wrap);
+
+  const close = () => wrap.classList.remove("show");
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector("#capModalClose").onclick = close;
+  wrap.querySelector("#capCancel").onclick = close;
+
+  capModal = { wrap, close };
+  return capModal;
+}
+
 
 // -------- DATA LOAD --------
 async function loadAndRender(){
@@ -660,7 +709,11 @@ tbody.appendChild(projRow);
     const tr = document.createElement("tr");
     tr.className = "cap-emp-row";
 
-    tr.appendChild(leftRowHdrCell(wnm, "sticky-left cap-name"));
+    const leftTd = leftRowHdrCell(wnm, "sticky-left cap-name cap-emp-click");
+    leftTd.dataset.empId = String(wid);
+    leftTd.dataset.empName = String(wnm);
+    tr.appendChild(leftTd);
+
 
     for(const d of dates){
       const iso = toISODate(d);
@@ -672,6 +725,26 @@ tbody.appendChild(projRow);
     }
     tbody.appendChild(tr);
   }
+
+  // ---- Totaal capaciteit (som medewerkers per dag) ----
+{
+  const trTot = document.createElement("tr");
+  trTot.className = "cap-total-row";
+
+  const leftTot = leftRowHdrCell("Totaal", "sticky-left cap-name");
+  trTot.appendChild(leftTot);
+
+  for (const d of dates) {
+    const iso = toISODate(d);
+    const td = document.createElement("td");
+    td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+    td.textContent = formatHoursCell(capTotalByDay[iso] || 0);
+    trTot.appendChild(td);
+  }
+
+  tbody.appendChild(trTot);
+}
+
 
   // Totals / beschikbaar rows (zoals PDF onderin)
   tbody.appendChild(spacerRow(dates.length));
@@ -747,6 +820,115 @@ if (nameEl) {
   });
   return;
 }
+
+  // click op medewerkernaam (capaciteit) => popup week-invoer
+  const empTd = ev.target.closest("td.cap-emp-click");
+  if (empTd) {
+    const empId = String(empTd.dataset.empId || "");
+    const empName = String(empTd.dataset.empName || empId);
+    if (!empId) return;
+
+    const modal = ensureCapModal();
+    const subEl = modal.wrap.querySelector("#capModalSub");
+    const weekLabelEl = modal.wrap.querySelector("#capWeekLabel");
+    const formEl = modal.wrap.querySelector("#capForm");
+    const btnPrevW = modal.wrap.querySelector("#capPrevWeek");
+    const btnNextW = modal.wrap.querySelector("#capNextWeek");
+    const btnSave  = modal.wrap.querySelector("#capSave");
+
+    // start bij week van huidige view
+    let wkStart = startOfISOWeek(new Date(rangeStart));
+
+    const buildWeekDays = () => {
+      const days = [];
+      for (let i=0;i<7;i++) days.push(addDays(wkStart, i));
+      return days;
+    };
+
+    const renderWeek = () => {
+      const days = buildWeekDays();
+      const startISO = toISODate(days[0]);
+      const endISO = toISODate(days[6]);
+
+      if (subEl) subEl.textContent = `${empName} • ${startISO} t/m ${endISO}`;
+      if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
+
+      // bestaande waarden ophalen uit capByEmp map
+      const empMap = capByEmp.get(Number(empId)) || capByEmp.get(empId) || new Map();
+
+      formEl.innerHTML = `
+        <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
+          ${days.map(d=>{
+            const iso = toISODate(d);
+            const val = Number(empMap.get(iso) || 0);
+            return `
+              <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+              <div class="value" style="gap:10px;">
+                <input class="input" type="number" step="0.5" min="0" data-iso="${iso}" value="${val ? String(val).replace(".", ",") : ""}" placeholder="0" />
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      // kleine hulp: komma naar punt bij typen
+      formEl.querySelectorAll("input[data-iso]").forEach(inp=>{
+        inp.addEventListener("input", ()=>{
+          inp.value = inp.value.replace(",", ".");
+        });
+      });
+    };
+
+    btnPrevW.onclick = () => { wkStart = addDays(wkStart, -7); renderWeek(); };
+    btnNextW.onclick = () => { wkStart = addDays(wkStart, +7); renderWeek(); };
+
+    btnSave.onclick = async () => {
+      const days = buildWeekDays();
+      const startISO = toISODate(days[0]);
+      const endISO   = toISODate(days[6]);
+
+      const inputs = Array.from(formEl.querySelectorAll("input[data-iso]"));
+      const rows = [];
+
+      for (const inp of inputs) {
+        const iso = String(inp.dataset.iso || "");
+        const raw = String(inp.value || "").trim().replace(",", ".");
+        const h = raw ? Number(raw) : 0;
+        if (!iso) continue;
+        if (h > 0) {
+          rows.push({
+            work_date: iso,
+            werknemer_id: Number(empId),
+            hours: h,
+            type: "werk"
+          });
+        }
+      }
+
+      // Eerst oude weekregels weg, dan nieuwe erin (veilig zonder unieke constraints)
+      const del = await sb
+        .from("capacity_entries")
+        .delete()
+        .eq("werknemer_id", Number(empId))
+        .eq("type", "werk")
+        .gte("work_date", startISO)
+        .lte("work_date", endISO);
+
+      if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+
+      if (rows.length) {
+        const ins = await sb.from("capacity_entries").insert(rows);
+        if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+      }
+
+      modal.close();
+      loadAndRender();
+    };
+
+    renderWeek();
+    modal.wrap.classList.add("show");
+    return;
+  }
 
     const td = ev.target.closest("td.section-click");
     if (!td) return;
