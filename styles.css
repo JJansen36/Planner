@@ -864,24 +864,25 @@ td.details-fill-wide .details-box{
   transform: translateX(-1px);
 }
 
-/* Sectie gegevens: ALTIJD links, ongeacht globale td{text-align:center} */
-td.details-fill{
-  padding: 0 !important;
+/* ===== Sectie gegevens: links uitlijnen in details-rij ===== */
+td.details-fill,
+td.details-fill-wide{
+  text-align: left !important;
+  padding: 0 !important;              /* td padding uit */
+  vertical-align: top !important;
+}
+
+td.details-fill .details-wrap,
+td.details-fill-wide .details-wrap{
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 8px 10px !important;       /* padding IN de wrap */
   text-align: left !important;
 }
 
-td.details-fill .details-box{
-  float: left !important;     /* <-- dit forceert links */
-  margin: 0 !important;
+td.details-fill .details-box,
+td.details-fill-wide .details-box{
   display: block !important;
-  padding: 8px 10px;
+  margin: 0 !important;
 }
-
-/* voorkomt dat floats rare rijhoogte issues geven */
-td.details-fill::after{
-  content:"";
-  display:block;
-  clear:both;
-}
-
-td.details-fill{ outline:2px solid red; }
