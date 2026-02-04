@@ -1040,3 +1040,20 @@ td.cap-emp-click:hover{
 .planner-table tbody tr.block-title {
   background: transparent !important;
 }
+
+/* Zebra over de héle rij (incl kalendercellen) */
+.planner-table tbody tr.zebra > td,
+.planner-table tbody tr.zebra > th {
+  background: #f6f7f9;
+}
+
+/* Sticky-left moet ook zebra volgen */
+.planner-table tbody tr.zebra > td.sticky-left {
+  background: #f6f7f9;
+}
+
+/* Weekend shading blijft zichtbaar (weekend wint) */
+.planner-table tbody tr.zebra > td.wknd,
+.planner-table tbody tr.zebra > th.wknd {
+  background: #dbeafe; /* jouw weekend kleur */
+}
