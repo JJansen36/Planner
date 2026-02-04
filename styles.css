@@ -1108,3 +1108,16 @@ td.cap-emp-click:hover{
 .planner-table tbody tr:not(.zebra) > td.wknd{
   background: var(--chip-blue) !important;
 }
+/* === ZEBRA over de hele rij (incl. kalender) === */
+.planner-table tbody tr.zebra > td,
+.planner-table tbody tr.zebra > th{
+  /* overlay met alpha, blijft werken op gekleurde cellen */
+  background-image: linear-gradient(rgba(243, 246, 251, 0.55), rgba(243, 246, 251, 0.55));
+  background-repeat: no-repeat;
+}
+
+/* Niet-zebra rijen moeten géén overlay hebben */
+.planner-table tbody tr:not(.zebra) > td,
+.planner-table tbody tr:not(.zebra) > th{
+  background-image: none;
+}
