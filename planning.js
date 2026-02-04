@@ -930,7 +930,8 @@ if (nameEl) {
         const hours = raw ? Number(raw) : 0;
         const hoursRounded = Math.round(hours * 4) / 4; // 0.25 stappen
 
-        values.push(Number.isFinite(h) ? h : 0);
+        values.push(Number.isFinite(hoursRounded) ? hoursRounded : 0);
+
       }
       // garandeer 7 waarden
       while (values.length < 7) values.push(0);
