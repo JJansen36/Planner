@@ -691,6 +691,13 @@ for (const d of dates){
   // TBODY
   const tbody = document.createElement("tbody");
 
+  let zebraOn = false;
+  const markZebra = (tr) => {
+    zebraOn = !zebraOn;
+    if (zebraOn) tr.classList.add("zebra");
+  };
+
+
   // Projects + sections (expand/collapse)
   for(const p of projecten || []){
     const pid = p?.[projIdKey];
@@ -707,6 +714,7 @@ for (const d of dates){
 
     const projRow = document.createElement("tr");
     projRow.className = "project-row";
+    markZebra(projRow);
     const left = document.createElement("td");
     left.className = "rowhdr sticky-left project-cell";
     left.innerHTML = `
@@ -770,6 +778,7 @@ tbody.appendChild(projRow);
     for (const s of secList) {
       const secRow = document.createElement("tr");
       secRow.className = "section-row hidden";
+      markZebra(secRow);
       secRow.dataset.parent = String(pid);
 
       const leftS = document.createElement("td");
@@ -822,6 +831,7 @@ const capKey = "cap"; // unieke key voor deze groep
 
 const trTotal = document.createElement("tr");
 trTotal.className = "cap-total-row";
+markZebra(trTotal); // ✅ ZEBRA HIER
 
 const tdTotalLeft = document.createElement("td");
 tdTotalLeft.className = "rowhdr sticky-left cap-total-left";
@@ -853,13 +863,14 @@ for (const w of werknemers || []) {
   tr.className = "cap-emp-row hidden";
   tr.dataset.capParent = capKey; // koppeling aan totaal-row
 
+  markZebra(tr);
+
   const leftEmp = document.createElement("td");
   leftEmp.className = "rowhdr sticky-left cap-name cap-emp-click";
   leftEmp.textContent = wnm;
   leftEmp.dataset.empId = String(wid ?? "");
   leftEmp.dataset.empName = String(wnm ?? "");
   tr.appendChild(leftEmp);
-
 
   for (const d of dates){
     const iso = toISODate(d);
