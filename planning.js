@@ -636,66 +636,13 @@ tbody.appendChild(projRow);
         };
       }
 
-appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werknemers);
+      appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werknemers);
 
 
 
       tbody.appendChild(secRow);
 
-            // ---- Sectie details row (hidden, shows on section expand) ----
-      const secDetails = document.createElement("tr");
-      secDetails.className = "section-details-row hidden";
-      secDetails.dataset.parent = String(pid); // zodat project open/dicht ook alles meeneemt
-      secDetails.dataset.sect = String(sid);
-
-      const secDetailsLeft = document.createElement("td");
-      secDetailsLeft.className = "rowhdr sticky-left section-details-cell";
-
-      // totals per sectie in huidige range
-      let sumPrepS = 0, sumProdS = 0, sumMontS = 0;
-      const dmS = workMap.get(String(sid));
-      if (dmS) {
-        for (const d of dates) {
-          const iso = toISODate(d);
-          const rows = dmS.get(iso) || [];
-          for (const r of rows) {
-            const wt = String(r.work_type || "");
-            const h  = Number(r.hours || 0);
-            if (isPrepType(wt)) sumPrepS += h;
-            if (isProdType(wt)) sumProdS += h;
-            if (isMontType(wt)) sumMontS += h;
-          }
-        }
-      }
-
-      // links: leeg (of alleen een kleine indent), zodat de details rechts komen
-      secDetailsLeft.innerHTML = ``;
-      secDetails.appendChild(secDetailsLeft);
-
-      // rechts: details-box over de hele kalenderbreedte (groene vlak)
-      const secDetailsFill = document.createElement("td");
-      secDetailsFill.colSpan = dates.length;
-      secDetailsFill.className = "cell details-fill details-fill-wide";
-
-secDetailsFill.innerHTML = `
-  <div class="details-wrap">
-    <div class="details-box">
-      <div class="details-title">Sectie gegevens</div>
-      <div class="details-line">Opleverdatum: <b>${escapeHtml(complTxt || "-")}</b></div>
-      <div class="details-line">Werkvoorbereiding: <b>${escapeHtml(formatHoursCell(sumPrepS))}</b> uur</div>
-      <div class="details-line">Productie: <b>${escapeHtml(formatHoursCell(sumProdS))}</b> uur</div>
-      <div class="details-line">Montage: <b>${escapeHtml(formatHoursCell(sumMontS))}</b> uur</div>
-    </div>
-  </div>
-`;
-
-      secDetails.appendChild(secDetailsFill);
-
-
-      tbody.appendChild(secDetails);
-
     }
-
   }
 
   // CAPACITY BLOCK
