@@ -1121,3 +1121,32 @@ td.cap-emp-click:hover{
 .planner-table tbody tr:not(.zebra) > th{
   background-image: none;
 }
+/* =========================
+   ZEBRA (DEFINITIEF) – helemaal onderaan zetten
+========================= */
+
+/* zorg dat we een overlay kunnen plaatsen */
+.planner-table td.cell{ position: relative; }
+
+/* zebra op linkerkolom (row header) */
+.planner-table tbody tr.zebra > td.rowhdr{
+  background: #f5f6f8 !important;
+}
+
+/* zebra overlay op kalendercellen (niet weekend) */
+.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: rgba(245, 246, 248, 0.55); /* sterkte zebra */
+  pointer-events:none;
+  z-index: 0;
+}
+
+/* zorg dat inhoud boven de overlay blijft */
+.planner-table td.cell .bar,
+.planner-table td.cell .deadline,
+.planner-table td.cell .assign-badge{
+  position: relative;
+  z-index: 1;
+}
