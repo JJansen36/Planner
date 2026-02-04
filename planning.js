@@ -835,7 +835,6 @@ trTotal.appendChild(tdTotalLeft);
 for (const d of dates){
   const iso = toISODate(d);
   const td = document.createElement("td");
-  td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
   td.className = `cell sum-cell ${isWeekend(d) ? "wknd" : ""}`;
   td.textContent = formatHoursCell(capTotalByDay[iso] || 0);
   trTotal.appendChild(td);
@@ -1673,6 +1672,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
     const isMarker = markerISO && iso === markerISO;
 
     const td = document.createElement("td");
+    td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
+
 
     // cel-kleur bepalen op basis van assignments (niet alleen label)
     let cls = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
