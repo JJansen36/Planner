@@ -594,6 +594,18 @@
       if (wt === "productie") dmA.get(d).productie.add(emp);
       if (wt === "montage") dmA.get(d).montage.add(emp);
     }
+// busyByDay: dateISO -> Set(empId) (ongeacht type)
+const busyByDay = new Map();
+
+for (const [sid, dm] of assignMap) {
+  for (const [dateISO, entry] of dm) {
+    if (!busyByDay.has(dateISO)) busyByDay.set(dateISO, new Set());
+    const set = busyByDay.get(dateISO);
+
+    for (const id of (entry.productie || [])) set.add(String(id));
+    for (const id of (entry.montage || [])) set.add(String(id));
+  }
+}
 
     // capacity: per werknemer per dag
     const capByEmp = new Map(); // empId -> dateISO -> sumHours
@@ -1249,31 +1261,56 @@
 
       let activeTab = "productie";
 
-      const renderList = () => {
-        tabs.forEach(t => t.classList.toggle("primary", t.dataset.tab === activeTab));
-        listEl.innerHTML = "";
+    const renderList = () => {
+  tabs.forEach(t => t.classList.toggle("primary", t.dataset.tab === activeTab));
+  listEl.innerHTML = "";
 
-        for (const w of werknemers || []) {
-          const eid = String(w?.[empIdKey] || "");
-          const name = String(w?.[empNameKey] || eid);
-          if (!eid) continue;
+  const busySet = busyByDay.get(dateISO) || new Set();
 
-          const row = document.createElement("label");
-          row.className = "assign-item";
-          const checked = selected[activeTab].has(eid);
-          row.innerHTML = `
-            <input type="checkbox" ${checked ? "checked" : ""} data-eid="${escapeAttr(eid)}" />
-            <span>${escapeHtml(name)}</span>
-          `;
-          row.querySelector("input").onchange = (e) => {
-            const id = String(e.target.dataset.eid || "");
-            if (!id) return;
-            if (e.target.checked) selected[activeTab].add(id);
-            else selected[activeTab].delete(id);
-          };
-          listEl.appendChild(row);
-        }
-      };
+  // mensen die in deze cel al geselecteerd zijn (in beide tabs) moeten altijd zichtbaar blijven
+  const keepVisible = new Set([
+    ...Array.from(selected.productie),
+    ...Array.from(selected.montage),
+  ]);
+
+  for (const w of werknemers || []) {
+    const eid = String(w?.[empIdKey] || "");
+    const name = String(w?.[empNameKey] || eid);
+    if (!eid) continue;
+
+    // 1) beschikbaarheid: >0 uur capaciteit op die datum
+    const empCap = capByEmp.get(Number(eid)) || capByEmp.get(eid) || new Map();
+    const availHours = Number(empCap.get(dateISO) || 0);
+    const isAvailable = availHours > 0;
+
+    // 2) al ingepland die dag (ergens). Maar: als hij alleen in deze cel staat -> mag blijven
+    const isBusy = busySet.has(eid);
+
+    const mustShow = keepVisible.has(eid);
+    const shouldHide = (!mustShow) && (!isAvailable || isBusy);
+
+    if (shouldHide) continue;
+
+    const row = document.createElement("label");
+    row.className = "assign-item";
+    const checked = selected[activeTab].has(eid);
+
+    row.innerHTML = `
+      <input type="checkbox" ${checked ? "checked" : ""} data-eid="${escapeAttr(eid)}" />
+      <span>${escapeHtml(name)}</span>
+    `;
+
+    row.querySelector("input").onchange = (e) => {
+      const id = String(e.target.dataset.eid || "");
+      if (!id) return;
+      if (e.target.checked) selected[activeTab].add(id);
+      else selected[activeTab].delete(id);
+    };
+
+    listEl.appendChild(row);
+  }
+};
+
 
       tabs.forEach(t => {
         t.onclick = () => {
@@ -1577,7 +1614,7 @@
     tr.appendChild(td);
     return tr;
   }
-  
+
   function balanceRow(label, dates, byDay){
     const tr = document.createElement("tr");
     tr.className = "balance-row";
