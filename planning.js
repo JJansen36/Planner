@@ -742,7 +742,13 @@ for (const w of werknemers || []) {
   tr.className = "cap-emp-row hidden";
   tr.dataset.capParent = capKey; // koppeling aan totaal-row
 
-  tr.appendChild(leftRowHdrCell(wnm, "sticky-left cap-name"));
+  const leftEmp = document.createElement("td");
+  leftEmp.className = "rowhdr sticky-left cap-name cap-emp-click";
+  leftEmp.textContent = wnm;
+  leftEmp.dataset.empId = String(wid ?? "");
+  leftEmp.dataset.empName = String(wnm ?? "");
+  tr.appendChild(leftEmp);
+
 
   for (const d of dates){
     const iso = toISODate(d);
@@ -756,25 +762,6 @@ for (const w of werknemers || []) {
   tbody.appendChild(tr);
 }
 
-
-  // ---- Totaal capaciteit (som medewerkers per dag) ----
-{
-  const trTot = document.createElement("tr");
-  trTot.className = "cap-total-row";
-
-  const leftTot = leftRowHdrCell("Totaal", "sticky-left cap-name");
-  trTot.appendChild(leftTot);
-
-  for (const d of dates) {
-    const iso = toISODate(d);
-    const td = document.createElement("td");
-    td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
-    td.textContent = formatHoursCell(capTotalByDay[iso] || 0);
-    trTot.appendChild(td);
-  }
-
-  tbody.appendChild(trTot);
-}
 
 
   // Totals / beschikbaar rows (zoals PDF onderin)
