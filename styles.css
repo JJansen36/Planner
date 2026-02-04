@@ -908,3 +908,10 @@ td.cap-emp-click:hover{
 .cap-expander{
   margin-right: 8px;
 }
+
+td.cap-emp-click{
+  cursor:pointer;
+}
+td.cap-emp-click:hover{
+  text-decoration: underline;
+}
