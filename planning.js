@@ -1764,135 +1764,167 @@ for (const [sid, dm] of assignMap) {
     }
   }
 
-  function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = {}) {
-    for (let i = 0; i < dates.length; i++) {
-      const d = dates[i];
-      const iso = toISODate(d);
+function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = {}) {
+  // bepaal per dag: welke "bar-status" is dit?
+  const keys = dates.map((d, i) => {
+    const iso = toISODate(d);
+    const prod = Number(assignByDay?.[iso]?.prod || 0);
+    const mont = Number(assignByDay?.[iso]?.mont || 0);
+    const label = labels[i] || "";
 
-      const prod = Number(assignByDay?.[iso]?.prod || 0);
-      const mont = Number(assignByDay?.[iso]?.mont || 0);
+    if (prod > 0 && mont > 0) return "both";
+    if (prod > 0) return "prod";
+    if (mont > 0) return "mont";
+    if (label) return `lbl:${label}`;
+    return "";
+  });
 
-      const label = labels[i] || "";
-      const isStart = !!label && (i === 0 || labels[i - 1] !== label);
-      const isMarker = markerISO && iso === markerISO;
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i];
+    const iso = toISODate(d);
 
-      const td = document.createElement("td");
-      td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
+    const prod = Number(assignByDay?.[iso]?.prod || 0);
+    const mont = Number(assignByDay?.[iso]?.mont || 0);
+    const label = labels[i] || "";
 
+    const key = keys[i];
+    const prevKey = (i > 0) ? keys[i - 1] : "";
+    const nextKey = (i < keys.length - 1) ? keys[i + 1] : "";
 
-      // cel-kleur bepalen op basis van assignments (niet alleen label)
-      let cls = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
-      if (prod > 0 && mont > 0) cls += " bar-both";
-      else if (prod > 0) cls += " bar-prod";
-      else if (mont > 0) cls += " bar-mont";
-      else if (label) cls += ` ${barClass(label)}`; // fallback
+    const isMarker = markerISO && iso === markerISO;
 
-      td.className = cls;
+    const td = document.createElement("td");
+    td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
 
-      let html = "";
+    // cel-kleur
+    let cls = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+    if (key === "both") cls += " bar-both";
+    else if (key === "prod") cls += " bar-prod";
+    else if (key === "mont") cls += " bar-mont";
+    else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
+    td.className = cls;
 
-      // deadline marker
-      if (isMarker) html += `<div class="deadline">oplever</div>`;
+    let html = "";
 
-      // bar tekenen als er iets gepland is
-      if (prod > 0 || mont > 0 || label) {
-        if (prod > 0 && mont > 0) {
-          // split bar (2 lijntjes samen hoogte van 1 blokje)
-          html += `
-            <div class="bar bar-split">
-              <div class="bar-half prod"></div>
-              <div class="bar-half mont"></div>
-            </div>
-          `;
-        } else {
-          // normale bar, tekst alleen op start
-          const txt = isStart ? (label || (prod > 0 ? "pro" : "mon")) : "&nbsp;";
-          html += `<div class="bar">${txt}</div>`;
-        }
+    // deadline marker
+    if (isMarker) html += `<div class="deadline">oplever</div>`;
+
+    // bar tonen?
+    if (key) {
+      const isStart = key !== prevKey;
+      const isEnd = key !== nextKey;
+
+      const startCls = isStart ? " bar-start" : "";
+      const endCls = isEnd ? " bar-end" : "";
+
+      if (key === "both") {
+        html += `
+          <div class="bar bar-split${startCls}${endCls}">
+            <div class="bar-half prod"></div>
+            <div class="bar-half mont"></div>
+          </div>
+        `;
+      } else {
+        // tekst alleen op start
+        const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
+        html += `<div class="bar${startCls}${endCls}">${txt}</div>`;
       }
-
-      // badges (aantallen)
-      if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
-      if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
-
-      td.innerHTML = html;
-      tr.appendChild(td);
     }
+
+    td.innerHTML = html;
+    tr.appendChild(td);
   }
+}
+
 
 
 
 
   // like appendDayCells, but makes section-day cells clickable for assignments
-  function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, assignMap, werknemers) {
+function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, assignMap, werknemers) {
+  const empIdKey = "id";
+  const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
+  const empNameById = new Map((werknemers || []).map(w => [
+    String(w?.[empIdKey]),
+    String(w?.[empNameKey] || w?.[empIdKey] || "")
+  ]));
 
-      // map werknemer_id -> naam (1x per render)
-    const empIdKey = "id";
-    const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
-    const empNameById = new Map((werknemers || []).map(w => [String(w?.[empIdKey]), String(w?.[empNameKey] || w?.[empIdKey] || "")]));
+  // keys bepalen zodat we start/einde kunnen zien
+  const keys = dates.map((d, i) => {
+    const iso = toISODate(d);
+    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+    const label = labels[i] || "";
 
+    if (prod > 0 && mont > 0) return "both";
+    if (prod > 0) return "prod";
+    if (mont > 0) return "mont";
+    if (label) return `lbl:${label}`;
+    return "";
+  });
 
-    for (let i = 0; i < dates.length; i++) {
-      const d = dates[i];
-      const iso = toISODate(d);
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i];
+    const iso = toISODate(d);
 
-      const prod = Number(assignCountByDay?.[iso]?.prod || 0);
-      const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+    const label = labels[i] || "";
 
-      const label = labels[i] || "";
-      const isStart = !!label && (i === 0 || labels[i - 1] !== label);
+    const key = keys[i];
+    const prevKey = (i > 0) ? keys[i - 1] : "";
+    const nextKey = (i < keys.length - 1) ? keys[i + 1] : "";
 
-      const td = document.createElement("td");
-      td.dataset.sectionId = String(sectionId || "");
-      td.dataset.workDate = iso;
+    const td = document.createElement("td");
+    td.dataset.sectionId = String(sectionId || "");
+    td.dataset.workDate = iso;
 
-          // tooltip met namen (alleen tonen als er assignments zijn)
-      const entry = assignMap?.get(String(sectionId))?.get(iso);
-      if (entry) {
-        const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
-        const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
+    // tooltip met namen
+    const entry = assignMap?.get(String(sectionId))?.get(iso);
+    if (entry) {
+      const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
+      const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
+      let tip = "";
+      if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
+      if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
+      if (tip) td.dataset.tip = tip;
+    }
 
-        let tip = "";
-        if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
-        if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
+    // cel-kleur
+    let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
+    if (key === "both") cls += " bar-both";
+    else if (key === "prod") cls += " bar-prod";
+    else if (key === "mont") cls += " bar-mont";
+    else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
+    td.className = cls;
 
-        if (tip) td.dataset.tip = tip;
-      }
+    let html = "";
 
+    if (key) {
+      const isStart = key !== prevKey;
+      const isEnd = key !== nextKey;
 
-      // cel-kleur bepalen op basis van assignments, zodat het altijd klopt
-      let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
-      if (prod > 0 && mont > 0) cls += " bar-both";
-      else if (prod > 0) cls += " bar-prod";
-      else if (mont > 0) cls += " bar-mont";
-      else if (label) cls += ` ${barClass(label)}`;
+      const startCls = isStart ? " bar-start" : "";
+      const endCls = isEnd ? " bar-end" : "";
 
-      td.className = cls;
-
-      let html = "";
-
-      // bar tekenen
-      if (prod > 0 && mont > 0) {
+      if (key === "both") {
         html += `
-          <div class="bar bar-split">
+          <div class="bar bar-split${startCls}${endCls}">
             <div class="bar-half prod"></div>
             <div class="bar-half mont"></div>
           </div>
         `;
-      } else if (prod > 0 || mont > 0 || label) {
-        // normale bar (tekst alleen op start)
-        const txt = isStart ? (label || (prod > 0 ? "pro" : "mon")) : "&nbsp;";
-        html += `<div class="bar">${txt}</div>`;
+      } else {
+        const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
+        html += `<div class="bar${startCls}${endCls}">${txt}</div>`;
       }
-
-      // badges
-      if (prod > 0) html += `<div class="assign-badge prod">${prod}</div>`;
-      if (mont > 0) html += `<div class="assign-badge mont">${mont}</div>`;
-
-      td.innerHTML = html;
-      tr.appendChild(td);
     }
+
+    td.innerHTML = html;
+    tr.appendChild(td);
   }
+}
+
 
 function applyZebraVisible(){
   const tbody = gridEl?.querySelector(".planner-table tbody");
