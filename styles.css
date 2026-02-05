@@ -1248,3 +1248,25 @@ td.cap-emp-click:hover{
   border-radius: 0 !important;
 }
 
+
+/* ===== Dummy (Inhuur) styling ===== */
+.dummy-hatch{
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(0,0,0,.18) 0px,
+    rgba(0,0,0,.18) 3px,
+    rgba(255,255,255,0) 3px,
+    rgba(255,255,255,0) 8px
+  ) !important;
+  outline: 1px solid rgba(15,23,42,.35);
+  outline-offset: -1px;
+}
+
+/* prod/mont kleur blijft gelijk; hatch is overlay */
+.bar-prod .bar.dummy-hatch{ background-color:#b7f0c2 !important; }
+.bar-mont .bar.dummy-hatch{ background-color:#f6c1f3 !important; }
+
+/* split helften */
+.bar.bar-split .bar-half.prod.dummy-hatch{ background-color:#b7f0c2 !important; }
+.bar.bar-split .bar-half.mont.dummy-hatch{ background-color:#f6c1f3 !important; }
+
