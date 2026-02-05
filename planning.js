@@ -759,17 +759,18 @@ for (const [sid, dm] of assignMap) {
   const projAssignByDay = {};
   const secs = sectiesByProject.get(pid) || [];
 
-  for (const dd of dates) {
-    const iso = toISODate(dd);
-    let prod = 0, mont = 0;
+for (const dd of dates) {
+  const iso = toISODate(dd);
+  let prod = 0, mont = 0;
+  let dummyProd = false, dummyMont = false; // ✅ FIX
 
-    for (const s of secs) {
-      const sid = s?.[sectIdKey]
-        ? String(s[sectIdKey])
-        : (s?.section_id ? String(s.section_id) : null);
-      if (!sid) continue;
+  for (const s of secs) {
+    const sid = s?.[sectIdKey]
+      ? String(s[sectIdKey])
+      : (s?.section_id ? String(s.section_id) : null);
+    if (!sid) continue;
 
-      const entry = assignMap.get(String(sid))?.get(iso);
+    const entry = assignMap.get(String(sid))?.get(iso);
     if (entry) {
       prod += entry.productie.size;
       mont += entry.montage.size;
@@ -781,6 +782,7 @@ for (const [sid, dm] of assignMap) {
 
   projAssignByDay[iso] = { prod, mont, dummyProd, dummyMont };
 }
+
 
   // ✅ labels voor projectregel: op basis van assignments
   // - alleen prod => "productie"
@@ -1778,8 +1780,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
     const iso = toISODate(d);
     const prod = Number(assignByDay?.[iso]?.prod || 0);
     const mont = Number(assignByDay?.[iso]?.mont || 0);
-    const dummyProd = !!assignByDay?.[iso]?.dummyProd;
-    const dummyMont = !!assignByDay?.[iso]?.dummyMont;
+
 
     const label = labels[i] || "";
 
@@ -1828,18 +1829,30 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
       const startCls = isStart ? " bar-start" : "";
       const endCls = isEnd ? " bar-end" : "";
 
-      if (key === "both") {
-        html += `
-          <div class="bar bar-split${startCls}${endCls}">
-            <div class="bar-half prod"></div>
-            <div class="bar-half mont"></div>
-          </div>
-        `;
-      } else {
-        // tekst alleen op start
-        const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
-        html += `<div class="bar${startCls}${endCls}">${txt}</div>`;
-      }
+if (key === "both") {
+  const dummyProd = !!assignByDay?.[iso]?.dummyProd;
+  const dummyMont = !!assignByDay?.[iso]?.dummyMont;
+
+  html += `
+    <div class="bar bar-split${startCls}${endCls}">
+      <div class="bar-half prod ${dummyProd ? "dummy-hatch" : ""}"></div>
+      <div class="bar-half mont ${dummyMont ? "dummy-hatch" : ""}"></div>
+    </div>
+  `;
+} else {
+  const dummyProd = !!assignByDay?.[iso]?.dummyProd;
+  const dummyMont = !!assignByDay?.[iso]?.dummyMont;
+
+  const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
+
+  const dummyCls =
+    (key === "prod" && dummyProd) ? " dummy-hatch" :
+    (key === "mont" && dummyMont) ? " dummy-hatch" :
+    "";
+
+  html += `<div class="bar${startCls}${endCls}${dummyCls}">${txt}</div>`;
+}
+
     }
 
     td.innerHTML = html;
