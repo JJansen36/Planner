@@ -373,6 +373,8 @@ function buildPlannedSetsByDay(planningItems){
     const end = addDays(start, RANGE_DAYS - 1);
     const startISO = toISODate(start);
     const endISO = toISODate(end);
+    const todayISO = toISODate(new Date());
+
 
     statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
@@ -380,16 +382,23 @@ function buildPlannedSetsByDay(planningItems){
     const { data: projecten, error: pErr } = await sb
       .from("projecten")
       .select("*")
+      .in("salesstatus", [4,5,6,7,8])
+      .gte("completiondate", todayISO)
       .order("offerno", { ascending: true })
       .limit(500);
+
 
     if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
 
     // 2) secties
+    const projectIds = (projecten || []).map(p => p.project_id ?? p.id).filter(Boolean);
+
     const { data: secties, error: sErr } = await sb
       .from("secties")
       .select("*")
+      .in("project_id", projectIds)
       .limit(2000);
+
 
     if (sErr) { statusEl.textContent = "Fout secties: " + sErr.message; return; }
 
