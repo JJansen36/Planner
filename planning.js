@@ -506,6 +506,7 @@ function buildPlannedSetsByDay(planningItems){
     const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
     const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
     const completionKey = pickKey(projecten[0], ["completiondate","completion_date","opleverdatum","end_date"]);
+    const deliveryKey = pickKey(projecten[0], ["deliverydate","delivery_date","leverdatum"]);
 
 
     const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
@@ -742,6 +743,9 @@ for (const [sid, dm] of assignMap) {
       const complRaw = p?.[completionKey] ?? "";
       const complTxt = formatDateNL(complRaw);
       const complISO = String(complRaw || "").slice(0,10); // "2026-03-15"
+      const deliveryRaw = p?.[deliveryKey] ?? "";
+      const deliveryISO = String(deliveryRaw || "").slice(0,10);
+
 
 
       console.log("completionKey:", completionKey, "value:", p?.[completionKey]);
@@ -807,7 +811,7 @@ for (const dd of dates) {
     return "";
   });
 
-  appendProjectDayCells(projRow, dates, projLabels, complISO, projAssignByDay);
+  appendProjectDayCells(projRow, dates, projLabels, complISO, deliveryISO, projAssignByDay);
   tbody.appendChild(projRow);
 
 
@@ -1788,7 +1792,8 @@ const renderList = () => {
     }
   }
 
-function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = {}) {
+function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = "", assignByDay = {}) {
+
   // bepaal per dag: welke "bar-status" is dit?
   const keys = dates.map((d, i) => {
     const iso = toISODate(d);
@@ -1818,6 +1823,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
     const nextKey = (i < keys.length - 1) ? keys[i + 1] : "";
 
     const isMarker = markerISO && iso === markerISO;
+    const isDelivery = deliveryISO && iso === deliveryISO;
+
 
     const td = document.createElement("td");
     td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
@@ -1832,7 +1839,10 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
 
     let html = "";
 
-    // deadline marker
+    // delivery marker (lichter oranje)
+    if (isDelivery) html += `<div class="delivery">lever</div>`;
+
+    // oplever marker (donkerder oranje)
     if (isMarker) html += `<div class="deadline">oplever</div>`;
 
     // bar tonen?
