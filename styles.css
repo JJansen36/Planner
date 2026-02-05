@@ -1279,3 +1279,19 @@ tr.project-row.is-open > td.sticky-left{
   background: rgba(37, 99, 235, 0.12);
   font-weight: 600;
 }
+/* Projectregel highlight over de HELE kalender (ook over wknd / bars heen) */
+tr.project-row.is-open > td{
+  /* zachte overlay */
+  box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.06);
+}
+
+/* iets sterker op de sticky-left kolom */
+tr.project-row.is-open > td.sticky-left{
+  box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.10);
+  font-weight: 600;
+}
+
+/* optioneel: duidelijke linkerrand */
+tr.project-row.is-open > td.sticky-left{
+  border-left: 4px solid rgba(37, 99, 235, 0.35);
+}
