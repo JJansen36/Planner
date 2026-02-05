@@ -1212,3 +1212,39 @@ td.cap-emp-click:hover{
 /* Als hidden=true in JS */
 #settingsModal[hidden]{ display:none !important; }
 
+/* ===== Bars aan elkaar laten sluiten ===== */
+
+/* standaard GEEN ronde hoeken */
+.planner-table td.plan-cell .bar{
+  border-radius: 0 !important;
+}
+
+/* alleen op start/einde weer rond */
+.planner-table td.plan-cell .bar.bar-start{
+  border-top-left-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+}
+.planner-table td.plan-cell .bar.bar-end{
+  border-top-right-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+/* split-bar (prod+mont) als 1 blok laten aanvoelen */
+.planner-table td.plan-cell .bar.bar-split{
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+.planner-table td.plan-cell .bar.bar-split.bar-start{
+  border-top-left-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+}
+.planner-table td.plan-cell .bar.bar-split.bar-end{
+  border-top-right-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+/* halve blokjes zelf niet afronden (wrapper doet dat) */
+.planner-table td.plan-cell .bar.bar-split .bar-half{
+  border-radius: 0 !important;
+}
+
