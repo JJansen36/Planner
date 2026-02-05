@@ -1295,3 +1295,26 @@ tr.project-row.is-open > td.sticky-left{
 tr.project-row.is-open > td.sticky-left{
   border-left: 4px solid rgba(37, 99, 235, 0.35);
 }
+
+/* oplever (bestaand) */
+.deadline{
+  display:inline-block;
+  font-size:10px;
+  padding:1px 4px;
+  border-radius:6px;
+  background: #f59e0b; /* oranje */
+  color:#0f172a;
+  border:1px solid rgba(0,0,0,.15);
+}
+
+/* leverdatum (nieuw, lichter oranje) */
+.delivery{
+  display:inline-block;
+  font-size:10px;
+  padding:1px 4px;
+  border-radius:6px;
+  background: #fde68a; /* licht oranje/geel */
+  color:#0f172a;
+  border:1px solid rgba(0,0,0,.12);
+  margin-right:4px; /* zodat lever + oplever niet plakken */
+}
