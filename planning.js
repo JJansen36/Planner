@@ -13,7 +13,7 @@
   const SETTINGS_KEY = "lovd_planner_settings_v1";
   // ===== Dummy medewerker (virtuele inhuur) =====
   const DUMMY_EMP_ID = 999999;
-  const DUMMY_EMP_NAME = "Inhuur (dummy)";
+  const DUMMY_EMP_NAME = "Concept";
   const defaultSettings = {
     planFactor: 0.80, // 80%
   };
@@ -970,10 +970,11 @@ for (const dd of dates) {
     const pid = String(projHit.dataset.proj || "");
     if (!pid) return;
 
-    // openklappen (alleen openen, niet togglen)
-    toggleProject(pid, true);
+    // ✅ togglen (open ↔ dicht) bij klik op regel/naam
+    toggleProject(pid);
     return;
   }
+
 
 
 
