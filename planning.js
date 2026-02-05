@@ -13,7 +13,7 @@
   const SETTINGS_KEY = "lovd_planner_settings_v1";
   // ===== Dummy medewerker (virtuele inhuur) =====
   const DUMMY_EMP_ID = 999999;
-  const DUMMY_EMP_NAME = "Inhuur (dummy)";
+  const DUMMY_EMP_NAME = "Concept";
   const defaultSettings = {
     planFactor: 0.80, // 80%
   };
