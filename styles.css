@@ -1270,3 +1270,12 @@ td.cap-emp-click:hover{
 .bar.bar-split .bar-half.prod.dummy-hatch{ background-color:#b7f0c2 !important; }
 .bar.bar-split .bar-half.mont.dummy-hatch{ background-color:#f6c1f3 !important; }
 
+/* Projectregel highlight als secties open staan */
+tr.project-row.is-open > td{
+  background: rgba(37, 99, 235, 0.08); /* licht blauw */
+}
+
+tr.project-row.is-open > td.sticky-left{
+  background: rgba(37, 99, 235, 0.12);
+  font-weight: 600;
+}
