@@ -13,7 +13,7 @@
   const SETTINGS_KEY = "lovd_planner_settings_v1";
   // ===== Dummy medewerker (virtuele inhuur) =====
   const DUMMY_EMP_ID = 999999;
-  const DUMMY_EMP_NAME = "Concept";
+  const DUMMY_EMP_NAME = "Inhuur (dummy)";
   const defaultSettings = {
     planFactor: 0.80, // 80%
   };
@@ -55,32 +55,39 @@
     el("settingsModal").hidden = true;
   }
 
-  function buildPlannedSetsByDay(planningItems){
-    // output: { "2026-02-10": { pro:Set(uuid), mo:Set(uuid) }, ... }
-    const out = Object.create(null);
+function buildPlannedSetsByDay(planningItems){
+  // output: { "YYYY-MM-DD": { pro:Set, mo:Set, dummyPro:number, dummyMo:number }, ... }
+  const out = Object.create(null);
 
-    for (const it of (planningItems || [])) {
-      const d = it.work_date;                 // "YYYY-MM-DD"
-      const wid = it.werknemer_id;            // uuid
-      const kind = (it.work_type || it.kind || it.type || "").toLowerCase();
+  for (const it of (planningItems || [])) {
+    const d = it.work_date;                 // "YYYY-MM-DD"
+    const wid = it.werknemer_id;            // id (number/string)
+    const kind = (it.work_type || it.kind || it.type || "").toLowerCase();
 
+    if (!d || wid === null || wid === undefined) continue;
 
-      if (!d || !wid) continue;
+    const bucket =
+      kind === "pro" || kind === "productie" ? "pro" :
+      kind === "mo"  || kind === "montage"  ? "mo"  :
+      null;
 
-      // normaliseer
-      const bucket =
-        kind === "pro" || kind === "productie" ? "pro" :
-        kind === "mo"  || kind === "montage"  ? "mo"  :
-        null;
+    if (!bucket) continue;
 
-      if (!bucket) continue;
+    if (!out[d]) out[d] = { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
 
-      if (!out[d]) out[d] = { pro: new Set(), mo: new Set() };
-      out[d][bucket].add(wid);
+    const isDummy = String(wid) === String(DUMMY_EMP_ID);
+
+    if (isDummy) {
+      if (bucket === "pro") out[d].dummyPro += 1;
+      if (bucket === "mo")  out[d].dummyMo  += 1;
+    } else {
+      out[d][bucket].add(String(wid));
     }
-
-    return out;
   }
+
+  return out;
+}
+
 
   function fmtHours(n){
     // 31 -> "31", 23.25 -> "23,25"
@@ -649,11 +656,12 @@ for (const [sid, dm] of assignMap) {
     const iso = toISODate(d);
     const sets = plannedSetsByDay[iso];
 
-    const prodCount = sets?.pro?.size || 0;
-    const montCount = sets?.mo?.size || 0;
+    const prodCount = (sets?.pro?.size || 0) + (sets?.dummyPro || 0);
+    const montCount = (sets?.mo?.size || 0) + (sets?.dummyMo || 0);
 
     plannedProdByDay[iso] = prodCount * HOURS_PER_PERSON_DAY * pf;
     plannedMontByDay[iso] = montCount * HOURS_PER_PERSON_DAY * pf;
+
   }
 
 
