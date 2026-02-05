@@ -1393,6 +1393,11 @@ const renderList = () => {
     btn.classList.toggle("open", open);
     btn.textContent = open ? "▼" : "▶";
 
+    // ✅ projectregel highlighten als open
+    const projRow = btn.closest("tr");
+    if (projRow) projRow.classList.toggle("is-open", open);
+
+
     gridEl.querySelectorAll("tr.section-row, tr.section-details-row").forEach(tr => {
       if (String(tr.dataset.parent || "") === pid) {
         tr.classList.toggle("hidden", !open);
