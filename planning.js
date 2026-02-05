@@ -11,7 +11,9 @@
 
   // ---- Settings (uitbreidbaar) ----
   const SETTINGS_KEY = "lovd_planner_settings_v1";
-
+  // ===== Dummy medewerker (virtuele inhuur) =====
+  const DUMMY_EMP_ID = 999999;
+  const DUMMY_EMP_NAME = "Inhuur (dummy)";
   const defaultSettings = {
     planFactor: 0.80, // 80%
   };
@@ -406,14 +408,18 @@
 
     // 5) werknemers (voor namen in capaciteitblok)
     const { data: werknemers, error: eErr } = await sb
+    
       .from("werknemers")
       .select("*")
       .order("name", { ascending: true })
       .limit(500);
 
     if (eErr) { statusEl.textContent = "Fout werknemers: " + eErr.message; return; }
-
-    // 6) section_assignments in range (collega's per sectie/dag + type)
+    // ✅ Dummy medewerker toevoegen (altijd beschikbaar in UI)
+    if (!werknemers.some(w => String(w.id) === String(DUMMY_EMP_ID))) {
+      werknemers.push({ id: DUMMY_EMP_ID, name: DUMMY_EMP_NAME });
+    }
+        // 6) section_assignments in range (collega's per sectie/dag + type)
     const { data: assigns, error: aErr } = await sb
       .from("section_assignments")
       .select("section_id, work_date, werknemer_id, work_type")
@@ -764,14 +770,17 @@ for (const [sid, dm] of assignMap) {
       if (!sid) continue;
 
       const entry = assignMap.get(String(sid))?.get(iso);
-      if (entry) {
-        prod += entry.productie.size;
-        mont += entry.montage.size;
-      }
-    }
+    if (entry) {
+      prod += entry.productie.size;
+      mont += entry.montage.size;
 
-    projAssignByDay[iso] = { prod, mont };
+      if (entry.productie.has(String(DUMMY_EMP_ID)) || entry.productie.has(Number(DUMMY_EMP_ID))) dummyProd = true;
+      if (entry.montage.has(String(DUMMY_EMP_ID)) || entry.montage.has(Number(DUMMY_EMP_ID))) dummyMont = true;
+    }
   }
+
+  projAssignByDay[iso] = { prod, mont, dummyProd, dummyMont };
+}
 
   // ✅ labels voor projectregel: op basis van assignments
   // - alleen prod => "productie"
@@ -1261,34 +1270,33 @@ for (const [sid, dm] of assignMap) {
 
       let activeTab = "productie";
 
-    const renderList = () => {
+const renderList = () => {
   tabs.forEach(t => t.classList.toggle("primary", t.dataset.tab === activeTab));
   listEl.innerHTML = "";
 
   const busySet = busyByDay.get(dateISO) || new Set();
-
-  // mensen die in deze cel al geselecteerd zijn (in beide tabs) moeten altijd zichtbaar blijven
   const keepVisible = new Set([
     ...Array.from(selected.productie),
     ...Array.from(selected.montage),
   ]);
+
+  const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID); // <<< PLAK HIER
 
   for (const w of werknemers || []) {
     const eid = String(w?.[empIdKey] || "");
     const name = String(w?.[empNameKey] || eid);
     if (!eid) continue;
 
-    // 1) beschikbaarheid: >0 uur capaciteit op die datum
     const empCap = capByEmp.get(Number(eid)) || capByEmp.get(eid) || new Map();
     const availHours = Number(empCap.get(dateISO) || 0);
     const isAvailable = availHours > 0;
 
-    // 2) al ingepland die dag (ergens). Maar: als hij alleen in deze cel staat -> mag blijven
     const isBusy = busySet.has(eid);
 
     const mustShow = keepVisible.has(eid);
-    const shouldHide = (!mustShow) && (!isAvailable || isBusy);
 
+    // ✅ Dummy nooit wegfilteren
+    const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
     if (shouldHide) continue;
 
     const row = document.createElement("label");
@@ -1770,6 +1778,9 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", assignByDay = 
     const iso = toISODate(d);
     const prod = Number(assignByDay?.[iso]?.prod || 0);
     const mont = Number(assignByDay?.[iso]?.mont || 0);
+    const dummyProd = !!assignByDay?.[iso]?.dummyProd;
+    const dummyMont = !!assignByDay?.[iso]?.dummyMont;
+
     const label = labels[i] || "";
 
     if (prod > 0 && mont > 0) return "both";
@@ -1881,6 +1892,9 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, a
 
     // tooltip met namen
     const entry = assignMap?.get(String(sectionId))?.get(iso);
+    const dummyProd = entry?.productie?.has(String(DUMMY_EMP_ID)) || entry?.productie?.has(Number(DUMMY_EMP_ID));
+    const dummyMont = entry?.montage?.has(String(DUMMY_EMP_ID)) || entry?.montage?.has(Number(DUMMY_EMP_ID));
+
     if (entry) {
       const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
       const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
@@ -1909,14 +1923,20 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, a
 
       if (key === "both") {
         html += `
-          <div class="bar bar-split${startCls}${endCls}">
-            <div class="bar-half prod"></div>
-            <div class="bar-half mont"></div>
-          </div>
+      <div class="bar bar-split${startCls}${endCls}">
+        <div class="bar-half prod ${dummyProd ? "dummy-hatch" : ""}"></div>
+        <div class="bar-half mont ${dummyMont ? "dummy-hatch" : ""}"></div>
+      </div>
+
         `;
       } else {
         const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
-        html += `<div class="bar${startCls}${endCls}">${txt}</div>`;
+        const dummyCls =
+          (key === "prod" && dummyProd) ? " dummy-hatch" :
+          (key === "mont" && dummyMont) ? " dummy-hatch" :
+          "";
+
+        html += `<div class="bar${startCls}${endCls}${dummyCls}">${txt}</div>`;
       }
     }
 
