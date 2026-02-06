@@ -232,6 +232,22 @@ function buildPlannedSetsByDay(planningItems){
     return `${dd}-${mm}-${yy}`;
   }
 
+
+  function asISODate(v){
+  if(!v) return "";
+  const s = String(v);
+
+  // al een pure date: "YYYY-MM-DD"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // timestamp: "YYYY-MM-DDTHH:mm:ss..."
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s.slice(0,10); // fallback
+
+  // lokale dag teruggeven (NL), niet de UTC dag uit de string
+  return toISODate(d);
+}
+
   // -------- SECTION DETAILS MODAL (sectie gegevens) --------
   let secModal = null;
 
@@ -776,9 +792,9 @@ for (const [sid, dm] of assignMap) {
       const kl  = p?.[klantKey] ?? "";
       const complRaw = p?.[completionKey] ?? "";
       const complTxt = formatDateNL(complRaw);
-      const complISO = String(complRaw || "").slice(0,10); // "2026-03-15"
+      const complISO = asISODate(complRaw);
       const deliveryRaw = p?.[deliveryKey] ?? "";
-      const deliveryISO = String(deliveryRaw || "").slice(0,10);
+      const deliveryISO = asISODate(deliveryRaw);
 
 
 
