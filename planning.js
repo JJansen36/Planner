@@ -796,6 +796,8 @@ for (const [sid, dm] of assignMap) {
       const deliveryRaw = p?.[deliveryKey] ?? "";
       const deliveryISO = asISODate(deliveryRaw);
 
+      console.log("RAW completion:", complRaw, "=> ISO:", complISO);
+
 
 
       console.log("completionKey:", completionKey, "value:", p?.[completionKey]);
