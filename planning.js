@@ -1846,7 +1846,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
     td.className = cls;
 
-    let html = "";
+    let html = `<div class="plan-stack">`;
 
     // delivery marker (lichter oranje)
     if (isDelivery) html += `<div class="delivery">lever</div>`;
@@ -1854,7 +1854,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     // oplever marker (donkerder oranje)
     if (isMarker) html += `<div class="deadline">oplever</div>`;
 
-    // bar tonen?
+    // bars: toon prod en/of mont als eigen blok (stacked)
     if (key) {
       const isStart = key !== prevKey;
       const isEnd = key !== nextKey;
@@ -1862,32 +1862,26 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       const startCls = isStart ? " bar-start" : "";
       const endCls = isEnd ? " bar-end" : "";
 
-if (key === "both") {
-  const dummyProd = !!assignByDay?.[iso]?.dummyProd;
-  const dummyMont = !!assignByDay?.[iso]?.dummyMont;
+      const dummyProd = !!assignByDay?.[iso]?.dummyProd;
+      const dummyMont = !!assignByDay?.[iso]?.dummyMont;
 
-  html += `
-    <div class="bar bar-split${startCls}${endCls}">
-      <div class="bar-half prod ${dummyProd ? "dummy-hatch" : ""}"></div>
-      <div class="bar-half mont ${dummyMont ? "dummy-hatch" : ""}"></div>
-    </div>
-  `;
-} else {
-  const dummyProd = !!assignByDay?.[iso]?.dummyProd;
-  const dummyMont = !!assignByDay?.[iso]?.dummyMont;
+      // ✅ bij "both": 2 losse bars onder elkaar
+      if (key === "both") {
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
+      } else {
+        const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
+        const dummyCls =
+          (key === "prod" && dummyProd) ? " dummy-hatch" :
+          (key === "mont" && dummyMont) ? " dummy-hatch" : "";
 
-  const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
-
-  const dummyCls =
-    (key === "prod" && dummyProd) ? " dummy-hatch" :
-    (key === "mont" && dummyMont) ? " dummy-hatch" :
-    "";
-
-  html += `<div class="bar${startCls}${endCls}${dummyCls}">${txt}</div>`;
-}
-
+        // let op: class bar-prod / bar-mont toevoegen zodat kleur 100% klopt
+        const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
+        html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
+      }
     }
 
+    html += `</div>`;
     td.innerHTML = html;
     tr.appendChild(td);
   }
@@ -1958,7 +1952,7 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, a
     else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
     td.className = cls;
 
-    let html = "";
+    let html = `<div class="plan-stack">`;
 
     if (key) {
       const isStart = key !== prevKey;
@@ -1967,25 +1961,25 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, a
       const startCls = isStart ? " bar-start" : "";
       const endCls = isEnd ? " bar-end" : "";
 
-      if (key === "both") {
-        html += `
-      <div class="bar bar-split${startCls}${endCls}">
-        <div class="bar-half prod ${dummyProd ? "dummy-hatch" : ""}"></div>
-        <div class="bar-half mont ${dummyMont ? "dummy-hatch" : ""}"></div>
-      </div>
+      // dummy flags (die had je al)
+      // dummyProd / dummyMont bestaan hierboven al
 
-        `;
+      // ✅ bij "both": 2 losse bars stacken
+      if (key === "both") {
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
       } else {
         const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
         const dummyCls =
           (key === "prod" && dummyProd) ? " dummy-hatch" :
-          (key === "mont" && dummyMont) ? " dummy-hatch" :
-          "";
+          (key === "mont" && dummyMont) ? " dummy-hatch" : "";
 
-        html += `<div class="bar${startCls}${endCls}${dummyCls}">${txt}</div>`;
+        const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
+        html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
       }
     }
 
+    html += `</div>`;
     td.innerHTML = html;
     tr.appendChild(td);
   }
