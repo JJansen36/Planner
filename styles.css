@@ -833,3 +833,9 @@ td.section-click[data-tip]:hover::before{
   overflow:auto !important;
 }
 #settingsModal[hidden]{ display:none !important; }
+
+/* als prod+mont op dezelfde dag staan: kleur op de bar zelf (niet via td) */
+.plan-stack .bar.bar-prod{ background:#b7f0c2 !important; }
+.plan-stack .bar.bar-mont{ background:#f6c1f3 !important; }
+.plan-stack .bar.bar-prep{ background:#c7e0ff !important; }
+.plan-stack .bar.bar-generic{ background:#e5e7eb !important; }
