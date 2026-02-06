@@ -1,5 +1,5 @@
   import { makeSupabaseClient, requireSession } from "./auth.js";
-  import { startOfISOWeek, addDays } from "./utils.js";
+  
 
   function parseISODate(iso){
     if(!iso) return null;
@@ -7,6 +7,22 @@
     if(!m) return null;
     const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
     return new Date(y, mo, d); // lokaal, geen UTC shift
+  }
+
+  function addDays(date, n){
+    // NIET muteren + altijd lokale midnight
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+
+  function startOfISOWeek(date){
+    // maandag = start
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const day = d.getDay();              // zo=0, ma=1, ..., za=6
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    return d;
   }
 
   function toISODate(date){
@@ -544,6 +560,8 @@ function buildPlannedSetsByDay(planningItems){
   function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns }){
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
+
+      console.log("DATES preview:", dates.slice(0,14).map(d => toISODate(d)).join(", "));
 
     resetZebra(); // ✅ hier
 
