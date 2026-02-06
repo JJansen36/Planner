@@ -1491,3 +1491,67 @@ td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
 td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
 td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
 
+/* ===== STACK FIX (helemaal onderaan) ===== */
+
+/* 1) Alleen “gewone” cellen zijn 18px hoog.
+      Planningcellen (plan-cell) mogen meegroeien. */
+.planner-table td.cell:not(.plan-cell){
+  height: 18px;
+  line-height: 18px;
+}
+
+/* 2) Planningcellen: laat ze auto-hoogte krijgen */
+.planner-table td.plan-cell{
+  height: auto !important;
+  line-height: normal !important;
+  padding: 0 !important;
+  vertical-align: top;
+}
+
+/* 3) Stack layout */
+.planner-table{ --cell-h: 22px; }
+
+.plan-stack{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  align-items:stretch;
+}
+
+/* markers (lever/oplever) */
+.plan-stack .marker{
+  display:block;
+  width:100%;
+  height: var(--cell-h) !important;
+  line-height: var(--cell-h) !important;
+  margin: 0 !important;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  box-sizing: border-box;
+  text-align:left;
+}
+.plan-stack .marker.placeholder{ visibility:hidden; }
+
+/* bars in stack */
+.plan-stack .bar{
+  display:block;
+  width:100%;
+  height: var(--cell-h) !important;
+  line-height: var(--cell-h) !important;
+  margin: 0 !important;
+  padding: 0 6px;
+  border-radius: 6px !important; /* override jouw “radius 0” regel */
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  text-align:left;
+}
+
+/* kleuren via TD class */
+td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
+td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
+td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
+td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
+
+
