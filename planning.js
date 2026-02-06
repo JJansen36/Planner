@@ -1,5 +1,21 @@
   import { makeSupabaseClient, requireSession } from "./auth.js";
-  import { startOfISOWeek, addDays, toISODate, parseISODate } from "./utils.js";
+  import { startOfISOWeek, addDays } from "./utils.js";
+
+  function parseISODate(iso){
+    if(!iso) return null;
+    const m = String(iso).slice(0,10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m) return null;
+    const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    return new Date(y, mo, d); // lokaal, geen UTC shift
+  }
+
+  function toISODate(date){
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`; // lokaal, geen toISOString()
+  }
+
 
   const sb = makeSupabaseClient();
 
