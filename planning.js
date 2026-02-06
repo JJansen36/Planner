@@ -435,6 +435,10 @@ function buildPlannedSetsByDay(planningItems){
     if (!werknemers.some(w => String(w.id) === String(DUMMY_EMP_ID))) {
       werknemers.push({ id: DUMMY_EMP_ID, name: DUMMY_EMP_NAME });
     }
+
+    // ✅ Voor capaciteit: dummy NIET meenemen
+    const werknemersCap = (werknemers || []).filter(w => String(w.id) !== String(DUMMY_EMP_ID));
+
         // 6) section_assignments in range (collega's per sectie/dag + type)
     const { data: assigns, error: aErr } = await sb
       .from("section_assignments")
@@ -457,9 +461,11 @@ function buildPlannedSetsByDay(planningItems){
       secties,
       work,
       cap,
-      werknemers,
+      werknemers,          // blijft: voor assignments + labels + hatch
+      werknemersCap,       // ✅ nieuw: voor capaciteit dropdown + totalen
       assigns: safeAssigns
     });
+
   }
   /* ======================
     SECTION WORK MAP (section_id -> date -> rows[])
@@ -503,7 +509,7 @@ function buildPlannedSetsByDay(planningItems){
 
 
   // -------- RENDER --------
-  function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, assigns}){
+  function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns }){
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
 
@@ -634,6 +640,9 @@ for (const [sid, dm] of assignMap) {
     const capByEmp = new Map(); // empId -> dateISO -> sumHours
     for(const r of cap || []){
       const emp = r.werknemer_id;
+        // ✅ Dummy nooit meenemen in capaciteit
+      if (String(emp) === String(DUMMY_EMP_ID)) continue;
+
       const d = r.work_date;
       const h = Number(r.hours || 0);
       // type filtering: alleen "werk" telt als capaciteit (pas aan als je anders wil)
@@ -905,10 +914,10 @@ for (const dd of dates) {
   tbody.appendChild(trTotal);
 
   // ---- medewerker rijen (standaard verborgen) ----
-  const empIdKey = "id";
-  const empNameKey = pickKey(werknemers[0], ["naam","name","fullname","display_name"]);
+const empIdKey = "id";
+const empNameKey = pickKey((werknemersCap?.[0] || werknemers?.[0]), ["naam","name","fullname","display_name"]);
 
-  for (const w of werknemers || []) {
+for (const w of (werknemersCap || []) ) {
     const wid = w?.[empIdKey];
     const wnm = w?.[empNameKey] ?? String(wid ?? "");
 
@@ -1848,11 +1857,16 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
     let html = `<div class="plan-stack">`;
 
-    // delivery marker (lichter oranje)
-    if (isDelivery) html += `<div class="delivery">lever</div>`;
+    // lane 1: lever (of placeholder)
+    html += isDelivery
+      ? `<div class="marker delivery">lever</div>`
+      : `<div class="marker delivery placeholder">lever</div>`;
 
-    // oplever marker (donkerder oranje)
-    if (isMarker) html += `<div class="deadline">oplever</div>`;
+    // lane 2: oplever (of placeholder)
+    html += isMarker
+      ? `<div class="marker deadline">oplever</div>`
+      : `<div class="marker deadline placeholder">oplever</div>`;
+
 
     // bars: toon prod en/of mont als eigen blok (stacked)
     if (key) {
@@ -1953,6 +1967,9 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, a
     td.className = cls;
 
     let html = `<div class="plan-stack">`;
+
+    html += `<div class="marker delivery placeholder">lever</div>`;
+    html += `<div class="marker deadline placeholder">oplever</div>`;
 
     if (key) {
       const isStart = key !== prevKey;
