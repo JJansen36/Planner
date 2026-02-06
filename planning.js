@@ -1857,15 +1857,16 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
     let html = `<div class="plan-stack">`;
 
-    // lane 1: lever (of placeholder)
+    // markers samen op 1 regel
+    html += `<div class="marker-row">`;
     html += isDelivery
       ? `<div class="marker delivery">lever</div>`
       : `<div class="marker delivery placeholder">lever</div>`;
-
-    // lane 2: oplever (of placeholder)
     html += isMarker
       ? `<div class="marker deadline">oplever</div>`
       : `<div class="marker deadline placeholder">oplever</div>`;
+    html += `</div>`;
+
 
 
     // bars: toon prod en/of mont als eigen blok (stacked)
@@ -1968,8 +1969,12 @@ function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, a
 
     let html = `<div class="plan-stack">`;
 
+    // markers samen op 1 regel (placeholders blijven voor vaste hoogte)
+    html += `<div class="marker-row">`;
     html += `<div class="marker delivery placeholder">lever</div>`;
     html += `<div class="marker deadline placeholder">oplever</div>`;
+    html += `</div>`;
+
 
     if (key) {
       const isStart = key !== prevKey;
