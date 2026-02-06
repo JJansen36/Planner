@@ -606,22 +606,27 @@ td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
   overflow: hidden;
 }
 
-/* concept / dummy arcering */
+/* concept / dummy arcering (altijd zichtbaar, ook op groen) */
+.plan-stack .bar{
+  position:relative;
+  overflow:hidden;
+}
+
 .plan-stack .bar.dummy-hatch::after{
   content:"";
   position:absolute;
   inset:0;
   pointer-events:none;
-  /* subtiele diagonaal streep */
-  background: repeating-linear-gradient(
+  z-index:3;                 /* <-- belangrijk: bovenop bar + tekst */
+  background:repeating-linear-gradient(
     45deg,
-    rgba(255,255,255,0.0) 0px,
-    rgba(255,255,255,0.0) 6px,
-    rgba(255,255,255,0.45) 6px,
-    rgba(255,255,255,0.45) 10px
+    rgba(0,0,0,0.00) 0px,
+    rgba(0,0,0,0.00) 6px,
+    rgba(0,0,0,0.18) 6px,     /* <-- donkerder: veel beter zichtbaar */
+    rgba(0,0,0,0.18) 10px
   );
-  opacity: 0.9;
 }
+
 
 /* =========================
    PROJECT ROW OPEN HIGHLIGHT
