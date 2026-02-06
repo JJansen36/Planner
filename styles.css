@@ -1349,3 +1349,30 @@ tr.project-row.is-open > td.sticky-left{
   padding: 0 8px;
   border-radius: 10px;
 }
+
+
+.plan-stack{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.plan-stack .marker,
+.plan-stack .bar{
+  height:22px;
+  line-height:22px;
+  margin:0 !important;
+  box-sizing:border-box;
+}
+
+.plan-stack .marker.placeholder{
+  visibility:hidden;   /* neemt wél ruimte in, maar onzichtbaar */
+}
+
+/* FIX: kleur selectors moeten ook werken als .bar niet direct child is */
+.plan-cell .bar{ /* basis bar styling (wat jij al had) */ }
+
+/* Als jij kleur via td classes doet (aanrader): */
+.plan-cell.bar-prod .bar{ /* productie kleur */ }
+.plan-cell.bar-mont .bar{ /* montage kleur */ }
+.plan-cell.bar-both .bar{ /* optioneel */ }
