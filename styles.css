@@ -1365,8 +1365,6 @@ tr.project-row.is-open > td.sticky-left{
   box-sizing:border-box;
 }
 
-.plan-stack .marker.placeholder{
-  visibility:hidden;   /* neemt wél ruimte in, maar onzichtbaar */
 /* ===== STACK SYSTEEM (laatste in CSS) ===== */
 .planner-table{ --cell-h: 22px; }
 
@@ -1401,7 +1399,10 @@ tr.project-row.is-open > td.sticky-left{
   border: 1px solid rgba(0,0,0,.15);
   color: #0f172a;
 }
-.plan-stack .marker.placeholder{ visibility:hidden; }
+
+.plan-stack .marker.placeholder{
+  visibility:hidden;   /* neemt wél ruimte in, maar onzichtbaar */
+}
 
 /* bars */
 .plan-stack .bar{
@@ -1421,3 +1422,72 @@ td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
 td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
 td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
 td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
+
+/* Stack bars moeten rounded blijven (override) */
+.plan-stack .bar{
+  border-radius: 6px !important;
+}
+
+.planner-table{ --cell-h: 22px; }
+
+.plan-stack .marker,
+.plan-stack .bar{
+  height: var(--cell-h) !important;
+  line-height: var(--cell-h) !important;
+}
+
+/* ===== STACK SYSTEEM (helemaal onderaan) ===== */
+.planner-table{ --cell-h: 22px; }
+
+.planner-table td.plan-cell{ vertical-align: top; }
+
+.plan-stack{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  align-items:stretch;
+}
+
+/* markers */
+.plan-stack .marker{
+  height: var(--cell-h) !important;
+  line-height: var(--cell-h) !important;
+  margin: 0 !important;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  box-sizing: border-box;
+  display:block;
+  text-align:left;
+}
+.plan-stack .marker.delivery{
+  background:#fde68a;
+  border:1px solid rgba(0,0,0,.12);
+  color:#0f172a;
+}
+.plan-stack .marker.deadline{
+  background:#f59e0b;
+  border:1px solid rgba(0,0,0,.15);
+  color:#0f172a;
+}
+.plan-stack .marker.placeholder{ visibility:hidden; }
+
+/* bars */
+.plan-stack .bar{
+  height: var(--cell-h) !important;
+  line-height: var(--cell-h) !important;
+  margin: 0 !important;
+  padding: 0 6px;
+  border-radius: 6px !important;  /* override jouw radius-0 */
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:left;
+}
+
+/* kleuren via TD class */
+td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
+td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
+td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
+td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
+
