@@ -1319,41 +1319,33 @@ tr.project-row.is-open > td.sticky-left{
   margin-right:4px; /* zodat lever + oplever niet plakken */
 }
 
-:root{
-  --laneH: 22px;   /* vaste hoogte per “laag” */
-  --laneGap: 4px;
-  --cellPad: 6px;
+/* Zorg dat celflow omhoog begint */
+.planner-table td.plan-cell{
+  vertical-align: top;
 }
 
-/* dagcel moet position context geven */
-.dayCell{
-  position: relative;
-  padding: var(--cellPad);
+/* 1 stack in elke cel */
+.plan-stack{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
 }
 
-/* alle blokjes gebruiken dezelfde box sizing en hoogte */
-.planBlock{
-  position: absolute;
-  left: var(--cellPad);
-  right: var(--cellPad);
-  height: var(--laneH);
-  line-height: var(--laneH);
-  margin: 0 !important;         /* belangrijk: geen type-specifieke margins */
+/* Alle items exact dezelfde maat => perfect uitlijnen */
+.plan-stack .bar,
+.plan-stack .delivery,
+.plan-stack .deadline{
+  height: 22px;
+  line-height: 22px;
+  margin: 0 !important;
   box-sizing: border-box;
-  border-radius: 10px;
+}
+
+/* (optioneel) markers iets smaller/kleiner tekst */
+.plan-stack .delivery,
+.plan-stack .deadline{
   font-size: 12px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  padding: 0 8px;
+  border-radius: 10px;
 }
-
-/* row/cel hoogte laten meegroeien met max lanes */
-.plannerRow{
-  --lanes: 1;
-}
-.dayCell{
-  min-height: calc(
-    (var(--lanes) * (var(--laneH) + var(--laneGap))) + (var(--cellPad) * 2)
-  );
-}
-
