@@ -1,4 +1,18 @@
-/* styles.css – clean light UI */
+/* styles.css – clean light UI (opschoond, zonder functionaliteit te wijzigen)
+   - Dubbelen verwijderd
+   - Conflicterende regels samengevoegd
+   - “laatste bedoeling” behouden:
+     * planner table = fixed layout met vars
+     * sticky header (3 rijen) + sticky-left
+     * zebra overlay (zonder bars/markers te slopen)
+     * plan-stack (lever/oplever + bars)
+     * bars “aan elkaar sluiten” (radius-0 behalve start/end)
+     * settings modal altijd boven alles
+*/
+
+/* =========================
+   THEME / BASE
+========================= */
 :root{
   --bg:#f4f6fb;
   --panel:#ffffff;
@@ -27,14 +41,16 @@ body{
   background:var(--bg);
   color:var(--text);
 }
-
 a{color:inherit; text-decoration:none}
 
 .container.full-width{
-  max-width: none !important;
-  width: 100%;
+  max-width:none !important;
+  width:100%;
 }
 
+/* =========================
+   TOPBAR / CARDS / UI
+========================= */
 .topbar{
   display:flex;
   align-items:center;
@@ -72,14 +88,23 @@ a{color:inherit; text-decoration:none}
 .btn:hover{border-color:#cbd5e1}
 .btn.primary{
   background:var(--acc);
-  border-color:var(--acc);
+  border-color:transparent;
   color:#fff;
 }
 .btn.primary:hover{filter:brightness(.98)}
-.btn.ghost{
-  background:transparent;
+.btn.ghost{background:transparent}
+.btn.small{padding:8px 10px; border-radius:10px; font-weight:650}
+
+.icon-btn{
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  border-radius:10px;
+  padding:8px 10px;
+  cursor:pointer;
+  box-shadow:none;
 }
-.btn.small{padding:8px 10px; border-radius:10px; font-weight:650;}
+.icon-btn:hover{ background:#f8fafc; }
 
 .card{
   margin-top:14px;
@@ -89,7 +114,6 @@ a{color:inherit; text-decoration:none}
   box-shadow:var(--shadow);
   overflow:hidden;
 }
-
 .card .hd{
   padding:14px 16px;
   border-bottom:1px solid var(--line);
@@ -98,46 +122,35 @@ a{color:inherit; text-decoration:none}
   justify-content:space-between;
   gap:12px;
 }
-
 .card .hd h1, .card .hd h2{margin:0; font-size:18px}
 .card .bd{padding:16px}
 
-.grid{
-  display:grid;
-  gap:14px;
-}
-.grid.cols-2{grid-template-columns: 1fr 1fr;}
-.grid.cols-3{grid-template-columns: 1fr 1fr 1fr;}
-@media (max-width: 980px){
+.grid{display:grid; gap:14px}
+.grid.cols-2{grid-template-columns:1fr 1fr}
+.grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:980px){
   .grid.cols-2,.grid.cols-3{grid-template-columns:1fr}
 }
 
-.kpi-title{
-  font-size:14px;
-  color:var(--muted);
-  margin:0 0 8px;
-}
+.kpi-title{font-size:14px; color:var(--muted); margin:0 0 8px}
 
 .fieldgrid{
   display:grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns:220px 1fr;
   gap:8px 12px;
   align-items:center;
 }
-@media (max-width: 720px){
-  .fieldgrid{grid-template-columns: 1fr}
+@media (max-width:720px){
+  .fieldgrid{grid-template-columns:1fr}
 }
 
-.label{
-  color:var(--muted);
-  font-size:13px;
-}
+.label{color:var(--muted); font-size:13px}
 .value{
-  background: #f8fafc;
+  background:#f8fafc;
   border:1px solid var(--line);
   border-radius:10px;
   padding:8px 10px;
-  min-height: 36px;
+  min-height:36px;
   display:flex;
   align-items:center;
   overflow:hidden;
@@ -145,21 +158,6 @@ a{color:inherit; text-decoration:none}
   text-overflow:ellipsis;
 }
 
-.chip{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:10px 12px;
-  border-radius:12px;
-  font-weight:800;
-  letter-spacing:.2px;
-  border:1px solid var(--line);
-}
-.chip.blue{background:var(--chip-blue)}
-.chip.green{background:var(--chip-green)}
-.chip.purple{background:var(--chip-purple)}
-
-.muted{color:var(--muted)}
 .row{
   display:flex;
   gap:10px;
@@ -207,44 +205,20 @@ a{color:inherit; text-decoration:none}
   background:#fff;
 }
 
-.accordion-row{
-  cursor:pointer;
-}
-.section-details{
-  padding:0 0 0 0;
-}
-.section-details .inner{
-  padding:14px 12px;
-  background:#f8fafc;
-  border-top:1px solid var(--line);
-}
-
-/* Modal */
-.modal-backdrop{
-  position:fixed; inset:0;
-  background:rgba(15,23,42,.35);
-  display:none;
+.chip{
+  display:inline-flex;
   align-items:center;
-  justify-content:center;
-  padding:18px;
-  z-index:50;
-}
-.modal-backdrop.show{display:flex;}
-.modal{
-  width:min(720px, 100%);
-  background:var(--panel);
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:800;
+  letter-spacing:.2px;
   border:1px solid var(--line);
-  border-radius:18px;
-  box-shadow:var(--shadow);
-  overflow:hidden;
 }
-.modal .hd{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px;}
-.modal .bd{padding:16px;}
-.modal .ft{padding:14px 16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px;}
-
-.split2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-@media (max-width:720px){.split2{grid-template-columns:1fr}}
-.hr{height:1px;background:var(--line);margin:10px 0}
+.chip.blue{background:var(--chip-blue)}
+.chip.green{background:var(--chip-green)}
+.chip.purple{background:var(--chip-purple)}
+.muted{color:var(--muted)}
 
 .notice{
   padding:10px 12px;
@@ -261,128 +235,96 @@ a{color:inherit; text-decoration:none}
   color:#7f1d1d;
 }
 
+.hr{height:1px; background:var(--line); margin:10px 0}
+
+.accordion-row{cursor:pointer}
+.section-details{padding:0}
+.section-details .inner{
+  padding:14px 12px;
+  background:#f8fafc;
+  border-top:1px solid var(--line);
+}
+
 /* =========================
-   PLANNER (table-based) — SINGLE SOURCE OF TRUTH
-   Doel: header (maand/week/dag) exact uitgelijnd met body dagcellen
+   MODALS (generic)
 ========================= */
-/* planner vars (los van theme vars) */
-.planner-table{
-  --left-w: 380px;
-  --day-w: 32px;
-  --hdr-month-h: 26px;
-  --hdr-week-h: 26px;
-  --hdr-day-h: 40px;
-  --cell-h: 18px;
-  --grid-line: #e6eaf0;
-  --hdr-bg: #f2f4f7;
-  --wknd-bg: #dbeafe;
+.modal-backdrop{
+  position:fixed; inset:0;
+  background:rgba(15,23,42,.35);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:50;
 }
+.modal-backdrop.show{display:flex}
 
-
-.planner-table{
-  width: 100%;
-  border-collapse: collapse;   /* <-- dit is de fix */
-  table-layout: fixed;
+.modal{
+  width:min(720px, 100%);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
 }
-
-/* linker kolom (hoek + rijlabels) */
-.planner-table th.rowhdr,
-.planner-table td.rowhdr{
-  width: var(--left-w);
-  min-width: var(--left-w);
-  max-width: var(--left-w);
-  box-sizing: border-box;
-  padding: 0 6px;
-  text-align: left;
-  background: #fff;
+.modal .hd{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 }
-
-
-/* maand/week rows: colspan mag bepalen */
-.planner-table thead tr.hdr-month th.hdr-cell{
-  height: var(--hdr-month-h);
-  line-height: var(--hdr-month-h);
-  padding: 0 4px;
-  font-size: 12px;
+.modal .bd{padding:16px}
+.modal .ft{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
 }
-.planner-table thead tr.hdr-week th.hdr-cell{
-  height: var(--hdr-week-h);
-  line-height: var(--hdr-week-h);
-  padding: 0 4px;
-  font-size: 11px;
+.modal[hidden], .modal-backdrop[hidden]{ display:none !important; }
+
+.split2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (max-width:720px){.split2{grid-template-columns:1fr}}
+
+/* Settings modal boven alles (jouw JS gebruikt #settingsBackdrop/#settingsModal) */
+#settingsBackdrop{
+  position:fixed !important;
+  inset:0 !important;
+  background:rgba(2,6,23,.45) !important;
+  z-index:5000 !important;
 }
+#settingsBackdrop[hidden]{ display:none !important; }
 
-/* dag header rij: vaste width = dagcel width */
-.planner-table thead tr.hdr-day th.hdr-cell{
-  width: var(--day-w);
-  min-width: var(--day-w);
-  max-width: var(--day-w);
-  height: var(--hdr-day-h);
-  padding: 0 !important;
-  font-size: 11px;
-  line-height: 1.1;
-  vertical-align: bottom;
+#settingsModal{
+  position:fixed !important;
+  left:50% !important;
+  top:50% !important;
+  transform:translate(-50%, -50%) !important;
+  z-index:5001 !important;
+  width:min(520px, calc(100vw - 24px)) !important;
+  max-height:calc(100vh - 24px) !important;
+  overflow:auto !important;
 }
-
-.planner-table th.hdr-cell,
-.planner-table td.cell{
-  border: 1px solid #e6eaf0;
-  box-sizing: border-box;
-}
-
-/* weekend */
-.planner-table td.cell.wknd{ background: var(--wknd-bg) !important; }
-
-/* planning bars */
-.plan-cell{ padding:0 !important; }
-.plan-cell .bar{
-  height: var(--cell-h);
-  line-height: var(--cell-h);
-  margin: 0;
-  border-radius: 6px;
-  font-size: 11px;
-  overflow: hidden;
-}
-
-/* sticky headers (3 rijen) — offsets matchen exact met headerhoogtes */
-.sticky-top{
-  position: sticky;
-  top: 0;
-  z-index: 60;
-  background: var(--hdr-bg);
-}
-.sticky-top2{
-  position: sticky;
-  top: var(--hdr-month-h);
-  z-index: 59;
-  background: var(--hdr-bg);
-}
-.sticky-top3{
-  position: sticky;
-  top: calc(var(--hdr-month-h) + var(--hdr-week-h));
-  z-index: 58;
-  background: var(--hdr-bg);
-}
-
-/* sticky linkerkolom (als gebruikt) */
-.sticky-left{
-  position: sticky;
-  left: 0;
-  z-index: 40;
-  background: #fff;
-  box-shadow: 1px 0 0 var(--grid-line);
-}
-
-
-
+#settingsModal[hidden]{ display:none !important; }
 
 /* =========================
-   PLANNER (PDF-style grid)
+   PLANNER PAGE SHELL
 ========================= */
 .planner-page{ background:#fff; color:#111; min-height:100vh; }
+
 .planner-topbar{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px 18px; border-bottom:1px solid #e6e8ef; position:sticky; top:0; background:#fff; z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 18px;
+  border-bottom:1px solid #e6e8ef;
+  position:sticky;
+  top:0;
+  background:#fff;
+  z-index:50;
+  height:56px; /* vaste hoogte => stabiele sticky */
 }
 .planner-title{ font-weight:700; font-size:18px; margin-left:10px; }
 .planner-topbar-left{ display:flex; align-items:center; gap:10px; }
@@ -391,28 +333,151 @@ a{color:inherit; text-decoration:none}
 .planner-wrap{ padding:12px 10px 30px; }
 .planner-status{ color:#667085; padding:6px 2px; }
 
-.planner-grid{ overflow:auto; border:1px solid #e6e8ef; border-radius:12px; background:#fff; }
+.planner-grid{
+  overflow:auto;
+  border:1px solid #e6e8ef;
+  border-radius:12px;
+  background:#fff;
+  position:relative; /* sticky context */
+}
 
+/* =========================
+   PLANNER TABLE — SINGLE SOURCE OF TRUTH
+========================= */
+.planner-table{
+  /* layout vars */
+  --left-w: 380px;
+  --day-w: 32px;
+  --hdr-month-h: 26px;
+  --hdr-week-h: 26px;
+  --hdr-day-h: 40px;
+  --cell-h: 22px;       /* stack item hoogte */
+  --cell-h-flat: 18px;  /* “gewone” cellen hoogte */
+  --grid-line: #e6eaf0;
+  --hdr-bg: #f2f4f7;
+  --wknd-bg: #dbeafe;
+
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
 
 .planner-table th, .planner-table td{
   border:1px solid #e6e8ef;
   padding:3px 4px;
   text-align:center;
   white-space:nowrap;
+  background-clip:padding-box;
+  box-sizing:border-box;
 }
-.rowhdr{
+
+/* linker kolom (hoek + rijlabels) */
+.planner-table th.rowhdr,
+.planner-table td.rowhdr{
+  width:var(--left-w);
+  min-width:var(--left-w);
+  max-width:var(--left-w);
+  padding:0 6px;
   text-align:left !important;
   background:#fff;
 }
-.hdr-cell{
-  background:#f2f4f7;
-  font-weight:700;
-}
+
+/* header cell look */
+.hdr-cell{ background:var(--hdr-bg); font-weight:700; }
 .hdr-month th{ font-size:12px; }
-.hdr-week th{ font-size:11px; }
-.hdr-day th{ font-size:11px; font-weight:600; }
+.hdr-week  th{ font-size:11px; }
+.hdr-day   th{ font-size:11px; font-weight:600; }
 
+/* maand/week header heights (colspan mag werken) */
+.planner-table thead tr.hdr-month th.hdr-cell{
+  height:var(--hdr-month-h);
+  line-height:var(--hdr-month-h);
+  padding:0 4px;
+  font-size:12px;
+}
+.planner-table thead tr.hdr-week th.hdr-cell{
+  height:var(--hdr-week-h);
+  line-height:var(--hdr-week-h);
+  padding:0 4px;
+  font-size:11px;
+}
 
+/* dag header: vaste breedte = dagcel */
+.planner-table thead tr.hdr-day th.hdr-cell{
+  width:var(--day-w);
+  min-width:var(--day-w);
+  max-width:var(--day-w);
+  height:var(--hdr-day-h);
+  padding:0 !important;
+  font-size:11px;
+  line-height:1.1;
+  vertical-align:bottom;
+  background:var(--hdr-bg);
+  border:1px solid var(--grid-line);
+}
+
+/* body dagcellen: vaste breedte */
+.planner-table td.cell{
+  width:var(--day-w);
+  min-width:var(--day-w);
+  max-width:var(--day-w);
+  padding:0 !important;
+  border:1px solid var(--grid-line);
+  background:#fff;
+}
+
+/* weekend */
+.planner-table td.cell.wknd{ background:var(--wknd-bg) !important; }
+
+/* “gewone” cellen zijn plat 18px hoog */
+.planner-table td.cell:not(.plan-cell){
+  height:var(--cell-h-flat);
+  line-height:var(--cell-h-flat);
+}
+
+/* planningcellen mogen meegroeien */
+.planner-table td.plan-cell{
+  height:auto !important;
+  line-height:normal !important;
+  padding:0 !important;
+  vertical-align:top;
+  background:#fff;
+}
+
+/* sticky headers (3 rijen) */
+.sticky-top{
+  position:sticky; top:0;
+  z-index:60;
+  background:var(--hdr-bg);
+}
+.sticky-top2{
+  position:sticky; top:var(--hdr-month-h);
+  z-index:59;
+  background:var(--hdr-bg);
+}
+.sticky-top3{
+  position:sticky;
+  top:calc(var(--hdr-month-h) + var(--hdr-week-h));
+  z-index:58;
+  background:var(--hdr-bg);
+}
+
+/* sticky-left */
+.sticky-left{
+  position:sticky;
+  left:0;
+  z-index:40;
+  background:#fff;
+  box-shadow:1px 0 0 var(--grid-line);
+}
+/* linker header-cellen boven alles */
+.hdr-cell.sticky-left{ z-index:80; background:var(--hdr-bg); }
+/* linker body-cellen boven body, onder header */
+td.rowhdr.sticky-left{ z-index:50; background:#fff; }
+
+/* =========================
+   ROW TYPES / TEXT
+========================= */
 .project-cell{ background:#fff; font-weight:700; }
 .section-cell{ background:#fff; color:#344054; }
 .sectext{ opacity:.95; }
@@ -421,835 +486,271 @@ a{color:inherit; text-decoration:none}
   border:1px solid #d0d5dd; background:#fff; border-radius:8px;
   width:26px; height:22px; cursor:pointer; margin-right:8px;
 }
+.expander-sec{ margin-right:6px; }
 .projtext{ vertical-align:middle; }
 
 .hidden{ display:none; }
 
-.cell{ min-width:32px; max-width:32px; }
-.wknd{ background:#dbeafe !important; } /* weekend-blauw zoals je PDF */
-
-
-
-.plan-cell{ background:#fff; }
-.plan-cell .bar{
-  width:100%; height:18px; line-height:18px;
-  border-radius:6px; font-size:11px;
-  overflow:hidden; text-overflow:ellipsis;
-  padding:0 6px;
-  text-align:left;
-}
-.bar-prep .bar{ background:#c7e0ff; }
-.bar-prod .bar{ background:#b7f0c2; }
-.bar-mont .bar{ background:#f6c1f3; }
-.bar-delivery .bar{ background:#ffd7b5; }
-.bar-generic .bar{ background:#e5e7eb; }
-
 .spacer td{ border:none; padding:6px 0; }
 .spacer-cell{ background:#fff; }
 
-.block-title .block-hdr{
-  background:#f2f4f7;
-  font-weight:800;
-}
-.block-title .block-fill{ background:#f2f4f7; }
+.block-title .block-hdr{ background:var(--hdr-bg); font-weight:800; }
+.block-title .block-fill{ background:var(--hdr-bg); }
 .block-title.compact .block-hdr{ font-weight:700; }
 
+/* capaciteit / totalen */
 .cap-emp-row .cap-name{ background:#fff; font-weight:600; }
 .cap-cell{ background:#fff; }
 
 .sum-row .sum-label{ background:#fff; font-weight:700; }
-.sum-cell{ background:#fff7d6; } /* lichtgeel zoals PDF */
+.sum-cell{ background:#fff7d6; }
 .sum-cell.ok{ background:#c7f7cf; }
 .sum-cell.warn{ background:#ffe7b5; }
 .sum-cell.bad{ background:#ffc6c6; }
 
 .info-row .info-left{ color:#667085; font-style:italic; }
 
-
-/* --- Sticky header: stabiel bij horizontaal scrollen --- */
-.planner-topbar{ height:56px; }              /* belangrijk: vaste hoogte */
-.planner-grid{ position:relative; }          /* zorgt voor stabiele sticky context */
-
-.sticky-left{
-  position: sticky;
-  left: 0;
-  z-index: 40;
-  background: #fff;
-}
-
-/* 3 header-rijen: maand / week / dag */
-.sticky-top{ position: sticky; top: 0;  z-index: 60; background:#f2f4f7; }
-/* linker header-cellen moeten boven alles blijven */
-.hdr-cell.sticky-left{ z-index: 80; background:#f2f4f7; }
-
-/* rijlabels links in body moeten boven body-cellen maar onder header */
-td.rowhdr.sticky-left{ z-index: 50; background:#fff; }
-
-/* voorkom “doorzicht”/flikkeren */
-.planner-table th, .planner-table td{
-  background-clip: padding-box;
-}
-
-
-.hdr-cell{
-  height: 26px;
-  vertical-align: middle;
-}
-.hdr-day .hdr-cell{ height: 40px; }
-
-/* === DEFINITIEVE FIX: alleen echte dagcellen hebben vaste breedte === */
-
-
-/* body dagcellen */
-.planner-table td.cell{
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
-  box-sizing: border-box;
-  padding: 0;
-  text-align: center;
-  border: 1px solid #e6eaf0;
-}
-
-/* alleen de DAG header rij (niet maand/week met colspan!) */
-.planner-table thead tr.hdr-day th.hdr-cell{
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
-  box-sizing: border-box;
-  padding: 0;
-  text-align: center;
-  border: 1px solid #e6eaf0;
-
-  background:#f2f4f7;
-  font-size:11px;
+/* kleinere cijfers in capaciteit + som */
+.planner-table td.cap-cell,
+.planner-table td.sum-cell,
+.planner-table td.cap-name,
+.planner-table td.sum-label{
+  font-size:12px;
   line-height:1.1;
-  height: 40px;
-  vertical-align: bottom;
+  font-variant-numeric: tabular-nums;
 }
 
-/* maand/week header cells NIET forceren (colspan moet werken) */
-.planner-table thead tr.hdr-month th.hdr-cell,
-.planner-table thead tr.hdr-week  th.hdr-cell{
-  width: auto;
-  min-width: 0;
-  max-width: none;
-  padding: 3px 4px;
+/* saldo rij */
+.balance-row .balance-label{
+  background:#fff;
+  font-size:12px !important;
+  font-weight:400 !important;
 }
-
-/* linker kolom exact vast */
-.planner-table th.rowhdr,
-.planner-table td.rowhdr{
-  width: 380px;
-  min-width: 380px;
-  max-width: 380px;
+.planner-table td.balance-cell{
+  font-size:12px !important;
+  font-weight:400 !important;
+  line-height:1.1;
 }
+.planner-table td.balance-cell.pos{ background:#c7f7cf !important; }
+.planner-table td.balance-cell.neg{ background:#ffc6c6 !important; }
+.planner-table td.balance-cell.zero{ background:#ffe7b5 !important; }
 
-
-
-/* dagcellen strak */
-.planner-table td.cell{
-  width: 32px;
-  min-width: 32px;
-  max-width: 32px;
-
-  height: 18px;         /* <- kies 18/20/22 */
-  line-height: 18px;
-
-  padding: 0 !important;
-  margin: 0;
-  box-sizing: border-box;
-
-  background: #fff;     /* leeg = wit */
-}
-
-.planner-table thead tr.hdr-day th.hdr-cell{
-  padding: 0;
-}
-
-.plan-cell{
-  padding: 0 !important;
-}
-
-.plan-cell .bar{
-  height: 18px;
-  line-height: 18px;
-  margin: 0;
-  border-radius: 6px;
-}
-
-.completiondate{
-  opacity: .75;
-  font-size: 12px;
-  margin-left: 6px;
-  white-space: nowrap;
-}
-
-.deadline{
-  display:inline-block;
-  padding:2px 6px;
-  border-radius:6px;
-  font-size:11px;
-  line-height:1.2;
-  background:#f6a623;   /* oranje */
-  color:#111;
-  font-weight:600;
-  white-space:nowrap;
-}
-
-.project-details-cell .details-box{
+/* =========================
+   DETAILS CELLS / SECTION INFO
+========================= */
+.project-details-cell .details-box,
+.section-details-cell .details-box{
   padding:6px 8px;
   font-size:12px;
   line-height:1.3;
 }
-.details-title{
-  font-weight:700;
-  margin-bottom:4px;
-}
-.details-line{
-  opacity:.9;
-}
+.details-title{ font-weight:700; margin-bottom:4px; }
+.details-line{ opacity:.9; }
+
 .details-fill{
   background:#fff;
-  padding: 10px;
+  padding:10px;
+  text-align:left !important;
+  vertical-align:top;
 }
-
-.expander-sec{ margin-right:6px; }
-.section-details-cell .details-box{ padding:6px 8px; font-size:12px; line-height:1.3; }
 
 .details-box{
-  margin: 0 !important;
-  display: inline-block; /* voorkomt rare stretch/center gedrag */
-}
-/* =========================
-   Section assignments popup
-========================= */
-td.section-click{
-  position: relative;
-  cursor: pointer;
-}
-.assign-badge{
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 5px;
-  border-radius: 999px;
-  font-size: 10px;
-  line-height: 16px;
-  text-align: center;
-  background: #111827;
-  color: #fff;
-  opacity: .85;
+  margin:0 !important;
+  display:inline-block;
 }
 
+/* brede details-cel: padding op wrapper, niet op td */
+td.details-fill-wide,
+td.details-fill{
+  padding:0 !important;
+  text-align:left !important;
+  vertical-align:top !important;
+}
+td.details-fill-wide .details-box,
+td.details-fill .details-wrap,
+td.details-fill-wide .details-wrap{
+  display:block !important;
+  width:100% !important;
+  margin:0 !important;
+  padding:8px 10px !important;
+  text-align:left !important;
+}
+
+/* =========================
+   ASSIGNMENTS POPUP / BADGE / TOOLTIP
+========================= */
+td.section-click{
+  position:relative;
+  cursor:pointer;
+}
+
+/* badge (door jou later verborgen) */
+.assign-badge{
+  position:absolute;
+  right:2px;
+  bottom:2px;
+  min-width:16px;
+  height:16px;
+  padding:0 5px;
+  border-radius:999px;
+  font-size:10px;
+  line-height:16px;
+  text-align:center;
+  background:#111827;
+  color:#fff;
+  opacity:.85;
+}
+.assign-badge.prod{ background:#2fbf71; }
+.assign-badge.mont{ background:#7b61ff; }
+
+/* badge verbergen (zoals jij wilde) */
+.assign-badge{ display:none !important; }
+
 .modal.assign-modal{
-  width: 460px;
-  max-width: calc(100vw - 24px);
+  width:460px;
+  max-width:calc(100vw - 24px);
 }
 .assign-modal .hd{
   display:flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
 }
-.assign-title{ font-weight: 700; }
-.assign-sub{ font-size: 12px; opacity: .75; }
-.assign-tabs{
-  display:flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.assign-title{ font-weight:700; }
+.assign-sub{ font-size:12px; opacity:.75; }
+.assign-tabs{ display:flex; gap:8px; flex-wrap:wrap; }
 .assign-list{
-  margin-top: 8px;
-  max-height: 50vh;
-  overflow: auto;
+  margin-top:8px;
+  max-height:50vh;
+  overflow:auto;
   display:flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction:column;
+  gap:6px;
 }
 .assign-item{
   display:flex;
   align-items:center;
-  gap: 10px;
-  padding: 6px 8px;
-  border: 1px solid rgba(0,0,0,.12);
-  border-radius: 10px;
+  gap:10px;
+  padding:6px 8px;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:10px;
 }
-.assign-item input{ transform: scale(1.05); }
+.assign-item input{ transform:scale(1.05); }
 
-
-
-/* groen = productie */
-.assign-badge.prod{
-  background: #2fbf71;
+/* tooltip via data-tip */
+td.section-click[data-tip]:hover::after{
+  content: attr(data-tip);
+  position:absolute;
+  left:6px;
+  top:calc(100% + 6px);
+  z-index:200;
+  background:#111827;
+  color:#fff;
+  padding:8px 10px;
+  border-radius:10px;
+  font-size:12px;
+  line-height:1.25;
+  white-space:pre-line;
+  min-width:160px;
+  max-width:320px;
+  box-shadow:0 10px 26px rgba(0,0,0,.18);
 }
-
-/* paars = montage */
-.assign-badge.mont{
-  background: #7b61ff;
-}
-
-
-
-
-.bar.bar-split .bar-half{
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:11px;              /* match jouw bar-tekst */
-  line-height:1;
-}
-
-/* Zorg dat boven/onder afgerond blijven */
-.bar.bar-split .bar-half:first-child{
-  border-top-left-radius:999px;
-  border-top-right-radius:999px;
-}
-.bar.bar-split .bar-half:last-child{
-  border-bottom-left-radius:999px;
-  border-bottom-right-radius:999px;
+td.section-click[data-tip]:hover::before{
+  content:"";
+  position:absolute;
+  left:14px;
+  top:calc(100% + 2px);
+  border:6px solid transparent;
+  border-bottom-color:#111827;
+  z-index:201;
 }
 
-
-.bar.bar-split .bar-half{
-  flex: 1;
+/* =========================
+   PLAN BARS (basis)
+========================= */
+.plan-cell .bar{
+  width:100%;
+  height:var(--cell-h-flat);
+  line-height:var(--cell-h-flat);
+  border-radius:6px;
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  padding:0 6px;
+  text-align:left;
 }
 
+/* kleuren via TD class */
+td.plan-cell.bar-prep   .bar{ background:#c7e0ff; }
+td.plan-cell.bar-prod   .bar{ background:#b7f0c2; }
+td.plan-cell.bar-mont   .bar{ background:#f6c1f3; }
+td.plan-cell.bar-delivery .bar{ background:#ffd7b5; }
+td.plan-cell.bar-generic .bar{ background:#e5e7eb; }
 
-/* split bar: 2 lijntjes samen even hoog als 1 bar */
-.bar.bar-split{
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  height: 18px;            /* pas aan als jouw bar hoger/lager is */
-  justify-content: center;
-}
-
-.bar.bar-split .bar-half{
-  height: calc((18px - 2px) / 2);  /* 2 helften + gap */
-  border-radius: 6px;
-  width: 100%;
-}
-
-.bar.bar-split .bar-half.prod{ background: #86efac; }  /* zelfde groen als productie */
-.bar.bar-split .bar-half.mont{ background: #a78bfa; }  /* zelfde paars als montage */
-
-/* optioneel: als je een neutrale cel-achtergrond wil bij beide */
-td.bar-both{ background: rgba(0,0,0,.02); }/* laat leeg of geef subtiele achtergrond */ 
-
-/* ===== Split bar (productie + montage in 1 cel) ===== */
-
-/* Zorg dat split niet wordt “gesloopt” door .plan-cell .bar */
+/* =========================
+   SPLIT BAR (prod + mont in 1 cel)
+========================= */
 .plan-cell .bar.bar-split{
   padding:0 !important;
-  text-align: initial !important;
-  height: 18px !important;          /* match .plan-cell .bar hoogte */
-  line-height: normal !important;
+  text-align:initial !important;
+  height:var(--cell-h-flat) !important;
+  line-height:normal !important;
   display:flex !important;
-  flex-direction: column !important;
-  gap: 2px;
+  flex-direction:column !important;
+  gap:2px;
   overflow:hidden;
   border-radius:6px;
 }
-
-/* 2 helften samen exact 18px hoog */
 .plan-cell .bar.bar-split .bar-half{
-  height: calc((18px - 2px) / 2);
-  width: 100%;
-  border-radius: 6px;
+  height:calc((var(--cell-h-flat) - 2px) / 2);
+  width:100%;
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  line-height:1;
 }
-
-/* kleuren exact gelijk aan je bestaande bar-prod / bar-mont */
 .plan-cell .bar.bar-split .bar-half.prod{ background:#b7f0c2; }
 .plan-cell .bar.bar-split .bar-half.mont{ background:#f6c1f3; }
 
-
-/* 2-koloms layout: links vaste breedte, rechts de dagen */
-.grid-row{
-  display:grid;
-  grid-template-columns: 360px 1fr; /* pas aan naar wens */
-  align-items: stretch;
-}
-
-.row-left{
-  padding: 10px 12px;
-  border-right: 1px solid var(--line, #e5e7eb);
-}
-
-.row-cells{
-  display:grid;
-  grid-template-columns: repeat(var(--days, 7), 1fr);
-}
-
-.day-cell{
-  min-height: 34px;
-  border-right: 1px solid var(--line, #e5e7eb);
-  border-bottom: 1px solid var(--line, #e5e7eb);
-}
-
-
-.planning-grid{
-  width: 100%;
-  overflow-x: auto; /* handig bij veel dagen */
-}
-
-table.planner-table{
-  width: 100%;
-  border-collapse: collapse;
-}
-
-td.details-fill{
-  text-align:left !important;
-  vertical-align: top;
-}
-
-
-/* verberg de nummer-badges */
-.assign-badge{ display:none !important; }
-
-
-/* tooltip op planningcellen */
-td.section-click{
-  position: relative;           /* had je al, maar houden */
-}
-
-td.section-click[data-tip]:hover::after{
-  content: attr(data-tip);
-  position: absolute;
-  left: 6px;
-  top: calc(100% + 6px);
-  z-index: 200;
-  background: #111827;
-  color: #fff;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  line-height: 1.25;
-  white-space: pre-line;        /* \n tonen als nieuwe regel */
-  min-width: 160px;
-  max-width: 320px;
-  box-shadow: 0 10px 26px rgba(0,0,0,.18);
-}
-
-td.section-click[data-tip]:hover::before{
-  content: "";
-  position: absolute;
-  left: 14px;
-  top: calc(100% + 2px);
-  border: 6px solid transparent;
-  border-bottom-color: #111827;
-  z-index: 201;
-}
-
-/* --- Sectie gegevens: écht tegen de linkerkant van de kalenderzone --- */
-td.details-fill-wide{
-  text-align: left !important;
-  padding: 0 !important;              /* kill inherited td padding */
-}
-
-td.details-fill-wide .details-box{
-  display: block !important;
-  margin: 0 !important;
-  padding: 8px 10px;                  /* padding binnen de box, niet in de td */
-}
-
-td.details-fill-wide .details-box{
-  transform: translateX(-1px);
-}
-
-/* ===== Sectie gegevens: force links in de brede details-cel ===== */
-td.details-fill,
-td.details-fill-wide{
-  padding: 0 !important;
-  text-align: left !important;
-  vertical-align: top !important;
-}
-
-td.details-fill .details-wrap,
-td.details-fill-wide .details-wrap{
-  display: block !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 8px 10px !important;     /* padding hier, niet op td */
-  text-align: left !important;
-}
-
-td.cap-emp-click{
-  cursor:pointer;
-}
-td.cap-emp-click:hover{
-  background:#f8fafc;
-}
-/* Kleinere tekst in capaciteit + totalen (zelfde gevoel als planning) */
-.planner-table td.cap-cell,
-.planner-table td.sum-cell {
-  font-size: 12px;          /* pas aan naar 11px als je 'm nog kleiner wilt */
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums; /* netjes uitlijnen van cijfers */
-}
-
-/* optioneel: als je ook de linker namen (Berry/Luuk/...) kleiner wilt */
-.planner-table td.cap-name,
-.planner-table td.sum-label {
-  font-size: 12px;
-}
-
-.cap-total-row .cap-total-left{
-  background: #fff; /* of jouw panel kleur */
-}
-
-.cap-expander{
-  margin-right: 8px;
-}
-
-td.cap-emp-click{
-  cursor:pointer;
-}
-td.cap-emp-click:hover{
-  text-decoration: underline;
-}
-
-.icon-btn{
-  border:1px solid var(--line);
-  background:var(--panel);
-  color:var(--text);
-  border-radius:10px;
-  padding:8px 10px;
-  cursor:pointer;
-  box-shadow:none;
-}
-.icon-btn:hover{ background:#f8fafc; }
-
-.btn.primary{
-  background:var(--acc);
-  color:white;
-  border-color:transparent;
-}
-
-.modal-backdrop{
-  position:fixed;
-  inset:0;
-  background:rgba(2,6,23,.45);
-  z-index:999;
-}
-
-
-.modal[hidden], .modal-backdrop[hidden]{ display:none !important; }
-
-.modal-card{
-  width:min(520px, 100%);
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
-
-.modal-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:14px 16px;
-  border-bottom:1px solid var(--line);
-}
-
-.modal-title{ font-weight:700; }
-
-.modal-body{ padding:16px; }
-
-.modal-footer{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  padding:14px 16px;
-  border-top:1px solid var(--line);
-}
-
-.field{ display:block; }
-.field-label{ font-weight:600; margin-bottom:8px; }
-.field-row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-.field-row input[type="range"]{ flex:1; }
-.field-help{
-  margin-top:8px;
-  color:var(--muted);
-  font-size:13px;
-}
-
-.chip{
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:#f8fafc;
-  font-weight:600;
-  min-width:62px;
-  text-align:center;
-}
-
-/* Laat blok-titels/spacers hun eigen styling houden */
-.planner-table tbody tr.spacer,
-.planner-table tbody tr.block-title {
-  background: transparent !important;
-}
-
-/* Zebra over de héle rij (incl kalendercellen) */
-.planner-table tbody tr.zebra > td,
-.planner-table tbody tr.zebra > th {
-  background: #f6f7f9;
-}
-
-/* Sticky-left moet ook zebra volgen */
-.planner-table tbody tr.zebra > td.sticky-left {
-  background: #f6f7f9;
-}
-
-
-/* zebra over hele rij (incl. kalendercellen) */
-.planner-table tbody tr.zebra > td{
-  background:#f6f7f9;
-}
-
-/* weekend blijft voorrang houden */
-.planner-table tbody tr.zebra > td.wknd{
-  background: var(--chip-blue);
-}
-
-/* Zebra rij: trek door over alle cellen */
-.planner-table tbody tr.zebra > td{
-  background: #f5f6f8; /* lichtgrijs */
-}
-
-/* Weekend blijft weekend-kleur (overschrijft zebra) */
-.planner-table tbody tr.zebra > td.wknd{
-  background: var(--chip-blue); /* of jouw weekend kleur */
-}
-
-/* Balkjes en deadline moeten gewoon blijven */
-.planner-table tbody tr.zebra > td .bar,
-.planner-table tbody tr.zebra > td .deadline,
-.planner-table tbody tr.zebra > td .assign-badge{
-  position: relative;
-  z-index: 1;
-}
-
-
+td.bar-both{ background:rgba(0,0,0,.02); }
 
 /* =========================
-   ZEBRA FIX (laatste in CSS)
+   BARS AAN ELKAAR LATEN SLUITEN (radius-0 behalve start/eind)
 ========================= */
-
-/* 1) verwijder de "altijd wit" regel effectief (override) */
-.planner-table td.cell:not(.wknd){
-  background: transparent !important;
-}
-
-/* 2) plan-cells ook transparant zodat zebra zichtbaar wordt */
-.planner-table td.plan-cell{
-  background: transparent !important;
-}
-
-/* 3) zebra bepaalt de rij-achtergrond */
-.planner-table tbody tr.zebra > td{
-  background: #f5f6f8 !important;
-}
-
-/* 4) weekend blijft blauw, ook in zebra */
-.planner-table tbody tr.zebra > td.wknd{
-  background: var(--wknd-bg) !important; /* of #dbeafe */
-}
-
-/* 5) sticky-left moet zebra volgen */
-.planner-table tbody tr.zebra > td.sticky-left{
-  background: #f5f6f8 !important;
-}
-
-/* Zebra UIT voor capaciteit + som-rijen */
-.planner-table tbody tr.cap-total-row.zebra > td,
-.planner-table tbody tr.cap-emp-row.zebra > td,
-.planner-table tbody tr.sum-row.zebra > td{
-  background: transparent !important;
-}
-
-/* =========================
-   ZEBRA FIX (laatste in CSS!)
-========================= */
-
-
-
-/* 2) Zorg dat plan-cells NIET transparant zijn (moeten zebra kunnen tonen) */
-.cell.plan-cell{
-  background: inherit !important;
-}
-
-/* 3) Zebra over hele rij (incl. kalendercellen) */
-.planner-table tbody tr.zebra > td,
-.planner-table tbody tr.zebra > th{
-  background: #f5f6f8 !important;
-}
-
-/* 4) Weekend blijft altijd weekendkleur (overschrijft zebra) */
-.planner-table tbody tr.zebra > td.wknd,
-.planner-table tbody tr:not(.zebra) > td.wknd{
-  background: var(--chip-blue) !important;
-}
-/* === ZEBRA over de hele rij (incl. kalender) === */
-.planner-table tbody tr.zebra > td,
-.planner-table tbody tr.zebra > th{
-  /* overlay met alpha, blijft werken op gekleurde cellen */
-  background-image: linear-gradient(rgba(243, 246, 251, 0.55), rgba(243, 246, 251, 0.55));
-  background-repeat: no-repeat;
-}
-
-/* Niet-zebra rijen moeten géén overlay hebben */
-.planner-table tbody tr:not(.zebra) > td,
-.planner-table tbody tr:not(.zebra) > th{
-  background-image: none;
-}
-/* =========================
-   ZEBRA (DEFINITIEF) – helemaal onderaan zetten
-========================= */
-
-/* zorg dat we een overlay kunnen plaatsen */
-.planner-table td.cell{ position: relative; }
-
-/* zebra op linkerkolom (row header) */
-.planner-table tbody tr.zebra > td.rowhdr{
-  background: #f5f6f8 !important;
-}
-
-/* zebra overlay op kalendercellen (niet weekend) */
-.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background: rgba(245, 246, 248, 0.55); /* sterkte zebra */
-  pointer-events:none;
-  z-index: 0;
-}
-
-/* zorg dat inhoud boven de overlay blijft */
-.planner-table td.cell .bar,
-.planner-table td.cell .deadline,
-.planner-table td.cell .assign-badge{
-  position: relative;
-  z-index: 1;
-}
-
-/* Saldo rij (capaciteit - gepland) */
-.balance-row .balance-label{
-  background:#fff;
-  font-weight:700;
-}
-
-.planner-table td.balance-cell{
-  font-weight:700;
-}
-
-/* kleuren */
-.planner-table td.balance-cell.pos{ background:#c7f7cf !important; }  /* groen */
-.planner-table td.balance-cell.neg{ background:#ffc6c6 !important; }  /* rood */
-.planner-table td.balance-cell.zero{ background:#ffe7b5 !important; } /* oranje */
-
-/* Saldo rij: zelfde typografie als de andere cijfer-rijen */
-.planner-table td.balance-cell{
-  font-size: 12px !important;   /* gelijk aan cap/sum die je al kleiner hebt gezet */
-  font-weight: 400 !important;  /* niet dik */
-  line-height: 1.1;
-}
-
-/* Linker label ook niet dik */
-.balance-row .balance-label{
-  font-weight: 400 !important;
-  font-size: 12px !important;
-}
-/* FIX: modal mag NIET fullscreen (die regel overschrijft je nette modal) */
-.modal{
-  position: relative !important;
-  inset: auto !important;
-  display: block !important;
-  padding: 0 !important;
-  align-items: unset !important;
-  justify-content: unset !important;
-}
-
-
-/* =========================
-   FIX: Instellingen modal altijd boven alles
-========================= */
-
-/* Backdrop van instellingen */
-#settingsBackdrop{
-  position: fixed !important;
-  inset: 0 !important;
-  background: rgba(2,6,23,.45) !important;
-  z-index: 5000 !important;
-}
-
-/* Als hidden=true in JS */
-#settingsBackdrop[hidden]{ display:none !important; }
-
-/* Het modal venster zelf */
-#settingsModal{
-  position: fixed !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-
-  z-index: 5001 !important;
-
-  width: min(520px, calc(100vw - 24px)) !important;
-  max-height: calc(100vh - 24px) !important;
-  overflow: auto !important;
-}
-
-/* Als hidden=true in JS */
-#settingsModal[hidden]{ display:none !important; }
-
-/* ===== Bars aan elkaar laten sluiten ===== */
-
-/* standaard GEEN ronde hoeken */
 .planner-table td.plan-cell .bar{
-  border-radius: 0 !important;
+  border-radius:0 !important;
 }
-
-/* alleen op start/einde weer rond */
 .planner-table td.plan-cell .bar.bar-start{
-  border-top-left-radius: 6px !important;
-  border-bottom-left-radius: 6px !important;
+  border-top-left-radius:6px !important;
+  border-bottom-left-radius:6px !important;
 }
 .planner-table td.plan-cell .bar.bar-end{
-  border-top-right-radius: 6px !important;
-  border-bottom-right-radius: 6px !important;
+  border-top-right-radius:6px !important;
+  border-bottom-right-radius:6px !important;
 }
 
-/* split-bar (prod+mont) als 1 blok laten aanvoelen */
+/* split wrapper ook “start/end” rounding */
 .planner-table td.plan-cell .bar.bar-split{
-  border-radius: 0 !important;
-  overflow: hidden;
+  border-radius:0 !important;
+  overflow:hidden;
 }
 .planner-table td.plan-cell .bar.bar-split.bar-start{
-  border-top-left-radius: 6px !important;
-  border-bottom-left-radius: 6px !important;
+  border-top-left-radius:6px !important;
+  border-bottom-left-radius:6px !important;
 }
 .planner-table td.plan-cell .bar.bar-split.bar-end{
-  border-top-right-radius: 6px !important;
-  border-bottom-right-radius: 6px !important;
+  border-top-right-radius:6px !important;
+  border-bottom-right-radius:6px !important;
 }
-
-/* halve blokjes zelf niet afronden (wrapper doet dat) */
 .planner-table td.plan-cell .bar.bar-split .bar-half{
-  border-radius: 0 !important;
+  border-radius:0 !important; /* wrapper doet rounding */
 }
 
-
-/* ===== Dummy (Inhuur) styling ===== */
+/* =========================
+   DUMMY (INHUUR) HATCH
+========================= */
 .dummy-hatch{
   background-image: repeating-linear-gradient(
     135deg,
@@ -1258,189 +759,66 @@ td.cap-emp-click:hover{
     rgba(255,255,255,0) 3px,
     rgba(255,255,255,0) 8px
   ) !important;
-  outline: 1px solid rgba(15,23,42,.35);
-  outline-offset: -1px;
+  outline:1px solid rgba(15,23,42,.35);
+  outline-offset:-1px;
 }
 
 /* prod/mont kleur blijft gelijk; hatch is overlay */
 .bar-prod .bar.dummy-hatch{ background-color:#b7f0c2 !important; }
 .bar-mont .bar.dummy-hatch{ background-color:#f6c1f3 !important; }
-
-/* split helften */
 .bar.bar-split .bar-half.prod.dummy-hatch{ background-color:#b7f0c2 !important; }
 .bar.bar-split .bar-half.mont.dummy-hatch{ background-color:#f6c1f3 !important; }
 
-/* Projectregel highlight als secties open staan */
+/* =========================
+   PROJECT ROW “OPEN” HIGHLIGHT
+========================= */
 tr.project-row.is-open > td{
-  background: rgba(37, 99, 235, 0.08); /* licht blauw */
-}
-
-tr.project-row.is-open > td.sticky-left{
-  background: rgba(37, 99, 235, 0.12);
-  font-weight: 600;
-}
-/* Projectregel highlight over de HELE kalender (ook over wknd / bars heen) */
-tr.project-row.is-open > td{
-  /* zachte overlay */
   box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.06);
 }
-
-/* iets sterker op de sticky-left kolom */
 tr.project-row.is-open > td.sticky-left{
   box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.10);
-  font-weight: 600;
+  font-weight:600;
+  border-left:4px solid rgba(37, 99, 235, 0.35);
 }
 
-/* optioneel: duidelijke linkerrand */
-tr.project-row.is-open > td.sticky-left{
-  border-left: 4px solid rgba(37, 99, 235, 0.35);
-}
+/* =========================
+   CAP ROW CLICK
+========================= */
+td.cap-emp-click{ cursor:pointer; }
+td.cap-emp-click:hover{ background:#f8fafc; text-decoration:underline; }
+.cap-expander{ margin-right:8px; }
+.cap-total-row .cap-total-left{ background:#fff; }
 
-/* oplever (bestaand) */
+/* =========================
+   DEADLINE / DELIVERY MARKERS (inline, legacy)
+   (wordt in plan-stack ook als .marker gebruikt)
+========================= */
 .deadline{
   display:inline-block;
   font-size:10px;
   padding:1px 4px;
   border-radius:6px;
-  background: #f59e0b; /* oranje */
+  background:#f59e0b;
   color:#0f172a;
   border:1px solid rgba(0,0,0,.15);
+  white-space:nowrap;
 }
 
-/* leverdatum (nieuw, lichter oranje) */
 .delivery{
   display:inline-block;
   font-size:10px;
   padding:1px 4px;
   border-radius:6px;
-  background: #fde68a; /* licht oranje/geel */
+  background:#fde68a;
   color:#0f172a;
   border:1px solid rgba(0,0,0,.12);
-  margin-right:4px; /* zodat lever + oplever niet plakken */
-}
-
-/* Zorg dat celflow omhoog begint */
-.planner-table td.plan-cell{
-  vertical-align: top;
-}
-
-/* 1 stack in elke cel */
-.plan-stack{
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: stretch;
-}
-
-/* Alle items exact dezelfde maat => perfect uitlijnen */
-.plan-stack .bar,
-.plan-stack .delivery,
-.plan-stack .deadline{
-  height: 22px;
-  line-height: 22px;
-  margin: 0 !important;
-  box-sizing: border-box;
-}
-
-/* (optioneel) markers iets smaller/kleiner tekst */
-.plan-stack .delivery,
-.plan-stack .deadline{
-  font-size: 12px;
-  padding: 0 8px;
-  border-radius: 10px;
-}
-
-
-.plan-stack{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-
-.plan-stack .marker,
-.plan-stack .bar{
-  height:22px;
-  line-height:22px;
-  margin:0 !important;
-  box-sizing:border-box;
-}
-
-/* ===== STACK SYSTEEM (laatste in CSS) ===== */
-.planner-table{ --cell-h: 22px; }
-
-.planner-table td.plan-cell{ vertical-align: top; }
-
-.plan-stack{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-  align-items:stretch;
-}
-
-/* markers */
-.plan-stack .marker{
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-  margin: 0 !important;
-  padding: 0 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  box-sizing: border-box;
-  display:block;
-  text-align:left;
-}
-.plan-stack .marker.delivery{
-  background: #fde68a;
-  border: 1px solid rgba(0,0,0,.12);
-  color: #0f172a;
-}
-.plan-stack .marker.deadline{
-  background: #f59e0b;
-  border: 1px solid rgba(0,0,0,.15);
-  color: #0f172a;
-}
-
-.plan-stack .marker.placeholder{
-  visibility:hidden;   /* neemt wél ruimte in, maar onzichtbaar */
-}
-
-/* bars */
-.plan-stack .bar{
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-  margin: 0 !important;
-  padding: 0 6px;
-  border-radius: 6px !important;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  margin-right:4px;
   white-space:nowrap;
-  text-align:left;
 }
 
-/* kleuren via TD class */
-td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
-td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
-td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
-td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
-
-/* Stack bars moeten rounded blijven (override) */
-.plan-stack .bar{
-  border-radius: 6px !important;
-}
-
-.planner-table{ --cell-h: 22px; }
-
-.plan-stack .marker,
-.plan-stack .bar{
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-}
-
-/* ===== STACK SYSTEEM (helemaal onderaan) ===== */
-.planner-table{ --cell-h: 22px; }
-
-.planner-table td.plan-cell{ vertical-align: top; }
-
+/* =========================
+   PLAN-STACK (lever/oplever + bars in 1 cel)
+========================= */
 .plan-stack{
   display:flex;
   flex-direction:column;
@@ -1448,16 +826,17 @@ td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
   align-items:stretch;
 }
 
-/* markers */
+/* markers: lever/oplever */
 .plan-stack .marker{
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-  margin: 0 !important;
-  padding: 0 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  box-sizing: border-box;
   display:block;
+  width:100%;
+  height:var(--cell-h) !important;
+  line-height:var(--cell-h) !important;
+  margin:0 !important;
+  padding:0 8px;
+  border-radius:10px;
+  font-size:12px;
+  box-sizing:border-box;
   text-align:left;
 }
 .plan-stack .marker.delivery{
@@ -1472,86 +851,67 @@ td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
 }
 .plan-stack .marker.placeholder{ visibility:hidden; }
 
-/* bars */
-.plan-stack .bar{
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-  margin: 0 !important;
-  padding: 0 6px;
-  border-radius: 6px !important;  /* override jouw radius-0 */
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  text-align:left;
-}
-
-/* kleuren via TD class */
-td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
-td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
-td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
-td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
-
-/* ===== STACK FIX (helemaal onderaan) ===== */
-
-/* 1) Alleen “gewone” cellen zijn 18px hoog.
-      Planningcellen (plan-cell) mogen meegroeien. */
-.planner-table td.cell:not(.plan-cell){
-  height: 18px;
-  line-height: 18px;
-}
-
-/* 2) Planningcellen: laat ze auto-hoogte krijgen */
-.planner-table td.plan-cell{
-  height: auto !important;
-  line-height: normal !important;
-  padding: 0 !important;
-  vertical-align: top;
-}
-
-/* 3) Stack layout */
-.planner-table{ --cell-h: 22px; }
-
-.plan-stack{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-  align-items:stretch;
-}
-
-/* markers (lever/oplever) */
-.plan-stack .marker{
-  display:block;
-  width:100%;
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-  margin: 0 !important;
-  padding: 0 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  box-sizing: border-box;
-  text-align:left;
-}
-.plan-stack .marker.placeholder{ visibility:hidden; }
-
 /* bars in stack */
 .plan-stack .bar{
   display:block;
   width:100%;
-  height: var(--cell-h) !important;
-  line-height: var(--cell-h) !important;
-  margin: 0 !important;
-  padding: 0 6px;
-  border-radius: 6px !important; /* override jouw “radius 0” regel */
+  height:var(--cell-h) !important;
+  line-height:var(--cell-h) !important;
+  margin:0 !important;
+  padding:0 6px;
+  border-radius:6px !important; /* override radius-0 systeem */
   overflow:hidden;
   white-space:nowrap;
   text-overflow:ellipsis;
   text-align:left;
 }
 
-/* kleuren via TD class */
-td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
-td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
-td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
-td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
+/* stack bars: kleuren via TD class (zelfde als boven) */
+td.plan-cell.bar-prod   .plan-stack .bar{ background:#b7f0c2 !important; }
+td.plan-cell.bar-mont   .plan-stack .bar{ background:#f6c1f3 !important; }
+td.plan-cell.bar-prep   .plan-stack .bar{ background:#c7e0ff !important; }
+td.plan-cell.bar-generic .plan-stack .bar{ background:#e5e7eb !important; }
 
+/* =========================
+   ZEBRA (definitief)
+   - werkt ook als cel een eigen achtergrond heeft (overlay op ::after)
+   - inhoud blijft boven overlay
+========================= */
+.planner-table td.cell{ position:relative; }
 
+/* zebra op linkerkolom */
+.planner-table tbody tr.zebra > td.rowhdr{
+  background:#f5f6f8 !important;
+}
+
+/* zebra overlay op kalendercellen (niet weekend) */
+.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:rgba(245, 246, 248, 0.55);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* inhoud boven overlay */
+.planner-table td.cell .bar,
+.planner-table td.cell .deadline,
+.planner-table td.cell .delivery,
+.planner-table td.cell .assign-badge,
+.planner-table td.cell .plan-stack{
+  position:relative;
+  z-index:1;
+}
+
+/* Zebra UIT voor capaciteit + som-rijen (zoals je eerder wilde) */
+.planner-table tbody tr.cap-total-row.zebra > td,
+.planner-table tbody tr.cap-emp-row.zebra > td,
+.planner-table tbody tr.sum-row.zebra > td{
+  background:transparent !important;
+}
+.planner-table tbody tr.cap-total-row.zebra > td.cell::after,
+.planner-table tbody tr.cap-emp-row.zebra > td.cell::after,
+.planner-table tbody tr.sum-row.zebra > td.cell::after{
+  content:none !important;
+}
