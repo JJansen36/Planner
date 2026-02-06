@@ -600,20 +600,28 @@ td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
 /* =========================
    DUMMY (INHUUR) HATCH
 ========================= */
-.dummy-hatch{
-  background-image:repeating-linear-gradient(
-    135deg,
-    rgba(0,0,0,.18) 0px,
-    rgba(0,0,0,.18) 3px,
-    rgba(255,255,255,0) 3px,
-    rgba(255,255,255,0) 8px
-  ) !important;
-  outline:1px solid rgba(15,23,42,.35);
-  outline-offset:-1px;
+/* zorgt dat pseudo-element netjes over de bar heen ligt */
+.plan-stack .bar{
+  position: relative;
+  overflow: hidden;
 }
-/* prod/mont kleur blijft gelijk; hatch overlay */
-.bar-prod .bar.dummy-hatch{ background-color:#b7f0c2 !important; }
-.bar-mont .bar.dummy-hatch{ background-color:#f6c1f3 !important; }
+
+/* concept / dummy arcering */
+.plan-stack .bar.dummy-hatch::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  /* subtiele diagonaal streep */
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255,255,255,0.0) 0px,
+    rgba(255,255,255,0.0) 6px,
+    rgba(255,255,255,0.45) 6px,
+    rgba(255,255,255,0.45) 10px
+  );
+  opacity: 0.9;
+}
 
 /* =========================
    PROJECT ROW OPEN HIGHLIGHT
