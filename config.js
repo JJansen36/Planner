@@ -93,13 +93,13 @@ export const DB = {
 
   // Secties overzicht (onderaan)
   // Welke kolommen tonen we in de tabel-rij?
-  sectionRowCols: [
-    { label: "Paragraaf", col: "paragraaf" },
-    // Let op: in jouw tabel heet dit mogelijk 'beschrijving' (of 'Beschrijving'). Pas aan indien nodig.
-    { label: "Omschrijving", col: "beschrijving" },
-    { label: "Aantal", col: "aantal" },
-    { label: "Bijlage", col: "bijlage" },
-  ],
+sectionRowCols: [
+  { label:"Paragraaf",   col:["paragraaf","paragraph","para"] },
+  { label:"Omschrijving",col:["omschrijving","description","sectienaam","salestextrtf"] },
+  { label:"Aantal",      col:["aantal","qty","quantity"] },
+  { label:"Bijlage",     col:["bijlage","attachment","file"] },
+],
+
 
   // Welke detailvelden tonen we als je een sectie openklapt?
   sectionDetailCols: [
