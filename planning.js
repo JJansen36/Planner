@@ -1064,7 +1064,20 @@ for (const w of (werknemersCap || []) ) {
         const pid = sObj?.[sectProjKey] ? String(sObj[sectProjKey]) : "";
         const complTxt = projById.get(pid)?.complTxt || "";
 
-        const totals = calcSectionTotals(sid);
+        const pick = (obj, keys) => {
+          for (const k of keys) {
+            const v = obj?.[k];
+            if (v !== null && v !== undefined && v !== "") return v;
+          }
+          return null;
+        };
+
+const totals = {
+  prep: Number(pick(sObj, ["uren_wvb", "uren_wv", "uren_prep"]) ?? 0),
+  prod: Number(pick(sObj, ["uren_prod", "uren_productie"]) ?? 0),
+  mont: Number(pick(sObj, ["uren_montage", "uren_mont"]) ?? 0),
+};
+
 
         // datum voor in de header van popup (ik pak de start van je range)
         const dateISO = toISODate(start);
@@ -2088,4 +2101,3 @@ function applyZebraVisible(){
     i++;
   }
 }
-
