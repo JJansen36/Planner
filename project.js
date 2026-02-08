@@ -119,7 +119,10 @@ async function loadProject(id){
 
   el("secBody").innerHTML = sections.map((s, idx)=>{
     const cols = DB.sectionRowCols.map(c=>{
-      const v = valFrom(s, c.col);
+      const v = Array.isArray(c.col)
+        ? c.col.map(k => valFrom(s, k)).find(x => x !== null && x !== undefined && x !== "")
+        : valFrom(s, c.col);
+
       return `<td>${escapeHtml(v ?? "")}</td>`;
     }).join("");
 
