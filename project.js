@@ -124,8 +124,14 @@ async function loadProject(id){
     }).join("");
 
     const detail = DB.sectionDetailCols.map(d=>{
-      const raw = valFrom(s, d.col);
-      const v = (d.col?.toString().includes("uren_")) ? (raw ?? 0) : (raw ?? "");
+      const raw = Array.isArray(d.col)
+        ? d.col.map(c => valFrom(s, c)).find(v => v !== null && v !== undefined && v !== "")
+        : valFrom(s, d.col);
+
+      const v = (String(Array.isArray(d.col) ? d.col[0] : d.col).includes("uren_"))
+        ? (raw ?? 0)
+        : (raw ?? "");
+
       return `
         <div class="fieldgrid" style="grid-template-columns:220px 1fr; margin-top:8px">
           <div class="label">${escapeHtml(d.label)}</div>
@@ -133,6 +139,7 @@ async function loadProject(id){
         </div>
       `;
     }).join("");
+
 
     return `
       <tr class="accordion-row" data-i="${idx}">
