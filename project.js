@@ -85,6 +85,33 @@ async function loadProject(id){
 
   const sections = b.data || [];
 
+      // ===== Bestelde onderdelen per sectie =====
+    const sectionIds = sections
+      .map(s => String(s?.[DB.sectionPkCol] ?? ""))
+      .filter(Boolean);
+
+    let ordersBySection = new Map();
+
+    if (sectionIds.length) {
+      const { data: orders, error: oErr } = await sb
+        .from("section_orders")
+        .select("section_id, omschrijving, aantal, leverancier, soort, leverdatum")
+        .in("section_id", sectionIds)
+        .order("leverdatum", { ascending: true });
+
+      if (oErr) {
+        console.warn("Section orders load failed:", oErr.message);
+      } else {
+        ordersBySection = new Map();
+        for (const o of (orders || [])) {
+          const sid = String(o.section_id);
+          if (!ordersBySection.has(sid)) ordersBySection.set(sid, []);
+          ordersBySection.get(sid).push(o);
+        }
+      }
+    }
+
+
   // Render header
   const projectNo = project?.[DB.projectNoCol] ?? "";
   const projectName = project?.[DB.projectNameCol] ?? "";
@@ -143,6 +170,24 @@ async function loadProject(id){
       `;
     }).join("");
 
+    // ===== Orders HTML voor deze sectie =====
+    const sid = String(s?.[DB.sectionPkCol] ?? "");
+    const ords = ordersBySection.get(sid) || [];
+
+    const ordersHtml = ords.length ? `
+      <div class="muted" style="font-weight:800; margin:14px 0 8px">Bestelde onderdelen</div>
+      <div class="orders">
+        ${ords.map(o => `
+          <div class="order-row" style="padding:8px 0; border-top:1px solid var(--line);">
+            <div style="font-weight:700">${escapeHtml(o.omschrijving)}</div>
+            <div class="muted">
+              ${escapeHtml(o.aantal ?? 1)} • ${escapeHtml(o.leverancier || "-")} • ${escapeHtml(o.soort || "-")}
+              • ${escapeHtml(o.leverdatum || "-")}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    ` : "";
 
     return `
       <tr class="accordion-row" data-i="${idx}">
@@ -154,6 +199,7 @@ async function loadProject(id){
           <div class="inner">
             <div class="muted" style="font-weight:800; margin-bottom:8px">Sectie details</div>
             ${detail}
+            ${ordersHtml}
           </div>
         </td>
       </tr>
