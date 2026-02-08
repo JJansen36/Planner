@@ -300,14 +300,18 @@ function buildPlannedSetsByDay(planningItems){
 
     if (sub) sub.textContent = `${dateISO} • ${sectie || "sectie"} • ${sid}`;
     if (body) {
-      body.innerHTML = `
-        <div class="fieldgrid" style="grid-template-columns: 170px 1fr;">
-          <div class="label">Opleverdatum</div><div class="value">${escapeHtml(complTxt || "-")}</div>
-          <div class="label">Werkvoorbereiding</div><div class="value">${escapeHtml(formatHoursCell(totals.prep))} uur</div>
-          <div class="label">Productie</div><div class="value">${escapeHtml(formatHoursCell(totals.prod))} uur</div>
-          <div class="label">Montage</div><div class="value">${escapeHtml(formatHoursCell(totals.mont))} uur</div>
-        </div>
-      `;
+        body.innerHTML = `
+          <div class="fieldgrid" style="grid-template-columns: 170px 1fr;">
+            <div class="label">Opleverdatum</div><div class="value">${escapeHtml(complTxt || "-")}</div>
+
+            <div class="label">Werkvoorbereiding</div><div class="value">${escapeHtml(formatHoursCell(totals.prep))} uur</div>
+            <div class="label">Productie</div><div class="value">${escapeHtml(formatHoursCell(totals.prod))} uur</div>
+            <div class="label">CNC</div><div class="value">${escapeHtml(formatHoursCell(totals.cnc))} uur</div>
+
+            <div class="label">Montage</div><div class="value">${escapeHtml(formatHoursCell(totals.mont))} uur</div>
+            <div class="label">Reis</div><div class="value">${escapeHtml(formatHoursCell(totals.reis))} uur</div>
+          </div>
+        `;
     }
 
     modal.wrap.classList.add("show");
@@ -1073,9 +1077,11 @@ for (const w of (werknemersCap || []) ) {
         };
 
 const totals = {
-  prep: Number(pick(sObj, ["uren_wvb", "uren_wv", "uren_prep"]) ?? 0),
-  prod: Number(pick(sObj, ["uren_prod", "uren_productie"]) ?? 0),
+  prep: Number(pick(sObj, ["uren_wvb"]) ?? 0),
+  prod: Number(pick(sObj, ["uren_prod"]) ?? 0),
+  cnc:  Number(pick(sObj, ["uren_cnc", "uren_cnc_prod", "cnc_uren"]) ?? 0),
   mont: Number(pick(sObj, ["uren_montage", "uren_mont"]) ?? 0),
+  reis: Number(pick(sObj, ["uren_reis", "reis_uren"]) ?? 0),
 };
 
 
