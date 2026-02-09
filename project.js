@@ -247,6 +247,28 @@ const ordersHtml = `
     });
   });
 
+  // Orders accordion behavior (per bestelnummer)
+    [...el("secBody").querySelectorAll("[data-order-toggle]")].forEach(btn=>{
+      btn.addEventListener("click", (e)=>{
+        e.stopPropagation(); // voorkomt dat je sectie-accordion ook toggled
+        const card = btn.closest(".order-card");
+        const body = card.querySelector(".order-body");
+        const arrow = card.querySelector(".order-arrow");
+
+        const isOpen = !body.hasAttribute("hidden");
+        if (isOpen) {
+          body.setAttribute("hidden", "");
+          btn.setAttribute("aria-expanded", "false");
+          if (arrow) arrow.textContent = "▾";
+        } else {
+          body.removeAttribute("hidden");
+          btn.setAttribute("aria-expanded", "true");
+          if (arrow) arrow.textContent = "▴";
+        }
+      });
+    });
+
+
 // Bestellingen accordion (binnen sectie-details) - delegated
 el("secBody").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-order-toggle]");
@@ -318,18 +340,20 @@ function renderOrdersAccordionHtml(rows){
     const safeLd = escapeHtml(ldTxt);
 
     html += `
-      <div class="order-card" data-order-card="1">
-        <button class="order-head" type="button" data-order-toggle="1">
+        <button class="order-head" type="button" data-order-toggle="1" aria-expanded="false">
           <div class="order-head-left">
-            <div class="order-bn">${safeBn}</div>
+            <span class="pill pill-soft">${safeBn}</span>
           </div>
+
           <div class="order-head-right">
-            <div class="order-ld">${safeLd}</div>
-            <div class="order-arrow">▾</div>
+            <span class="pill pill-soft">${safeLd || "-"}</span>
+            <span class="order-arrow">▾</span>
           </div>
         </button>
 
-        <div class="order-body" style="display:none">
+
+        <div class="order-body" hidden>
+
           ${items.map(it=>{
             const oms = escapeHtml(it.omschrijving || "");
             const aant = escapeHtml(it.aantal ?? "");
