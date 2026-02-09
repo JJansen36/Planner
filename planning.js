@@ -668,9 +668,46 @@ async function fillOrderTypeFilterUI(){
       if (s?.id) sectLookup.set(String(s.id), String(s.id));
       if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
     }
-    
+
     // ✅ ordersBySection: section_id -> Map(bestel_nummer -> rows[])
     ordersBySection = new Map();
+
+    for (const r of (orders || [])) {
+      const rawSid = r.section_id;
+      if (!rawSid) continue;
+
+      // gebruik dezelfde sid als de rest van je planner (sectLookup)
+      const sid = sectLookup.get(String(rawSid)) || String(rawSid);
+
+      if (!ordersBySection.has(sid)) ordersBySection.set(sid, new Map());
+      const byBN = ordersBySection.get(sid);
+
+      const bn = String(r.bestel_nummer || "").trim() || "Onbekend";
+      if (!byBN.has(bn)) byBN.set(bn, []);
+      byBN.get(bn).push(r);
+    }
+
+    // ✅ headers maken NA vullen ordersBySection
+    const orderHeadersBySection = new Map(); // sid -> [{bn, leverISO, items}]
+    for (const [sid, byBN] of ordersBySection.entries()) {
+      const headers = [];
+
+      for (const [bn, items] of byBN.entries()) {
+        // pak 1e leverdatum die gevuld is
+        const lever = items.map(x => x.leverdatum).find(Boolean);
+
+        headers.push({
+          bn,
+          leverISO: lever ? asISODate(lever) : "",
+          items
+        });
+      }
+
+      headers.sort((a,b)=> String(a.leverISO||"").localeCompare(String(b.leverISO||"")));
+      orderHeadersBySection.set(sid, headers);
+    }
+
+
 
     for (const r of (orders || [])) {
       const rawSid = r.section_id;
@@ -750,20 +787,6 @@ async function fillOrderTypeFilterUI(){
       const dm = workMap.get(sid);
       if(!dm.has(d)) dm.set(d, []);
       dm.get(d).push(r);
-    }
-
-    // ✅ orders map: sectionId -> bestelnummer -> rows[]
-    ordersBySection = new Map();
-    for (const r of (orders || [])) {
-      const sid = String(r.section_id || "");
-      if (!sid) continue;
-    
-      if (!ordersBySection.has(sid)) ordersBySection.set(sid, new Map());
-      const byBN = ordersBySection.get(sid);
-    
-      const bn = String(r.bestel_nummer || "").trim() || "Onbekend";
-      if (!byBN.has(bn)) byBN.set(bn, []);
-      byBN.get(bn).push(r);
     }
 
     
@@ -1043,6 +1066,63 @@ for (const dd of dates) {
 
         tbody.appendChild(secRow);
 
+
+      // ======================
+      // ✅ ORDER-RIJEN onder de sectie (hidden, volgen sectie open/dicht)
+      // ======================
+      const headers = orderHeadersBySection.get(String(sid)) || [];
+
+      for (const oh of headers) {
+        const orderRow = document.createElement("tr");
+        orderRow.className = "order-row hidden";         // start hidden, zichtbaar als sectie open is
+        markZebra(orderRow);
+        orderRow.dataset.parent = String(pid);           // hoort bij project
+        orderRow.dataset.orderParent = String(sid);      // hoort bij sectie
+        orderRow.dataset.orderBn = String(oh.bn || "");
+
+        // linker kolom: bestelnummer + expander
+        const tdLeft = document.createElement("td");
+        tdLeft.className = "rowhdr sticky-left section-cell";
+        tdLeft.innerHTML = `
+          <button class="expander expander-order" data-orderbn="${escapeAttr(oh.bn)}" data-sect="${escapeAttr(sid)}" aria-label="toggle order">▶</button>
+          <span class="sectext">↳↳ Bestelling ${escapeHtml(oh.bn)}</span>
+        `;
+        orderRow.appendChild(tdLeft);
+
+        // kalendercellen: alleen op leverdatum een geel blokje
+        appendOrderDayCells(orderRow, dates, oh.leverISO);
+
+        tbody.appendChild(orderRow);
+
+        // details row (uitklapbaar) met orderregels
+        const det = document.createElement("tr");
+        det.className = "order-details-row hidden";
+        markZebra(det);
+        det.dataset.parent = String(pid);
+        det.dataset.orderParent = String(sid);
+        det.dataset.orderBn = String(oh.bn || "");
+
+        const tdDet = document.createElement("td");
+        tdDet.colSpan = dates.length + 1; // left + days
+        tdDet.className = "details-fill";
+
+        tdDet.innerHTML = `
+          <div class="details-wrap">
+            <div class="details-box">
+              <div class="details-title">Bestelling ${escapeHtml(oh.bn)} • Leverdatum: ${escapeHtml(formatDateNL(oh.leverISO))}</div>
+              ${oh.items.map(it => `
+                <div class="details-line">
+                  ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}
+                  <span class="muted"> • ${escapeHtml(it.leverancier || "-")}${it.soort ? " • " + escapeHtml(it.soort) : ""}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+        det.appendChild(tdDet);
+        tbody.appendChild(det);
+      }
+
         // ==========================
         // ✅ DETAILS ROW (uitklap) + BESTELLINGEN accordion
         // ==========================
@@ -1167,6 +1247,69 @@ for (const w of (werknemersCap || []) ) {
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
+
+    // =========================
+    // EXPANDERS BINDEN (na render)
+    // =========================
+
+    // Section expander (▶) opent: section-details + order-rijen
+    gridEl.querySelectorAll(".expander-sec").forEach(btn => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+
+        const sid = String(btn.dataset.sect || "");
+        const parentTr = btn.closest("tr");
+        const pid = String(parentTr?.dataset?.parent || "");
+        if (!sid || !pid) return;
+
+        const open = btn.textContent !== "▼";
+        btn.textContent = open ? "▼" : "▶";
+
+        // section details row (Bestellingen blok etc.)
+        gridEl.querySelectorAll(
+          `tr.section-details-row[data-sect="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+        ).forEach(r => r.classList.toggle("hidden", !open));
+
+        // order rows + order details rows die bij deze sectie horen
+        gridEl.querySelectorAll(
+          `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
+          tr.order-details-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+        ).forEach(r => r.classList.toggle("hidden", !open));
+
+        // als je dichtklapt: zet alle order expanders terug + verberg details
+        if (!open) {
+          gridEl.querySelectorAll(
+            `.expander-order[data-sect="${cssEsc(sid)}"]`
+          ).forEach(b => b.textContent = "▶");
+        }
+
+        applyZebraVisible();
+      });
+    });
+
+    // Order expander (▶) opent alleen de details van die bestelling
+    gridEl.querySelectorAll(".expander-order").forEach(btn => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+
+        const sid = String(btn.dataset.sect || "");
+        const bn  = String(btn.dataset.orderbn || "");
+        const parentTr = btn.closest("tr");
+        const pid = String(parentTr?.dataset?.parent || "");
+        if (!sid || !bn || !pid) return;
+
+        const open = btn.textContent !== "▼";
+        btn.textContent = open ? "▼" : "▶";
+
+        const row = gridEl.querySelector(
+          `tr.order-details-row[data-order-parent="${cssEsc(sid)}"][data-order-bn="${cssEsc(bn)}"][data-parent="${cssEsc(pid)}"]`
+        );
+        if (row) row.classList.toggle("hidden", !open);
+
+        applyZebraVisible();
+      });
+    });
+
 
     applyZebraVisible();
 
@@ -1678,29 +1821,6 @@ const renderList = () => {
   });
 
 
-
-  // section expanders
-  gridEl.querySelectorAll(".expander-sec").forEach(btn => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-
-      const sid = String(btn.dataset.sect || "");
-      const parentTr = btn.closest("tr");
-      const pid = String(parentTr?.dataset?.parent || "");
-
-      // vind de details row van deze sectie
-      const rows = Array.from(gridEl.querySelectorAll("tr.section-details-row"));
-      const match = rows.find(r => String(r.dataset.sect || "") === sid && String(r.dataset.parent || "") === pid);
-      if (!match) return;
-
-      const nowHidden = match.classList.toggle("hidden");
-      btn.textContent = nowHidden ? "▶" : "▼";
-      applyZebraVisible();
-
-    });
-  });
-
-
   // capacity dropdown (Totaal ▶ / ▼)
   gridEl.querySelectorAll(".cap-expander").forEach(btn => {
     btn.addEventListener("click", (ev) => {
@@ -2133,106 +2253,125 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
 
 
-  // like appendDayCells, but makes section-day cells clickable for assignments
-function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, assignMap, werknemers) {
-  const empIdKey = "id";
-  const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
-  const empNameById = new Map((werknemers || []).map(w => [
-    String(w?.[empIdKey]),
-    String(w?.[empNameKey] || w?.[empIdKey] || "")
-  ]));
+    // like appendDayCells, but makes section-day cells clickable for assignments
+    function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, assignMap, werknemers) {
+      const empIdKey = "id";
+      const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
+      const empNameById = new Map((werknemers || []).map(w => [
+        String(w?.[empIdKey]),
+        String(w?.[empNameKey] || w?.[empIdKey] || "")
+      ]));
 
-  // keys bepalen zodat we start/einde kunnen zien
-  const keys = dates.map((d, i) => {
-    const iso = toISODate(d);
-    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
-    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
-    const label = labels[i] || "";
+      // keys bepalen zodat we start/einde kunnen zien
+      const keys = dates.map((d, i) => {
+        const iso = toISODate(d);
+        const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+        const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+        const label = labels[i] || "";
 
-    if (prod > 0 && mont > 0) return "both";
-    if (prod > 0) return "prod";
-    if (mont > 0) return "mont";
-    if (label) return `lbl:${label}`;
-    return "";
-  });
+        if (prod > 0 && mont > 0) return "both";
+        if (prod > 0) return "prod";
+        if (mont > 0) return "mont";
+        if (label) return `lbl:${label}`;
+        return "";
+      });
 
-  for (let i = 0; i < dates.length; i++) {
-    const d = dates[i];
-    const iso = toISODate(d);
+      for (let i = 0; i < dates.length; i++) {
+        const d = dates[i];
+        const iso = toISODate(d);
 
-    const prod = Number(assignCountByDay?.[iso]?.prod || 0);
-    const mont = Number(assignCountByDay?.[iso]?.mont || 0);
-    const label = labels[i] || "";
+        const prod = Number(assignCountByDay?.[iso]?.prod || 0);
+        const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+        const label = labels[i] || "";
 
-    const key = keys[i];
-    const prevKey = (i > 0) ? keys[i - 1] : "";
-    const nextKey = (i < keys.length - 1) ? keys[i + 1] : "";
+        const key = keys[i];
+        const prevKey = (i > 0) ? keys[i - 1] : "";
+        const nextKey = (i < keys.length - 1) ? keys[i + 1] : "";
 
-    const td = document.createElement("td");
-    td.dataset.sectionId = String(sectionId || "");
-    td.dataset.workDate = iso;
+        const td = document.createElement("td");
+        td.dataset.sectionId = String(sectionId || "");
+        td.dataset.workDate = iso;
 
-    // tooltip met namen
-    const entry = assignMap?.get(String(sectionId))?.get(iso);
-    const dummyProd = entry?.productie?.has(String(DUMMY_EMP_ID)) || entry?.productie?.has(Number(DUMMY_EMP_ID));
-    const dummyMont = entry?.montage?.has(String(DUMMY_EMP_ID)) || entry?.montage?.has(Number(DUMMY_EMP_ID));
+        // tooltip met namen
+        const entry = assignMap?.get(String(sectionId))?.get(iso);
+        const dummyProd = entry?.productie?.has(String(DUMMY_EMP_ID)) || entry?.productie?.has(Number(DUMMY_EMP_ID));
+        const dummyMont = entry?.montage?.has(String(DUMMY_EMP_ID)) || entry?.montage?.has(Number(DUMMY_EMP_ID));
 
-    if (entry) {
-      const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
-      const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
-      let tip = "";
-      if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
-      if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
-      if (tip) td.dataset.tip = tip;
-    }
+        if (entry) {
+          const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
+          const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
+          let tip = "";
+          if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
+          if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
+          if (tip) td.dataset.tip = tip;
+        }
 
-    // cel-kleur
-    let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
-    if (key === "both") cls += " bar-both";
-    else if (key === "prod") cls += " bar-prod";
-    else if (key === "mont") cls += " bar-mont";
-    else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
-    td.className = cls;
+        // cel-kleur
+        let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
+        if (key === "both") cls += " bar-both";
+        else if (key === "prod") cls += " bar-prod";
+        else if (key === "mont") cls += " bar-mont";
+        else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
+        td.className = cls;
 
-    let html = `<div class="plan-stack">`;
+        let html = `<div class="plan-stack">`;
 
-    // markers samen op 1 regel (placeholders blijven voor vaste hoogte)
-    html += `<div class="marker-row">`;
-    html += `<div class="marker delivery placeholder">lever</div>`;
-    html += `<div class="marker deadline placeholder">oplever</div>`;
-    html += `</div>`;
+        // markers samen op 1 regel (placeholders blijven voor vaste hoogte)
+        html += `<div class="marker-row">`;
+        html += `<div class="marker delivery placeholder">lever</div>`;
+        html += `<div class="marker deadline placeholder">oplever</div>`;
+        html += `</div>`;
 
 
-    if (key) {
-      const isStart = key !== prevKey;
-      const isEnd = key !== nextKey;
+        if (key) {
+          const isStart = key !== prevKey;
+          const isEnd = key !== nextKey;
 
-      const startCls = isStart ? " bar-start" : "";
-      const endCls = isEnd ? " bar-end" : "";
+          const startCls = isStart ? " bar-start" : "";
+          const endCls = isEnd ? " bar-end" : "";
 
-      // dummy flags (die had je al)
-      // dummyProd / dummyMont bestaan hierboven al
+          // dummy flags (die had je al)
+          // dummyProd / dummyMont bestaan hierboven al
 
-      // ✅ bij "both": 2 losse bars stacken
-      if (key === "both") {
-        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
-        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
-      } else {
-        const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
-        const dummyCls =
-          (key === "prod" && dummyProd) ? " dummy-hatch" :
-          (key === "mont" && dummyMont) ? " dummy-hatch" : "";
+          // ✅ bij "both": 2 losse bars stacken
+          if (key === "both") {
+            html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
+            html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
+          } else {
+            const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
+            const dummyCls =
+              (key === "prod" && dummyProd) ? " dummy-hatch" :
+              (key === "mont" && dummyMont) ? " dummy-hatch" : "";
 
-        const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
-        html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
+            const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
+            html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
+          }
+        }
+
+        html += `</div>`;
+        td.innerHTML = html;
+        tr.appendChild(td);
       }
     }
 
-    html += `</div>`;
-    td.innerHTML = html;
-    tr.appendChild(td);
-  }
-}
+    function appendOrderDayCells(tr, dates, leverISO){
+      for (const d of dates) {
+        const iso = toISODate(d);
+
+        const td = document.createElement("td");
+        td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+        // alleen op leverdatum een geel blokje
+        if (leverISO && iso === leverISO) {
+          td.className += " bar-order";
+          td.innerHTML = `<div class="bar bar-order">lever</div>`;
+        } else {
+          td.innerHTML = "";
+        }
+
+        tr.appendChild(td);
+      }
+    }
 
 
 function applyZebraVisible(){
