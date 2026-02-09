@@ -1250,6 +1250,15 @@ for (const w of (werknemersCap || []) ) {
             `.expander-order[data-sect="${cssEsc(sid)}"]`
           ).forEach(b => b.textContent = "▶");
         }
+        gridEl.querySelectorAll(`tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
+                         tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`)
+            .forEach(r => r.classList.toggle("hidden", !open));
+
+        gridEl.querySelectorAll(
+                        `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
+                        tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+                      ).forEach(r => r.classList.toggle("hidden", !open));
+
 
         applyZebraVisible();
       });
@@ -1785,6 +1794,27 @@ const renderList = () => {
   gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
     btn.addEventListener("click", () => {
       toggleProject(String(btn.dataset.proj || ""));
+    });
+  });
+
+  // ===== ORDER EXPANDERS: toon/verberg orderregels (order-line-row) =====
+  gridEl.querySelectorAll(".expander-order").forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+
+      const sid = String(btn.dataset.sect || "");
+      const pid = String(btn.dataset.parent || "");
+      const bn  = String(btn.dataset.orderbn || "");
+
+      const open = btn.textContent !== "▼";
+      btn.textContent = open ? "▼" : "▶";
+
+      // toon/verberg ALLE orderregel-rijen die bij deze bestelling horen
+      gridEl.querySelectorAll(
+        `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]`
+      ).forEach(r => r.classList.toggle("hidden", !open));
+
+      applyZebraVisible();
     });
   });
 
