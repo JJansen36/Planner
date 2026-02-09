@@ -1022,3 +1022,22 @@ td.section-click[data-tip]:hover::before{
 .order-type-item input{ transform:scale(1.05); }
 .order-type-item .muted{ font-size:12px; }
 
+.orders-acc{ display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+.order-card{ border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+.order-head{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  background:#f8fafc;
+  border:0;
+  cursor:pointer;
+  font-weight:750;
+}
+.order-head-right{ display:flex; gap:10px; align-items:center; color:var(--muted); font-weight:700; }
+.order-body{ padding:10px 12px; border-top:1px solid var(--line); }
+.order-line{ padding:8px 0; border-top:1px dashed rgba(0,0,0,.08); }
+.order-line:first-child{ border-top:0; }
+.ol-meta{ color:var(--muted); font-size:12px; margin-top:2px; }
