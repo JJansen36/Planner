@@ -38,6 +38,8 @@
   const el = (id) => document.getElementById(id);
   let gridEl = null;
   let statusEl = null;
+  let ordersBySection = new Map();
+
 
   const HOURS_PER_PERSON_DAY = 7.75;
 
@@ -46,9 +48,11 @@
   // ===== Dummy medewerker (virtuele inhuur) =====
   const DUMMY_EMP_ID = 999999;
   const DUMMY_EMP_NAME = "Concept";
-  const defaultSettings = {
-    planFactor: 0.80, // 80%
-  };
+
+const defaultSettings = {
+  planFactor: 0.80, // 80%
+  orderTypeFilter: [], // ✅ nieuw: lijst met geselecteerde 'soort'
+};
 
   function loadSettings(){
     try{
@@ -77,6 +81,9 @@
     label.textContent = `${slider.value}%`;
 
     slider.oninput = () => { label.textContent = `${slider.value}%`; };
+    
+    // ✅ nieuw: soorten-filter UI vullen
+    fillOrderTypeFilterUI();
 
     back.hidden = false;
     modal.hidden = false;
@@ -145,12 +152,45 @@ function buildPlannedSetsByDay(planningItems){
     el("btnSettingsSave")?.addEventListener("click", () => {
       const pct = parseInt(el("planFactor").value, 10);
       settings.planFactor = Math.max(0.1, Math.min(2.0, pct / 100));
+    
+      // ✅ nieuw: geselecteerde soorten uitlezen
+      const box = el("orderTypeList");
+      const picked = box
+        ? [...box.querySelectorAll('input[type="checkbox"]:checked')].map(x => x.value)
+        : [];
+      settings.orderTypeFilter = picked;
+    
       saveSettings(settings);
       closeSettingsModal();
-
+    
       refreshAfterSettingsChange();
     });
+
   }
+async function fillOrderTypeFilterUI(){
+  const box = el("orderTypeList");
+  if(!box) return;
+
+  // haal unieke soorten uit DB
+  const res = await sb
+    .from("section_orders")
+    .select("soort")
+    .not("soort", "is", null);
+
+  const soorten = [...new Set((res.data || [])
+    .map(r => String(r.soort || "").trim())
+    .filter(Boolean)
+  )].sort();
+
+  const selected = new Set(settings.orderTypeFilter || []);
+
+  box.innerHTML = soorten.length ? soorten.map(s => `
+    <label class="order-type-item">
+      <input type="checkbox" value="${escapeAttr(s)}" ${selected.has(s) ? "checked" : ""}>
+      <span>${escapeHtml(s)}</span>
+    </label>
+  `).join("") : `<div class="muted">Geen soorten gevonden.</div>`;
+}
 
 
   function ensureContainers(){
@@ -454,6 +494,34 @@ function buildPlannedSetsByDay(planningItems){
 
     if (sErr) { statusEl.textContent = "Fout secties: " + sErr.message; return; }
 
+    // 2b) section_orders (bestellingen) – in range + alleen gekozen soorten
+    let orders = [];
+    const sectionIds = (secties || []).map(s => s.section_id ?? s.id).filter(Boolean);
+    const typeFilter = new Set(settings.orderTypeFilter || []);
+    
+    if (sectionIds.length && typeFilter.size) {
+      const { data: oData, error: oErr } = await sb
+        .from("section_orders")
+        .select("id, section_id, bestel_nummer, leverdatum, omschrijving, aantal, leverancier, soort, created_at")
+        .in("section_id", sectionIds)
+        .gte("leverdatum", startISO)
+        .lte("leverdatum", endISO)
+        .in("soort", Array.from(typeFilter))
+        .order("bestel_nummer", { ascending: true })
+        .order("created_at", { ascending: true });
+    
+      if (oErr) {
+        console.warn("Fout section_orders:", oErr.message);
+        orders = [];
+      } else {
+        orders = oData || [];
+      }
+    } else {
+      // niks aangevinkt => niets tonen
+      orders = [];
+    }
+
+    
     // 3) section_work in range
     const { data: work, error: wErr } = await sb
       .from("section_work")
@@ -513,10 +581,12 @@ function buildPlannedSetsByDay(planningItems){
       secties,
       work,
       cap,
-      werknemers,          // blijft: voor assignments + labels + hatch
-      werknemersCap,       // ✅ nieuw: voor capaciteit dropdown + totalen
-      assigns: safeAssigns
+      werknemers,
+      werknemersCap,
+      assigns: safeAssigns,
+      orders // ✅ nieuw
     });
+
 
   }
   /* ======================
@@ -561,7 +631,8 @@ function buildPlannedSetsByDay(planningItems){
 
 
   // -------- RENDER --------
-  function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns }){
+  function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, orders }){
+
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
 
@@ -661,6 +732,21 @@ function buildPlannedSetsByDay(planningItems){
       dm.get(d).push(r);
     }
 
+    // ✅ orders map: sectionId -> bestelnummer -> rows[]
+    ordersBySection = new Map();
+    for (const r of (orders || [])) {
+      const sid = String(r.section_id || "");
+      if (!sid) continue;
+    
+      if (!ordersBySection.has(sid)) ordersBySection.set(sid, new Map());
+      const byBN = ordersBySection.get(sid);
+    
+      const bn = String(r.bestel_nummer || "").trim() || "Onbekend";
+      if (!byBN.has(bn)) byBN.set(bn, []);
+      byBN.get(bn).push(r);
+    }
+
+    
     // assignments map: sectionId -> dateISO -> {productie:Set(empId), montage:Set(empId)}
     const assignMap = new Map();
     for (const a of assigns || []) {
@@ -838,6 +924,8 @@ for (const [sid, dm] of assignMap) {
       `;
       projRow.appendChild(left);
 
+      
+
     
 
       
@@ -934,6 +1022,33 @@ for (const dd of dates) {
 
 
         tbody.appendChild(secRow);
+
+        // ==========================
+        // ✅ DETAILS ROW (uitklap) + BESTELLINGEN accordion
+        // ==========================
+        const detailsRow = document.createElement("tr");
+        detailsRow.className = "section-details-row hidden";
+        detailsRow.dataset.parent = String(pid);
+        detailsRow.dataset.sect = String(sid);
+
+        const tdDetails = document.createElement("td");
+        tdDetails.colSpan = dates.length + 1; // 1 = linkerkolom
+        tdDetails.className = "details-fill";
+
+        const byBN = ordersBySection.get(String(sid));            // Map(bestelnummer -> regels[])
+        const ordersHtml = renderOrdersAccordion(byBN);           // HTML accordion
+
+        tdDetails.innerHTML = `
+          <div class="details-wrap">
+            <div class="details-box">
+              <div class="details-title">Bestellingen</div>
+              ${ordersHtml}
+            </div>
+          </div>
+        `;
+
+        detailsRow.appendChild(tdDetails);
+        tbody.appendChild(detailsRow);
 
       }
     }
@@ -1038,20 +1153,41 @@ for (const w of (werknemersCap || []) ) {
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
 
-  // klik op projectnaam OF projectcellen => secties openklappen
-  // MAAR: klik op het pijltje zelf moet gewoon togglen (dus hier negeren)
-  const expBtn = ev.target.closest(".expander[data-proj]");
-  if (expBtn) return; // laat de normale toggle listener z'n werk doen
+    // ✅ click op order accordion head (in details)
+    const oh = ev.target.closest(".order-head");
+    if (oh) {
+      ev.stopPropagation();
+      const card = oh.closest(".order-card");
+      const body = card?.querySelector(".order-body");
+      const arrow = oh.querySelector(".order-arrow");
+      if(!body) return;
 
-  const projHit = ev.target.closest("[data-proj]");
-  if (projHit) {
-    const pid = String(projHit.dataset.proj || "");
-    if (!pid) return;
+      const open = !body.hasAttribute("hidden");
+      if(open){
+        body.setAttribute("hidden", "");
+        if(arrow) arrow.textContent = "▾";
+      } else {
+        body.removeAttribute("hidden");
+        if(arrow) arrow.textContent = "▴";
+      }
+      return;
+    }
 
-    // ✅ togglen (open ↔ dicht) bij klik op regel/naam
-    toggleProject(pid);
-    return;
-  }
+
+    // klik op projectnaam OF projectcellen => secties openklappen
+    // MAAR: klik op het pijltje zelf moet gewoon togglen (dus hier negeren)
+    const expBtn = ev.target.closest(".expander[data-proj]");
+    if (expBtn) return; // laat de normale toggle listener z'n werk doen
+
+    const projHit = ev.target.closest("[data-proj]");
+    if (projHit) {
+      const pid = String(projHit.dataset.proj || "");
+      if (!pid) return;
+
+      // ✅ togglen (open ↔ dicht) bij klik op regel/naam
+      toggleProject(pid);
+      return;
+    }
 
 
 
@@ -2106,4 +2242,38 @@ function applyZebraVisible(){
     tr.classList.toggle("zebra", (i % 2) === 1);
     i++;
   }
+}
+
+function renderOrdersAccordion(byBN){
+  if(!byBN || !byBN.size) return `<div class="muted" style="padding:6px 0;">Geen bestellingen</div>`;
+
+  let html = `<div class="orders-acc">`;
+
+  for(const [bn, rows] of byBN){
+    const ld = rows.map(x=>x.leverdatum).find(Boolean);
+    const ldTxt = ld ? formatDateNL(ld) : "";
+
+    html += `
+      <div class="order-card">
+        <button class="order-head" type="button">
+          <div>${escapeHtml(bn)}</div>
+          <div class="order-head-right">
+            <div>${escapeHtml(ldTxt)}</div>
+            <div class="order-arrow">▾</div>
+          </div>
+        </button>
+        <div class="order-body" hidden>
+          ${rows.map(r=>`
+            <div class="order-line">
+              <div><b>${escapeHtml(r.aantal ?? 1)}</b> — ${escapeHtml(r.omschrijving || "")}</div>
+              <div class="ol-meta">${escapeHtml(r.leverancier || "")}${r.leverancier && r.soort ? " • " : ""}${escapeHtml(r.soort || "")}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  return html;
 }
