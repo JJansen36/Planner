@@ -482,17 +482,31 @@ async function fillOrderTypeFilterUI(){
 
     if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
 
-    // 2) secties
-    const projectIds = (projecten || []).map(p => p.project_id ?? p.id).filter(Boolean);
 
-    const { data: secties, error: sErr } = await sb
-      .from("secties")
-      .select("*")
-      .in("project_id", projectIds)
-      .limit(2000);
+    // 2b) section_orders voor alle secties in dit project (✅ nieuw)
+    const sectionIds = (secties || [])
+      .map(s => String(s.id ?? s.section_id ?? ""))   // pak id/section_id (wat er is)
+      .filter(Boolean);
 
+    let orders = [];
 
-    if (sErr) { statusEl.textContent = "Fout secties: " + sErr.message; return; }
+    if (sectionIds.length) {
+      const { data: oData, error: oErr } = await sb
+        .from("section_orders")
+        .select("id, section_id, bestel_nummer, leverdatum, omschrijving, aantal, leverancier, soort, created_at")
+        .in("section_id", sectionIds)
+        .order("bestel_nummer", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(20000);
+
+      if (oErr) {
+        console.warn("Fout section_orders:", oErr.message);
+        orders = [];
+      } else {
+        orders = oData || [];
+      }
+    }
+
 
     // 2b) section_orders (bestellingen) – in range + alleen gekozen soorten
     let orders = [];
@@ -588,6 +602,7 @@ async function fillOrderTypeFilterUI(){
     });
 
 
+
   }
   /* ======================
     SECTION WORK MAP (section_id -> date -> rows[])
@@ -633,6 +648,7 @@ async function fillOrderTypeFilterUI(){
   // -------- RENDER --------
   function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, orders }){
 
+
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
 
@@ -668,6 +684,25 @@ async function fillOrderTypeFilterUI(){
       if (s?.id) sectLookup.set(String(s.id), String(s.id));
       if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
     }
+
+    // ✅ ordersBySection: section_id -> Map(bestel_nummer -> rows[])
+    ordersBySection = new Map();
+
+    for (const r of (orders || [])) {
+      const rawSid = r.section_id;
+      if (!rawSid) continue;
+
+      // belangrijk: zelfde "canonical" sid gebruiken als rest van planner
+      const sid = sectLookup.get(String(rawSid)) || String(rawSid);
+
+      if (!ordersBySection.has(sid)) ordersBySection.set(sid, new Map());
+      const by = ordersBySection.get(sid);
+
+      const bn = String(r.bestel_nummer || "").trim() || "Onbekend";
+      if (!by.has(bn)) by.set(bn, []);
+      by.get(bn).push(r);
+    }
+
     // snelle lookup: sectionId -> sectie object
     const sectById = new Map();
     for (const s of secties || []) {
