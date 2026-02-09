@@ -1073,9 +1073,10 @@ for (const dd of dates) {
 const headers = orderHeadersBySection.get(String(sid)) || [];
 
 for (const oh of headers) {
+
   // 1) Bestelling header-rij
   const orderRow = document.createElement("tr");
-  orderRow.className = "order-row hidden";       // zichtbaar wanneer sectie open is
+  orderRow.className = "order-row hidden";
   markZebra(orderRow);
   orderRow.dataset.parent = String(pid);
   orderRow.dataset.orderParent = String(sid);
@@ -1083,24 +1084,22 @@ for (const oh of headers) {
 
   const tdLeft = document.createElement("td");
   tdLeft.className = "rowhdr sticky-left section-cell";
-  tdLeft.innerHTML = `
-    <button class="expander expander-order"
-      data-sect="${escapeAttr(sid)}"
-      data-parent="${escapeAttr(pid)}"
-      data-orderbn="${escapeAttr(oh.bn)}"
-      aria-label="toggle order">▶</button>
-    <span class="sectext">↳↳ Bestelling ${escapeHtml(oh.bn)}</span>
-  `;
-  orderRow.appendChild(tdLeft);
+  tdLeft.innerHTML =
+    `<button class="expander expander-order" ` +
+    `data-sect="${escapeAttr(sid)}" ` +
+    `data-parent="${escapeAttr(pid)}" ` +
+    `data-orderbn="${escapeAttr(oh.bn)}" ` +
+    `aria-label="toggle order">▶</button>` +
+    `<span class="sectext">↳↳ Bestelling ${escapeHtml(oh.bn)}</span>`;
 
-  // dagcellen (leverdatum)
+  orderRow.appendChild(tdLeft);
   appendOrderDayCells(orderRow, dates, oh.leverISO);
   tbody.appendChild(orderRow);
 
   // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
   for (const it of (oh.items || [])) {
     const lineRow = document.createElement("tr");
-    lineRow.className = "order-line-row hidden";   // zichtbaar als order open
+    lineRow.className = "order-line-row hidden";
     markZebra(lineRow);
 
     lineRow.dataset.parent = String(pid);
@@ -1109,19 +1108,18 @@ for (const oh of headers) {
 
     const tdL = document.createElement("td");
     tdL.className = "rowhdr sticky-left section-cell";
-    tdL.innerHTML = `
-      <span class="sectext">↳↳↳ ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}</span>
-    `;
+    tdL.innerHTML =
+      `<span class="sectext">↳↳↳ ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}</span>`;
+
     lineRow.appendChild(tdL);
 
-    // per regel: als leverdatum op regel-niveau bestaat, gebruik die, anders header leverISO
     const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
     appendOrderDayCells(lineRow, dates, leverLineISO);
 
     tbody.appendChild(lineRow);
   }
 }
-
+      }}
 
     // CAPACITY BLOCK
   tbody.appendChild(spacerRow(dates.length));
@@ -1218,27 +1216,44 @@ for (const w of (werknemersCap || []) ) {
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
+    // =========================
+    // EXPANDERS BINDEN (na render)
+    // =========================
 
-    gridEl.querySelectorAll(".expander-order").forEach(btn => {
-  btn.addEventListener("click", (ev) => {
-    ev.stopPropagation();
+    // Section expander (▶) opent: section-details + order-rijen
+    gridEl.querySelectorAll(".expander-sec").forEach(btn => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
 
-    const sid = String(btn.dataset.sect || "");
-    const pid = String(btn.dataset.parent || "");
-    const bn  = String(btn.dataset.orderbn || "");
+        const sid = String(btn.dataset.sect || "");
+        const parentTr = btn.closest("tr");
+        const pid = String(parentTr?.dataset?.parent || "");
+        if (!sid || !pid) return;
 
-    const open = btn.textContent !== "▼";
-    btn.textContent = open ? "▼" : "▶";
+        const open = btn.textContent !== "▼";
+        btn.textContent = open ? "▼" : "▶";
 
-    gridEl.querySelectorAll(`
-      tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]
-    `).forEach(r => r.classList.toggle("hidden", !open));
+        // section details row (Bestellingen blok etc.)
+        gridEl.querySelectorAll(
+          `tr.section-details-row[data-sect="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+        ).forEach(r => r.classList.toggle("hidden", !open));
 
-    applyZebraVisible();
-  });
-});
+        // order rows + order details rows die bij deze sectie horen
+        gridEl.querySelectorAll(
+          `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
+          tr.order-details-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+        ).forEach(r => r.classList.toggle("hidden", !open));
 
+        // als je dichtklapt: zet alle order expanders terug + verberg details
+        if (!open) {
+          gridEl.querySelectorAll(
+            `.expander-order[data-sect="${cssEsc(sid)}"]`
+          ).forEach(b => b.textContent = "▶");
+        }
 
+        applyZebraVisible();
+      });
+    });
 
     // Order expander (▶) opent alleen de details van die bestelling
     gridEl.querySelectorAll(".expander-order").forEach(btn => {
