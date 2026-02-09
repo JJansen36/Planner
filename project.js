@@ -85,31 +85,39 @@ async function loadProject(id){
 
   const sections = b.data || [];
 
-      // ===== Bestelde onderdelen per sectie =====
-    const sectionIds = sections
-      .map(s => String(s?.[DB.sectionPkCol] ?? ""))
-      .filter(Boolean);
+    
 
-    let ordersBySection = new Map();
+  // Orders (bestellingen) voor alle secties van dit project
+  const sectionIds = sections
+    .map(s => s?.[DB.sectionPkCol])
+    .filter(Boolean);
 
-    if (sectionIds.length) {
-      const { data: orders, error: oErr } = await sb
-        .from("section_orders")
-        .select("section_id, omschrijving, aantal, leverancier, soort, leverdatum")
-        .in("section_id", sectionIds)
-        .order("leverdatum", { ascending: true });
+  let orders = [];
+  if (sectionIds.length) {
+    const oRes = await sb
+      .from("section_orders")
+      .select("id, section_id, bestel_nummer, leverdatum, omschrijving, aantal, leverancier, soort, created_at")
+      .in("section_id", sectionIds)
+      .order("bestel_nummer", { ascending: true })
+      .order("leverdatum", { ascending: true })
+      .order("created_at", { ascending: true });
 
-      if (oErr) {
-        console.warn("Section orders load failed:", oErr.message);
-      } else {
-        ordersBySection = new Map();
-        for (const o of (orders || [])) {
-          const sid = String(o.section_id);
-          if (!ordersBySection.has(sid)) ordersBySection.set(sid, []);
-          ordersBySection.get(sid).push(o);
-        }
-      }
+    if (oRes.error) {
+      console.warn("section_orders laden faalde:", oRes.error.message);
+      orders = [];
+    } else {
+      orders = oRes.data || [];
     }
+  }
+
+  // Map: section_id -> orders[]
+  const ordersBySection = new Map();
+  for (const r of orders) {
+    const sid = String(r.section_id || "");
+    if (!sid) continue;
+    if (!ordersBySection.has(sid)) ordersBySection.set(sid, []);
+    ordersBySection.get(sid).push(r);
+  }
 
 
   // Render header
@@ -170,24 +178,15 @@ async function loadProject(id){
       `;
     }).join("");
 
-    // ===== Orders HTML voor deze sectie =====
-    const sid = String(s?.[DB.sectionPkCol] ?? "");
-    const ords = ordersBySection.get(sid) || [];
+// ===== Orders HTML voor deze sectie (accordion per bestel_nummer) =====
+const sid = String(s?.[DB.sectionPkCol] ?? "");
+const ords = ordersBySection.get(sid) || [];
 
-    const ordersHtml = ords.length ? `
-      <div class="muted" style="font-weight:800; margin:14px 0 8px">Bestelde onderdelen</div>
-      <div class="orders">
-        ${ords.map(o => `
-          <div class="order-row" style="padding:8px 0; border-top:1px solid var(--line);">
-            <div style="font-weight:700">${escapeHtml(o.omschrijving)}</div>
-            <div class="muted">
-              ${escapeHtml(o.aantal ?? 1)} • ${escapeHtml(o.leverancier || "-")} • ${escapeHtml(o.soort || "-")}
-              • ${escapeHtml(o.leverdatum || "-")}
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    ` : "";
+const ordersHtml = `
+  <div class="muted" style="font-weight:800; margin:14px 0 8px">Bestellingen</div>
+  ${renderOrdersAccordionHtml(ords)}
+`;
+
 
     return `
       <tr class="accordion-row" data-i="${idx}">
@@ -217,6 +216,24 @@ async function loadProject(id){
     });
   });
 
+// Bestellingen accordion (binnen sectie-details) - delegated
+el("secBody").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-order-toggle]");
+  if (!btn) return;
+
+  e.stopPropagation(); // voorkomt togglen van sectie zelf
+  const card = btn.closest("[data-order-card]");
+  if (!card) return;
+
+  const body = card.querySelector(".order-body");
+  const arrow = card.querySelector(".order-arrow");
+  const open = body && body.style.display !== "none";
+
+  if (body) body.style.display = open ? "none" : "block";
+  if (arrow) arrow.textContent = open ? "▾" : "▴";
+});
+
+
   setStatus(el("status"), "");
   el("cardMain").style.display = "block";
 }
@@ -239,4 +256,67 @@ function renderBlock(targetId, fields, primaryObj, fallbackObj){
       <div class="value" title="${escapeHtml(raw ?? "")}">${escapeHtml(raw ?? "")}</div>
     `;
   }).join("");
+}
+
+function groupOrdersByBestelnummer(rows){
+  const by = new Map();
+  for (const r of (rows || [])) {
+    const key = String(r.bestel_nummer || "").trim() || "Onbekend";
+    if (!by.has(key)) by.set(key, []);
+    by.get(key).push(r);
+  }
+  return by;
+}
+
+function renderOrdersAccordionHtml(rows){
+  if (!rows || !rows.length) {
+    return `<div class="muted" style="padding:8px 0;">Geen bestellingen</div>`;
+  }
+
+  const grouped = groupOrdersByBestelnummer(rows);
+
+  // per bestelnummer 1 header + uitklapbare regels
+  let html = `<div class="orders-acc">`;
+
+  for (const [bn, items] of grouped) {
+    // leverdatum op header: neem eerste niet-lege leverdatum
+    const ld = items.map(x => x.leverdatum).find(Boolean);
+    const ldTxt = ld ? fmtDate(ld) : "";
+
+    const safeBn = escapeHtml(bn);
+    const safeLd = escapeHtml(ldTxt);
+
+    html += `
+      <div class="order-card" data-order-card="1">
+        <button class="order-head" type="button" data-order-toggle="1">
+          <div class="order-head-left">
+            <div class="order-bn">${safeBn}</div>
+          </div>
+          <div class="order-head-right">
+            <div class="order-ld">${safeLd}</div>
+            <div class="order-arrow">▾</div>
+          </div>
+        </button>
+
+        <div class="order-body" style="display:none">
+          ${items.map(it=>{
+            const oms = escapeHtml(it.omschrijving || "");
+            const aant = escapeHtml(it.aantal ?? "");
+            const lev = escapeHtml(it.leverancier || "");
+            const soort = escapeHtml(it.soort || "");
+            return `
+              <div class="order-line">
+                <div class="ol-aantal">${aant}</div>
+                <div class="ol-oms">${oms}</div>
+                <div class="ol-meta">${lev}${lev && soort ? " • " : ""}${soort}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  return html;
 }
