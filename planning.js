@@ -1288,6 +1288,29 @@ for (const w of (werknemersCap || []) ) {
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
 
+     // ✅ klik op bestelling pijltje => toon/verberg orderregel-rijen
+    const obtn = ev.target.closest(".expander-order");
+    if (obtn) {
+      ev.stopPropagation();
+
+      const sid = String(obtn.dataset.sect || "");
+      const bn  = String(obtn.dataset.orderbn || "");
+
+      // pid pakken we veilig van de rij zelf (betrouwbaarder dan dataset op de button)
+      const tr = obtn.closest("tr");
+      const pid = String(tr?.dataset?.parent || "");
+
+      const open = obtn.textContent !== "▼";
+      obtn.textContent = open ? "▼" : "▶";
+
+      gridEl.querySelectorAll(
+        `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]`
+      ).forEach(r => r.classList.toggle("hidden", !open));
+
+      applyZebraVisible();
+      return;
+    } 
+
     // ✅ click op order accordion head (in details)
     const oh = ev.target.closest(".order-head");
     if (oh) {
