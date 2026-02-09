@@ -161,22 +161,39 @@ async function loadProject(id){
       return `<td>${escapeHtml(v ?? "")}</td>`;
     }).join("");
 
-    const detail = DB.sectionDetailCols.map(d=>{
-      const raw = Array.isArray(d.col)
-        ? d.col.map(c => valFrom(s, c)).find(v => v !== null && v !== undefined && v !== "")
-        : valFrom(s, d.col);
+// ===== detail opsplitsen: tekst/beschrijving boven, uren links =====
+const detailText = DB.sectionDetailCols
+  .filter(d => !String(Array.isArray(d.col) ? d.col[0] : d.col).includes("uren_"))
+  .map(d => {
+    const raw = Array.isArray(d.col)
+      ? d.col.map(c => valFrom(s, c)).find(v => v !== null && v !== undefined && v !== "")
+      : valFrom(s, d.col);
 
-      const v = (String(Array.isArray(d.col) ? d.col[0] : d.col).includes("uren_"))
-        ? (raw ?? 0)
-        : (raw ?? "");
+    const v = raw ?? "";
+    return `
+      <div class="fieldgrid" style="grid-template-columns:220px 1fr; margin-top:8px">
+        <div class="label">${escapeHtml(d.label)}</div>
+        <div class="value" style="white-space:normal">${escapeHtml(v)}</div>
+      </div>
+    `;
+  }).join("");
 
-      return `
-        <div class="fieldgrid" style="grid-template-columns:220px 1fr; margin-top:8px">
-          <div class="label">${escapeHtml(d.label)}</div>
-          <div class="value" style="white-space:normal">${escapeHtml(v)}</div>
-        </div>
-      `;
-    }).join("");
+const detailHours = DB.sectionDetailCols
+  .filter(d => String(Array.isArray(d.col) ? d.col[0] : d.col).includes("uren_"))
+  .map(d => {
+    const raw = Array.isArray(d.col)
+      ? d.col.map(c => valFrom(s, c)).find(v => v !== null && v !== undefined && v !== "")
+      : valFrom(s, d.col);
+
+    const v = (raw ?? 0);
+    return `
+      <div class="fieldgrid" style="grid-template-columns:190px 1fr; margin-top:8px">
+        <div class="label">${escapeHtml(d.label)}</div>
+        <div class="value">${escapeHtml(v)}</div>
+      </div>
+    `;
+  }).join("");
+
 
 // ===== Orders HTML voor deze sectie (accordion per bestel_nummer) =====
 const sid = String(s?.[DB.sectionPkCol] ?? "");
@@ -196,10 +213,24 @@ const ordersHtml = `
       <tr class="section-details" data-i="${idx}" style="display:none">
         <td colspan="${DB.sectionRowCols.length + 1}">
           <div class="inner">
-            <div class="muted" style="font-weight:800; margin-bottom:8px">Sectie details</div>
-            ${detail}
-            ${ordersHtml}
-          </div>
+            <div class="inner">
+              <div class="muted" style="font-weight:800; margin-bottom:8px">Sectie details</div>
+
+              <!-- 1) Tekst/beschrijving boven (volledige breedte) -->
+              ${detailText}
+
+              <!-- 2) Uren links + Bestellingen rechts -->
+              <div class="sec-split" style="display:grid; grid-template-columns: 260px 1fr; gap:16px; margin-top:14px;">
+                <div class="sec-left">
+                  ${detailHours}
+                </div>
+
+                <div class="sec-right">
+                  ${ordersHtml}
+                </div>
+              </div>
+            </div>
+
         </td>
       </tr>
     `;
