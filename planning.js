@@ -482,6 +482,17 @@ async function fillOrderTypeFilterUI(){
 
     if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
 
+    // 2) secties
+    const projectIds = (projecten || []).map(p => p.project_id ?? p.id).filter(Boolean);
+
+    const { data: secties, error: sErr } = await sb
+      .from("secties")
+      .select("*")
+      .in("project_id", projectIds)
+      .limit(2000);
+
+
+    if (sErr) { statusEl.textContent = "Fout secties: " + sErr.message; return; }
 
     // 2b) section_orders voor alle secties in dit project (✅ nieuw)
     const sectionIds = (secties || [])
@@ -507,33 +518,6 @@ async function fillOrderTypeFilterUI(){
       }
     }
 
-
-    // 2b) section_orders (bestellingen) – in range + alleen gekozen soorten
-    let orders = [];
-    const sectionIds = (secties || []).map(s => s.section_id ?? s.id).filter(Boolean);
-    const typeFilter = new Set(settings.orderTypeFilter || []);
-    
-    if (sectionIds.length && typeFilter.size) {
-      const { data: oData, error: oErr } = await sb
-        .from("section_orders")
-        .select("id, section_id, bestel_nummer, leverdatum, omschrijving, aantal, leverancier, soort, created_at")
-        .in("section_id", sectionIds)
-        .gte("leverdatum", startISO)
-        .lte("leverdatum", endISO)
-        .in("soort", Array.from(typeFilter))
-        .order("bestel_nummer", { ascending: true })
-        .order("created_at", { ascending: true });
-    
-      if (oErr) {
-        console.warn("Fout section_orders:", oErr.message);
-        orders = [];
-      } else {
-        orders = oData || [];
-      }
-    } else {
-      // niks aangevinkt => niets tonen
-      orders = [];
-    }
 
     
     // 3) section_work in range
@@ -645,8 +629,8 @@ async function fillOrderTypeFilterUI(){
     }
 
 
-  // -------- RENDER --------
-  function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, orders }){
+    // -------- RENDER --------
+    function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, orders }){
 
 
     const dates = [];
@@ -684,7 +668,7 @@ async function fillOrderTypeFilterUI(){
       if (s?.id) sectLookup.set(String(s.id), String(s.id));
       if (s?.section_id) sectLookup.set(String(s.section_id), String(s.section_id));
     }
-
+    
     // ✅ ordersBySection: section_id -> Map(bestel_nummer -> rows[])
     ordersBySection = new Map();
 
@@ -702,6 +686,7 @@ async function fillOrderTypeFilterUI(){
       if (!by.has(bn)) by.set(bn, []);
       by.get(bn).push(r);
     }
+
 
     // snelle lookup: sectionId -> sectie object
     const sectById = new Map();
