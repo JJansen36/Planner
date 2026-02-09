@@ -1233,34 +1233,29 @@ for (const w of (werknemersCap || []) ) {
         const open = btn.textContent !== "▼";
         btn.textContent = open ? "▼" : "▶";
 
-        // section details row (Bestellingen blok etc.)
+        // 1) sectie-details row (Bestellingen blok etc.)
         gridEl.querySelectorAll(
           `tr.section-details-row[data-sect="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
         ).forEach(r => r.classList.toggle("hidden", !open));
 
-        // order rows + order details rows die bij deze sectie horen
+        // 2) bestelling header-rijen (order-row) tonen/verbergen bij sectie open/dicht
         gridEl.querySelectorAll(
-          `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
-          tr.order-details-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+          `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
         ).forEach(r => r.classList.toggle("hidden", !open));
 
-        // als je dichtklapt: zet alle order expanders terug + verberg details
+        // 3) als sectie dicht gaat: verberg ook ALLE order-regel-rijen + zet order-pijltjes terug
         if (!open) {
+          gridEl.querySelectorAll(
+            `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+          ).forEach(r => r.classList.add("hidden"));
+
           gridEl.querySelectorAll(
             `.expander-order[data-sect="${cssEsc(sid)}"]`
           ).forEach(b => b.textContent = "▶");
         }
-        gridEl.querySelectorAll(`tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
-                         tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`)
-            .forEach(r => r.classList.toggle("hidden", !open));
-
-        gridEl.querySelectorAll(
-                        `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
-                        tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
-                      ).forEach(r => r.classList.toggle("hidden", !open));
-
 
         applyZebraVisible();
+
       });
     });
 
