@@ -247,26 +247,31 @@ const ordersHtml = `
     });
   });
 
-  // Orders accordion behavior (per bestelnummer)
-    [...el("secBody").querySelectorAll("[data-order-toggle]")].forEach(btn=>{
-      btn.addEventListener("click", (e)=>{
-        e.stopPropagation(); // voorkomt dat je sectie-accordion ook toggled
-        const card = btn.closest(".order-card");
-        const body = card.querySelector(".order-body");
-        const arrow = card.querySelector(".order-arrow");
+// Orders accordion behavior (per bestelnummer)
+[...el("secBody").querySelectorAll("[data-order-toggle]")].forEach(btn=>{
+  btn.addEventListener("click", (e)=>{
+    e.stopPropagation();
 
-        const isOpen = !body.hasAttribute("hidden");
-        if (isOpen) {
-          body.setAttribute("hidden", "");
-          btn.setAttribute("aria-expanded", "false");
-          if (arrow) arrow.textContent = "▾";
-        } else {
-          body.removeAttribute("hidden");
-          btn.setAttribute("aria-expanded", "true");
-          if (arrow) arrow.textContent = "▴";
-        }
-      });
-    });
+    // werkt zowel met als zonder .order-card wrapper
+    const card = btn.closest(".order-card") || btn.parentElement;
+    const body = card ? card.querySelector(".order-body") : null;
+    const arrow = card ? card.querySelector(".order-arrow") : btn.querySelector(".order-arrow");
+
+    if (!body) return; // niets te togglen
+
+    const isOpen = !body.hasAttribute("hidden");
+    if (isOpen) {
+      body.setAttribute("hidden", "");
+      btn.setAttribute("aria-expanded", "false");
+      if (arrow) arrow.textContent = "▾";
+    } else {
+      body.removeAttribute("hidden");
+      btn.setAttribute("aria-expanded", "true");
+      if (arrow) arrow.textContent = "▴";
+    }
+  });
+});
+
 
 
 // Bestellingen accordion (binnen sectie-details) - delegated
