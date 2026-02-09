@@ -858,3 +858,145 @@ td.section-click[data-tip]:hover::before{
   box-sizing:border-box;
 }
 
+
+/* =========================
+   SECTION ORDERS (Bestellingen) – UI styling
+========================= */
+
+/* container naast uren */
+.orders-acc{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+/* kaartje per bestelnummer */
+.order-card{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  overflow:hidden;
+  box-shadow:0 1px 0 rgba(2,6,23,.03);
+}
+
+/* button reset + layout */
+.order-head{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  border:0;
+  background:#f8fafc;
+  color:var(--text);
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+
+  padding:10px 12px;
+  font:inherit;              /* belangrijk: gebruikt dezelfde font als rest */
+  text-align:left;
+}
+.order-head:hover{ background:#f1f5f9; }
+.order-head:focus{
+  outline:none;
+  box-shadow:0 0 0 4px rgba(147,197,253,.25);
+}
+
+/* links: bestelnummer */
+.order-bn{
+  font-weight:800;
+  font-size:13px;
+  letter-spacing:.2px;
+}
+
+/* rechts: leverdatum + pijltje */
+.order-head-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+.order-ld{
+  color:var(--muted);
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.order-arrow{
+  width:22px;
+  height:22px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  font-size:12px;
+  line-height:1;
+}
+
+/* body (uitklap) */
+.order-body{
+  padding:10px 12px;
+  border-top:1px solid var(--line);
+  background:#fff;
+}
+.order-body[hidden]{ display:none !important; }
+
+/* regels in body */
+.order-line{
+  display:grid;
+  grid-template-columns:52px 1fr;
+  gap:6px 10px;
+  padding:8px 0;
+  border-top:1px dashed #e5e7eb;
+}
+.order-line:first-child{
+  border-top:0;
+  padding-top:0;
+}
+
+.ol-aantal{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:26px;
+  min-width:44px;
+
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#f8fafc;
+
+  font-weight:800;
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+}
+
+.ol-oms{
+  font-weight:700;
+  font-size:13px;
+  line-height:1.25;
+}
+
+.ol-meta{
+  grid-column:2 / -1;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.2;
+}
+
+/* kleine helper: titel "Bestellingen" zoals andere blokjes */
+.orders-title{
+  font-weight:800;
+  color:var(--muted);
+  margin:10px 0 6px;
+}
+
+/* mobiel: iets compacter */
+@media (max-width:720px){
+  .order-head{ padding:9px 10px; }
+  .order-body{ padding:9px 10px; }
+  .order-line{ grid-template-columns:46px 1fr; }
+}
+
