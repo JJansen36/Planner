@@ -1067,91 +1067,61 @@ for (const dd of dates) {
         tbody.appendChild(secRow);
 
 
-      // ======================
-      // ✅ ORDER-RIJEN onder de sectie (hidden, volgen sectie open/dicht)
-      // ======================
-      const headers = orderHeadersBySection.get(String(sid)) || [];
+// ======================
+// ✅ BESTELLINGEN ALS ECHTE KALENDER-RIJEN
+// ======================
+const headers = orderHeadersBySection.get(String(sid)) || [];
 
-      for (const oh of headers) {
-        const orderRow = document.createElement("tr");
-        orderRow.className = "order-row hidden";         // start hidden, zichtbaar als sectie open is
-        markZebra(orderRow);
-        orderRow.dataset.parent = String(pid);           // hoort bij project
-        orderRow.dataset.orderParent = String(sid);      // hoort bij sectie
-        orderRow.dataset.orderBn = String(oh.bn || "");
+for (const oh of headers) {
+  // 1) Bestelling header-rij
+  const orderRow = document.createElement("tr");
+  orderRow.className = "order-row hidden";       // zichtbaar wanneer sectie open is
+  markZebra(orderRow);
+  orderRow.dataset.parent = String(pid);
+  orderRow.dataset.orderParent = String(sid);
+  orderRow.dataset.orderBn = String(oh.bn || "");
 
-        // linker kolom: bestelnummer + expander
-        const tdLeft = document.createElement("td");
-        tdLeft.className = "rowhdr sticky-left section-cell";
-        tdLeft.innerHTML = `
-          <button class="expander expander-order" data-orderbn="${escapeAttr(oh.bn)}" data-sect="${escapeAttr(sid)}" aria-label="toggle order">▶</button>
-          <span class="sectext">↳↳ Bestelling ${escapeHtml(oh.bn)}</span>
-        `;
-        orderRow.appendChild(tdLeft);
+  const tdLeft = document.createElement("td");
+  tdLeft.className = "rowhdr sticky-left section-cell";
+  tdLeft.innerHTML = `
+    <button class="expander expander-order"
+      data-sect="${escapeAttr(sid)}"
+      data-parent="${escapeAttr(pid)}"
+      data-orderbn="${escapeAttr(oh.bn)}"
+      aria-label="toggle order">▶</button>
+    <span class="sectext">↳↳ Bestelling ${escapeHtml(oh.bn)}</span>
+  `;
+  orderRow.appendChild(tdLeft);
 
-        // kalendercellen: alleen op leverdatum een geel blokje
-        appendOrderDayCells(orderRow, dates, oh.leverISO);
+  // dagcellen (leverdatum)
+  appendOrderDayCells(orderRow, dates, oh.leverISO);
+  tbody.appendChild(orderRow);
 
-        tbody.appendChild(orderRow);
+  // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
+  for (const it of (oh.items || [])) {
+    const lineRow = document.createElement("tr");
+    lineRow.className = "order-line-row hidden";   // zichtbaar als order open
+    markZebra(lineRow);
 
-        // details row (uitklapbaar) met orderregels
-        const det = document.createElement("tr");
-        det.className = "order-details-row hidden";
-        markZebra(det);
-        det.dataset.parent = String(pid);
-        det.dataset.orderParent = String(sid);
-        det.dataset.orderBn = String(oh.bn || "");
+    lineRow.dataset.parent = String(pid);
+    lineRow.dataset.orderParent = String(sid);
+    lineRow.dataset.orderBn = String(oh.bn || "");
 
-        const tdDet = document.createElement("td");
-        tdDet.colSpan = dates.length + 1; // left + days
-        tdDet.className = "details-fill";
+    const tdL = document.createElement("td");
+    tdL.className = "rowhdr sticky-left section-cell";
+    tdL.innerHTML = `
+      <span class="sectext">↳↳↳ ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}</span>
+    `;
+    lineRow.appendChild(tdL);
 
-        tdDet.innerHTML = `
-          <div class="details-wrap">
-            <div class="details-box">
-              <div class="details-title">Bestelling ${escapeHtml(oh.bn)} • Leverdatum: ${escapeHtml(formatDateNL(oh.leverISO))}</div>
-              ${oh.items.map(it => `
-                <div class="details-line">
-                  ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}
-                  <span class="muted"> • ${escapeHtml(it.leverancier || "-")}${it.soort ? " • " + escapeHtml(it.soort) : ""}</span>
-                </div>
-              `).join("")}
-            </div>
-          </div>
-        `;
-        det.appendChild(tdDet);
-        tbody.appendChild(det);
-      }
+    // per regel: als leverdatum op regel-niveau bestaat, gebruik die, anders header leverISO
+    const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
+    appendOrderDayCells(lineRow, dates, leverLineISO);
 
-        // ==========================
-        // ✅ DETAILS ROW (uitklap) + BESTELLINGEN accordion
-        // ==========================
-        const detailsRow = document.createElement("tr");
-        detailsRow.className = "section-details-row hidden";
-        detailsRow.dataset.parent = String(pid);
-        detailsRow.dataset.sect = String(sid);
+    tbody.appendChild(lineRow);
+  }
+}
 
-        const tdDetails = document.createElement("td");
-        tdDetails.colSpan = dates.length + 1; // 1 = linkerkolom
-        tdDetails.className = "details-fill";
-
-        const byBN = ordersBySection.get(String(sid));            // Map(bestelnummer -> regels[])
-        const ordersHtml = renderOrdersAccordion(byBN);           // HTML accordion
-
-        tdDetails.innerHTML = `
-          <div class="details-wrap">
-            <div class="details-box">
-              <div class="details-title">Bestellingen</div>
-              ${ordersHtml}
-            </div>
-          </div>
-        `;
-
-        detailsRow.appendChild(tdDetails);
-        tbody.appendChild(detailsRow);
-
-      }
-    }
 
     // CAPACITY BLOCK
   tbody.appendChild(spacerRow(dates.length));
@@ -1248,44 +1218,27 @@ for (const w of (werknemersCap || []) ) {
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
-    // =========================
-    // EXPANDERS BINDEN (na render)
-    // =========================
 
-    // Section expander (▶) opent: section-details + order-rijen
-    gridEl.querySelectorAll(".expander-sec").forEach(btn => {
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
+    gridEl.querySelectorAll(".expander-order").forEach(btn => {
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
 
-        const sid = String(btn.dataset.sect || "");
-        const parentTr = btn.closest("tr");
-        const pid = String(parentTr?.dataset?.parent || "");
-        if (!sid || !pid) return;
+    const sid = String(btn.dataset.sect || "");
+    const pid = String(btn.dataset.parent || "");
+    const bn  = String(btn.dataset.orderbn || "");
 
-        const open = btn.textContent !== "▼";
-        btn.textContent = open ? "▼" : "▶";
+    const open = btn.textContent !== "▼";
+    btn.textContent = open ? "▼" : "▶";
 
-        // section details row (Bestellingen blok etc.)
-        gridEl.querySelectorAll(
-          `tr.section-details-row[data-sect="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
-        ).forEach(r => r.classList.toggle("hidden", !open));
+    gridEl.querySelectorAll(`
+      tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]
+    `).forEach(r => r.classList.toggle("hidden", !open));
 
-        // order rows + order details rows die bij deze sectie horen
-        gridEl.querySelectorAll(
-          `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"],
-          tr.order-details-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
-        ).forEach(r => r.classList.toggle("hidden", !open));
+    applyZebraVisible();
+  });
+});
 
-        // als je dichtklapt: zet alle order expanders terug + verberg details
-        if (!open) {
-          gridEl.querySelectorAll(
-            `.expander-order[data-sect="${cssEsc(sid)}"]`
-          ).forEach(b => b.textContent = "▶");
-        }
 
-        applyZebraVisible();
-      });
-    });
 
     // Order expander (▶) opent alleen de details van die bestelling
     gridEl.querySelectorAll(".expander-order").forEach(btn => {
