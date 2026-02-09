@@ -1,91 +1,860 @@
-/* ===== Orders (bestellingen) in sectie details ===== */
-.orders-acc{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+/* styles.css – clean light UI (cleaned / deduped) */
+
+/* =========================
+   THEME
+========================= */
+:root{
+  --bg:#f4f6fb;
+  --panel:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:#e2e8f0;
+
+  --acc:#2563eb;
+  --good:#16a34a;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
+  --chip-blue:#dbeafe;
+  --chip-green:#dcfce7;
+  --chip-purple:#f5d0fe;
+
+  --radius:14px;
+  --shadow:0 8px 28px rgba(2,6,23,.08);
 }
 
-.order-card{
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+a{ color:inherit; text-decoration:none; }
+
+.container.full-width{
+  max-width:none !important;
+  width:100%;
+}
+
+/* =========================
+   GENERIC UI
+========================= */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  letter-spacing:.2px;
+}
+.brand .dot{
+  width:11px;height:11px;border-radius:50%;
+  background:var(--acc);
+  box-shadow:0 0 0 4px rgba(37,99,235,.15);
+}
+
+.btn{
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:650;
+}
+.btn:hover{ border-color:#cbd5e1; }
+.btn.small{ padding:8px 10px; border-radius:10px; }
+.btn.ghost{ background:transparent; }
+.btn.primary{
+  background:var(--acc);
+  border-color:var(--acc);
+  color:#fff;
+}
+.btn.primary:hover{ filter:brightness(.98); }
+
+.icon-btn{
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  border-radius:10px;
+  padding:8px 10px;
+  cursor:pointer;
+}
+.icon-btn:hover{ background:#f8fafc; }
+
+.card{
+  margin-top:14px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
   overflow:hidden;
 }
+.card .hd{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.card .hd h1, .card .hd h2{ margin:0; font-size:18px; }
+.card .bd{ padding:16px; }
 
-.order-head{
+.grid{ display:grid; gap:14px; }
+.grid.cols-2{ grid-template-columns:1fr 1fr; }
+.grid.cols-3{ grid-template-columns:1fr 1fr 1fr; }
+@media (max-width:980px){
+  .grid.cols-2,.grid.cols-3{ grid-template-columns:1fr; }
+}
+
+.kpi-title{
+  font-size:14px;
+  color:var(--muted);
+  margin:0 0 8px;
+}
+
+.fieldgrid{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  gap:8px 12px;
+  align-items:center;
+}
+@media (max-width:720px){
+  .fieldgrid{ grid-template-columns:1fr; }
+}
+.label{ color:var(--muted); font-size:13px; }
+.value{
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:8px 10px;
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.input{
   width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
+  outline:none;
+}
+.input:focus{
+  border-color:#93c5fd;
+  box-shadow:0 0 0 4px rgba(147,197,253,.25);
+}
+
+.table{
+  width:100%;
+  border-collapse:collapse;
+  border:1px solid var(--line);
+  border-radius:12px;
+  overflow:hidden;
+}
+.table th, .table td{
+  padding:10px 10px;
+  border-bottom:1px solid var(--line);
+  font-size:14px;
+  vertical-align:top;
+}
+.table th{
+  text-align:left;
+  color:var(--muted);
+  font-weight:700;
+  background:#f8fafc;
+}
+.table tr:hover td{ background:#f8fafc; }
+
+.pill{
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:750;
+  border:1px solid var(--line);
+  background:#fff;
+}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:800;
+  letter-spacing:.2px;
+  border:1px solid var(--line);
+}
+.chip.blue{ background:var(--chip-blue); }
+.chip.green{ background:var(--chip-green); }
+.chip.purple{ background:var(--chip-purple); }
+
+.muted{ color:var(--muted); }
+
+.notice{
+  padding:10px 12px;
+  border:1px solid #bae6fd;
+  background:#eff6ff;
+  border-radius:12px;
+  color:#0c4a6e;
+}
+.error{
+  padding:10px 12px;
+  border:1px solid #fecaca;
+  background:#fff1f2;
+  border-radius:12px;
+  color:#7f1d1d;
+}
+
+/* =========================
+   MODAL (generic)
+========================= */
+.modal-backdrop{
+  position:fixed; inset:0;
+  background:rgba(2,6,23,.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:999;
+}
+.modal-backdrop.show{ display:flex; }
+.modal[hidden], .modal-backdrop[hidden]{ display:none !important; }
+
+.modal{
+  width:min(720px, 100%);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  position:relative; /* niet fullscreen */
+}
+.modal .hd{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:10px 12px;
-  background: transparent;
-  border:0;
+}
+.modal .bd{ padding:16px; }
+.modal .ft{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.split2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:720px){ .split2{ grid-template-columns:1fr; } }
+.hr{ height:1px; background:var(--line); margin:10px 0; }
+
+/* =========================
+   PLANNER PAGE SHELL
+========================= */
+.planner-page{ background:#fff; color:#111; min-height:100vh; }
+
+.planner-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 18px;
+  border-bottom:1px solid #e6e8ef;
+  position:sticky;
+  top:0;
+  background:#fff;
+  z-index:50;
+  height:56px; /* vaste hoogte voorkomt sticky-jitter */
+}
+.planner-title{ font-weight:700; font-size:18px; margin-left:10px; }
+.planner-topbar-left{ display:flex; align-items:center; gap:10px; }
+.planner-topbar-right{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.planner-wrap{ padding:12px 10px 30px; }
+.planner-status{ color:#667085; padding:6px 2px; }
+
+.planner-grid{
+  position:relative;
+  overflow:auto;
+  border:1px solid #e6e8ef;
+  border-radius:12px;
+  background:#fff;
+}
+
+/* =========================
+   PLANNER TABLE (single source of truth)
+========================= */
+.planner-table{
+  /* sizing */
+  --left-w: 380px;
+  --day-w: 32px;
+
+  /* header heights */
+  --hdr-month-h: 26px;
+  --hdr-week-h: 26px;
+  --hdr-day-h: 40px;
+
+  /* grid */
+  --grid-line: #e6eaf0;
+  --hdr-bg: #f2f4f7;
+  --wknd-bg: #dbeafe;
+
+  /* bar / marker height */
+  --stack-h: 22px;
+  --row-h: 18px;
+
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+/* borders + base cells */
+.planner-table th,
+.planner-table td{
+  border:1px solid #e6e8ef;
+  padding:3px 4px;
+  text-align:center;
+  white-space:nowrap;
+  background-clip:padding-box; /* voorkomt “doorzicht” bij sticky */
+}
+
+/* left column */
+.planner-table th.rowhdr,
+.planner-table td.rowhdr{
+  width:var(--left-w);
+  min-width:var(--left-w);
+  max-width:var(--left-w);
+  text-align:left !important;
+  padding:0 6px;
+  background:#fff;
+}
+
+/* header cells */
+.hdr-cell{
+  background:var(--hdr-bg);
+  font-weight:700;
+  vertical-align:middle;
+}
+
+/* month/week: colspan moet “vrij” blijven */
+.planner-table thead tr.hdr-month th.hdr-cell{
+  height:var(--hdr-month-h);
+  line-height:var(--hdr-month-h);
+  font-size:12px;
+  padding:0 4px;
+}
+.planner-table thead tr.hdr-week th.hdr-cell{
+  height:var(--hdr-week-h);
+  line-height:var(--hdr-week-h);
+  font-size:11px;
+  padding:0 4px;
+}
+
+/* day header: exact gelijk aan dagcellen */
+.planner-table thead tr.hdr-day th.hdr-cell{
+  width:var(--day-w);
+  min-width:var(--day-w);
+  max-width:var(--day-w);
+  height:var(--hdr-day-h);
+  padding:0 !important;
+  font-size:11px;
+  line-height:1.1;
+  vertical-align:bottom;
+}
+
+/* body day cells */
+.planner-table td.cell{
+  width:var(--day-w);
+  min-width:var(--day-w);
+  max-width:var(--day-w);
+  padding:0 !important;
+  box-sizing:border-box;
+}
+
+/* “normale” cellen blijven strak 18px hoog */
+.planner-table td.cell:not(.plan-cell){
+  height:var(--row-h);
+  line-height:var(--row-h);
+}
+
+/* weekend */
+.planner-table td.cell.wknd{ background:var(--wknd-bg) !important; }
+
+/* =========================
+   STICKY (header rows + left col)
+========================= */
+.sticky-left{
+  position:sticky;
+  left:0;
+  z-index:40;
+  background:#fff;
+  box-shadow:1px 0 0 var(--grid-line);
+}
+
+/* 3 header rijen */
+.sticky-top{
+  position:sticky;
+  top:0;
+  z-index:60;
+  background:var(--hdr-bg);
+}
+.sticky-top2{
+  position:sticky;
+  top:var(--hdr-month-h);
+  z-index:59;
+  background:var(--hdr-bg);
+}
+.sticky-top3{
+  position:sticky;
+  top:calc(var(--hdr-month-h) + var(--hdr-week-h));
+  z-index:58;
+  background:var(--hdr-bg);
+}
+
+/* linker header-cellen boven alles */
+.hdr-cell.sticky-left{ z-index:80; background:var(--hdr-bg); }
+td.rowhdr.sticky-left{ z-index:50; }
+
+/* =========================
+   ROW LABELS / EXPANDERS / DETAILS
+========================= */
+.project-cell{ background:#fff; font-weight:700; }
+.section-cell{ background:#fff; color:#344054; }
+.sectext{ opacity:.95; }
+
+.expander{
+  border:1px solid #d0d5dd;
+  background:#fff;
+  border-radius:8px;
+  width:26px;
+  height:22px;
   cursor:pointer;
+  margin-right:8px;
+}
+.expander-sec{ margin-right:6px; }
+.projtext{ vertical-align:middle; }
+.hidden{ display:none; }
+
+td.details-fill{ text-align:left !important; vertical-align:top; padding:0 !important; }
+.details-wrap{
+  display:block;
+  width:100%;
+  margin:0;
+  padding:8px 10px;
+  text-align:left;
+}
+.details-box{
+  margin:0 !important;
+  display:block;
+  font-size:12px;
+  line-height:1.3;
+}
+.details-title{ font-weight:700; margin-bottom:4px; }
+.details-line{ opacity:.9; }
+
+/* =========================
+   PLANNING BARS + MARKERS
+========================= */
+.planner-table td.plan-cell{
+  height:auto !important;
+  line-height:normal !important;
+  padding:0 !important;
+  vertical-align:top;
+  background:#fff;
+}
+
+/* bars in a cell */
+.plan-cell .bar{
+  width:100%;
+  height:var(--row-h);         /* “oude” bars: 18px */
+  line-height:var(--row-h);
+  border-radius:6px;
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  padding:0 6px;
+  text-align:left;
+}
+.bar-prep .bar{ background:#c7e0ff; }
+.bar-prod .bar{ background:#b7f0c2; }
+.bar-mont .bar{ background:#f6c1f3; }
+.bar-delivery .bar{ background:#ffd7b5; }
+.bar-generic .bar{ background:#e5e7eb; }
+
+/* markers (lever/oplever) – standalone (als je ze direct in cel zet) */
+.deadline,
+.delivery{
+  display:inline-block;
+  font-size:10px;
+  padding:1px 4px;
+  border-radius:6px;
+  color:#0f172a;
+  white-space:nowrap;
+}
+.deadline{
+  background:#f59e0b;
+  border:1px solid rgba(0,0,0,.15);
+}
+.delivery{
+  background:#fde68a;
+  border:1px solid rgba(0,0,0,.12);
+  margin-right:4px;
+}
+
+/* =========================
+   STACK SYSTEM (lever/oplever + bars netjes onder elkaar)
+========================= */
+.plan-stack{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  align-items:stretch;
+}
+
+/* stack markers */
+.plan-stack .marker{
+  display:block;
+  width:100%;
+  height:var(--stack-h);
+  line-height:var(--stack-h);
+  margin:0 !important;
+  padding:0 8px;
+  border-radius:10px;
+  font-size:12px;
+  box-sizing:border-box;
+  text-align:left;
+}
+.plan-stack .marker.delivery{
+  background:#fde68a;
+  border:1px solid rgba(0,0,0,.12);
+}
+.plan-stack .marker.deadline{
+  background:#f59e0b;
+  border:1px solid rgba(0,0,0,.15);
+}
+.plan-stack .marker.placeholder{ visibility:hidden; }
+
+/* stack bars */
+.plan-stack .bar{
+  display:block;
+  width:100%;
+  height:var(--stack-h);
+  line-height:var(--stack-h);
+  margin:0 !important;
+  padding:0 6px;
+  border-radius:6px !important;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
   text-align:left;
 }
 
-.order-head:hover{
-  background: rgba(15, 23, 42, 0.03);
+/* kleuren via TD class (werkt met jouw JS) */
+td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
+td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
+td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
+td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
+
+/* =========================
+   BARS AAN ELKAAR (start/end rounding)
+========================= */
+.planner-table td.plan-cell .bar{ border-radius:0 !important; }
+.planner-table td.plan-cell .bar.bar-start{
+  border-top-left-radius:6px !important;
+  border-bottom-left-radius:6px !important;
+}
+.planner-table td.plan-cell .bar.bar-end{
+  border-top-right-radius:6px !important;
+  border-bottom-right-radius:6px !important;
+}
+/* stack bars moeten rounded blijven */
+.plan-stack .bar{ border-radius:6px !important; }
+
+/* =========================
+   DUMMY (INHUUR) HATCH
+========================= */
+/* zorgt dat pseudo-element netjes over de bar heen ligt */
+.plan-stack .bar{
+  position: relative;
+  overflow: hidden;
 }
 
-.order-head-left,
-.order-head-right{
-  display:flex;
-  align-items:center;
-  gap:10px;
+/* concept / dummy arcering (altijd zichtbaar, ook op groen) */
+.plan-stack .bar{
+  position:relative;
+  overflow:hidden;
 }
 
-.order-arrow{
-  font-weight:800;
-  color: var(--muted);
+.plan-stack .bar.dummy-hatch::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:3;                 /* <-- belangrijk: bovenop bar + tekst */
+  background:repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.00) 0px,
+    rgba(0,0,0,0.00) 6px,
+    rgba(0,0,0,0.18) 6px,     /* <-- donkerder: veel beter zichtbaar */
+    rgba(0,0,0,0.18) 10px
+  );
 }
 
-.order-body{
-  padding:10px 12px 12px;
-  border-top:1px solid var(--line);
-  background: rgba(15, 23, 42, 0.02);
+
+/* =========================
+   PROJECT ROW OPEN HIGHLIGHT
+========================= */
+tr.project-row.is-open > td{
+  box-shadow:inset 0 0 0 9999px rgba(37, 99, 235, 0.06);
+}
+tr.project-row.is-open > td.sticky-left{
+  box-shadow:inset 0 0 0 9999px rgba(37, 99, 235, 0.10);
+  font-weight:600;
+  border-left:4px solid rgba(37, 99, 235, 0.35);
 }
 
-/* regels binnen bestelling */
-.order-line{
-  display:grid;
-  grid-template-columns: 38px 1fr;
-  gap:10px;
-  padding:8px 0;
+/* =========================
+   CAPACITY / TOTALS STYLING
+========================= */
+.block-title .block-hdr{ background:var(--hdr-bg); font-weight:800; }
+.block-title .block-fill{ background:var(--hdr-bg); }
+.block-title.compact .block-hdr{ font-weight:700; }
+
+.cap-emp-row .cap-name{ background:#fff; font-weight:600; }
+.cap-cell{ background:#fff; }
+
+.sum-row .sum-label{ background:#fff; font-weight:700; }
+.sum-cell{ background:#fff7d6; }
+.sum-cell.ok{ background:#c7f7cf; }
+.sum-cell.warn{ background:#ffe7b5; }
+.sum-cell.bad{ background:#ffc6c6; }
+
+.planner-table td.cap-cell,
+.planner-table td.sum-cell,
+.planner-table td.cap-name,
+.planner-table td.sum-label{
+  font-size:12px;
+  line-height:1.1;
+  font-variant-numeric:tabular-nums;
 }
 
-.order-line + .order-line{
-  border-top:1px dashed var(--line);
+td.cap-emp-click{ cursor:pointer; }
+td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
+
+.spacer td{ border:none; padding:6px 0; }
+.spacer-cell{ background:#fff; }
+
+/* Saldo rij */
+.balance-row .balance-label{ background:#fff; font-weight:400; font-size:12px; }
+.planner-table td.balance-cell{
+  font-size:12px !important;
+  font-weight:400 !important;
+  line-height:1.1;
+}
+.planner-table td.balance-cell.pos{ background:#c7f7cf !important; }
+.planner-table td.balance-cell.neg{ background:#ffc6c6 !important; }
+.planner-table td.balance-cell.zero{ background:#ffe7b5 !important; }
+
+/* =========================
+   ZEBRA (clean, predictable)
+========================= */
+.planner-table td.cell{ position:relative; }
+
+/* linkerkolom zebra */
+.planner-table tbody tr.zebra > td.rowhdr{
+  background:#f5f6f8 !important;
 }
 
-.ol-aantal{
-  min-width:38px;
-  height:28px;
-  border:1px solid var(--line);
+/* zebra overlay op kalendercellen, niet weekend */
+.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:rgba(245, 246, 248, 0.55);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* content boven overlay */
+.planner-table td.cell .bar,
+.planner-table td.cell .deadline,
+.planner-table td.cell .delivery,
+.planner-table td.cell .assign-badge{
+  position:relative;
+  z-index:1;
+}
+
+/* zebra UIT voor capaciteit + som + saldo (als jij die wilt laten “wit” houden) */
+.planner-table tbody tr.cap-total-row.zebra > td,
+.planner-table tbody tr.cap-emp-row.zebra > td,
+.planner-table tbody tr.sum-row.zebra > td,
+.planner-table tbody tr.balance-row.zebra > td{
+  background:transparent !important;
+}
+.planner-table tbody tr.cap-total-row.zebra > td::after,
+.planner-table tbody tr.cap-emp-row.zebra > td::after,
+.planner-table tbody tr.sum-row.zebra > td::after,
+.planner-table tbody tr.balance-row.zebra > td::after{
+  content:none !important;
+}
+
+/* =========================
+   SECTION ASSIGNMENTS (tooltip + modal)
+========================= */
+td.section-click{
+  position:relative;
+  cursor:pointer;
+}
+
+.assign-badge{
+  position:absolute;
+  right:2px;
+  bottom:2px;
+  min-width:16px;
+  height:16px;
+  padding:0 5px;
+  border-radius:999px;
+  font-size:10px;
+  line-height:16px;
+  text-align:center;
+  background:#111827;
+  color:#fff;
+  opacity:.85;
+}
+/* verberg badges (zoals je had) */
+.assign-badge{ display:none !important; }
+
+/* tooltip */
+td.section-click[data-tip]:hover::after{
+  content:attr(data-tip);
+  position:absolute;
+  left:6px;
+  top:calc(100% + 6px);
+  z-index:200;
+  background:#111827;
+  color:#fff;
+  padding:8px 10px;
   border-radius:10px;
+  font-size:12px;
+  line-height:1.25;
+  white-space:pre-line;
+  min-width:160px;
+  max-width:320px;
+  box-shadow:0 10px 26px rgba(0,0,0,.18);
+}
+td.section-click[data-tip]:hover::before{
+  content:"";
+  position:absolute;
+  left:14px;
+  top:calc(100% + 2px);
+  border:6px solid transparent;
+  border-bottom-color:#111827;
+  z-index:201;
+}
+
+/* assignment modal variant */
+.modal.assign-modal{
+  width:460px;
+  max-width:calc(100vw - 24px);
+}
+.assign-modal .hd{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.assign-title{ font-weight:700; }
+.assign-sub{ font-size:12px; opacity:.75; }
+.assign-tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+.assign-list{
+  margin-top:8px;
+  max-height:50vh;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.assign-item{
   display:flex;
   align-items:center;
-  justify-content:center;
-  background: #fff;
-  font-weight:700;
+  gap:10px;
+  padding:6px 8px;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:10px;
+}
+.assign-item input{ transform:scale(1.05); }
+
+/* =========================
+   SETTINGS MODAL (boven alles)
+========================= */
+#settingsBackdrop{
+  position:fixed !important;
+  inset:0 !important;
+  background:rgba(2,6,23,.45) !important;
+  z-index:5000 !important;
+}
+#settingsBackdrop[hidden]{ display:none !important; }
+
+#settingsModal{
+  position:fixed !important;
+  left:50% !important;
+  top:50% !important;
+  transform:translate(-50%, -50%) !important;
+  z-index:5001 !important;
+  width:min(520px, calc(100vw - 24px)) !important;
+  max-height:calc(100vh - 24px) !important;
+  overflow:auto !important;
+}
+#settingsModal[hidden]{ display:none !important; }
+
+/* als prod+mont op dezelfde dag staan: kleur op de bar zelf (niet via td) */
+.plan-stack .bar.bar-prod{ background:#b7f0c2 !important; }
+.plan-stack .bar.bar-mont{ background:#f6c1f3 !important; }
+.plan-stack .bar.bar-prep{ background:#c7e0ff !important; }
+.plan-stack .bar.bar-generic{ background:#e5e7eb !important; }
+
+/* markers (lever/oplever) samen op 1 regel */
+.plan-stack .marker-row{
+  display:flex;
+  gap:6px;
 }
 
-.ol-oms{
-  font-weight:700;
+.plan-stack .marker-row .marker{
+  flex:1;               /* beide nemen evenveel ruimte */
+  width:auto;           /* override oude 100% */
+  height:var(--stack-h);
+  line-height:var(--stack-h);
+  padding:0 8px;
+  border-radius:10px;
+  font-size:12px;
+  text-align:left;
+  box-sizing:border-box;
 }
 
-.ol-meta{
-  grid-column:2 / -1;
-  color: var(--muted);
-  font-size: 12.5px;
-  margin-top:2px;
-}
-
-/* pill variant (als je nog geen pill-soft hebt) */
-.pill.pill-soft{
-  background: #fff;
-  border: 1px solid var(--line);
-  color: var(--text);
-}
