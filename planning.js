@@ -1436,10 +1436,13 @@ for (const oh of headers) {
     }
 
 
-    // klik op projectnaam OF projectcellen => secties openklappen
-    // MAAR: klik op het pijltje zelf moet gewoon togglen (dus hier negeren)
     const expBtn = ev.target.closest(".expander[data-proj]");
-    if (expBtn) return; // laat de normale toggle listener z'n werk doen
+    if (expBtn) {
+      ev.stopPropagation();
+      const pid = String(expBtn.dataset.proj || "");
+      if (pid) toggleProject(pid);
+      return;
+    }
 
     const projHit = ev.target.closest("[data-proj]");
     if (projHit) {
@@ -1955,6 +1958,8 @@ const totals = {
       ).forEach(r => r.classList.toggle("hidden", !open));
 
       applyZebraVisible();
+      restoreOpenState();
+
     });
   });
 
@@ -1968,6 +1973,8 @@ const totals = {
       btn.textContent = open ? "▼" : "▶";
       toggleRowsByKey(key, open);
       applyZebraVisible();
+      restoreOpenState();
+
     });
   });
 
