@@ -869,21 +869,21 @@ async function fillOrderTypeFilterUI(){
 
 
 
-    // per dag: welke medewerkers ingepland zijn op productie / montage
-    const empAssignByDay = Object.create(null); 
-    // { "YYYY-MM-DD": { prod:Set(empId), mont:Set(empId) } }
+    // per dag: welke medewerkers ingepland zijn (gebruik dezelfde bron als plannedProd/Mont)
+    const empAssignByDay = Object.create(null);
+    // { "YYYY-MM-DD": { prod:Set(empIdStr), mont:Set(empIdStr) } }
 
-    for (const a of (assigns || [])) {
-      const iso = String(a.work_date || "");
-      const emp = String(a.werknemer_id || "");
-      const wt  = String(a.work_type || "").toLowerCase();
-      if (!iso || !emp) continue;
+    for (const d of dates) {
+      const iso = toISODate(d);
+      const sets = plannedSetsByDay[iso] || { pro: new Set(), mo: new Set() };
 
-      if (!empAssignByDay[iso]) empAssignByDay[iso] = { prod: new Set(), mont: new Set() };
-
-      if (wt === "productie") empAssignByDay[iso].prod.add(emp);
-      if (wt === "montage")   empAssignByDay[iso].mont.add(emp);
+      // let op: plannedSetsByDay gebruikt keys "pro" en "mo"
+      empAssignByDay[iso] = {
+        prod: new Set(Array.from(sets.pro || []).map(x => String(x).trim())),
+        mont: new Set(Array.from(sets.mo || []).map(x => String(x).trim())),
+      };
     }
+
 
 
     // build table
