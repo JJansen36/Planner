@@ -825,6 +825,22 @@ td.section-click[data-tip]:hover::before{
 }
 .assign-item input{ transform:scale(1.05); }
 
+.assign-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+@media (max-width:720px){
+  .assign-grid{ grid-template-columns:1fr; }
+}
+
+.assign-col-title{
+  font-weight:800;
+  font-size:13px;
+  color:var(--muted);
+  margin:0 0 8px;
+}
+
 /* =========================
    SETTINGS MODAL (boven alles)
 ========================= */
