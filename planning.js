@@ -1736,39 +1736,44 @@ const renderBothLists = () => {
       if (!id) return;
 
       if (e.target.checked) {
-        // ✅ exclusief: als je iemand in Productie zet, haal hem uit Montage
+        // exclusief: uit montage halen
         selected.montage.delete(id);
+
+        // montage checkbox (zelfde id) uitvinken
+        const other = listMont?.querySelector(`input[data-eid="${id}"]`);
+        if (other) other.checked = false;
+
         selected.productie.add(id);
       } else {
         selected.productie.delete(id);
       }
-
-      // ✅ UI direct syncen (montage checkbox uitzetten als die aan stond)
-      renderBothLists();
     };
     listProd.appendChild(rowP);
 
-    // --- Montage rij ---
+        // --- Montage rij ---
     rowM.querySelector("input").onchange = (e) => {
       const id = String(e.target.dataset.eid || "");
       if (!id) return;
 
       if (e.target.checked) {
-        // ✅ exclusief: als je iemand in Montage zet, haal hem uit Productie
+        // exclusief: uit productie halen
         selected.productie.delete(id);
+
+        // productie checkbox (zelfde id) uitvinken
+        const other = listProd?.querySelector(`input[data-eid="${id}"]`);
+        if (other) other.checked = false;
+
         selected.montage.add(id);
       } else {
         selected.montage.delete(id);
       }
-
-      // ✅ UI direct syncen (productie checkbox uitzetten als die aan stond)
-      renderBothLists();
     };
-    listMont.appendChild(rowM);
-  }
-};
 
-renderBothLists();
+        listMont.appendChild(rowM);
+      }
+    };
+
+    renderBothLists();
 
 
 
