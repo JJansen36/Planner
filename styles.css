@@ -1096,4 +1096,19 @@ td.section-click[data-tip]:hover::before{
   background: rgba(236,72,153,.18) !important;  /* paars */
 }
 
-/* Weekend blijft weekendkleur (jouw wknd rules blijven leidend) */
+/* Weekend-kolom doortrekken in capaciteitblok (incl. saldo) */
+.planner-table tbody td.wknd{
+  background: var(--wknd-bg) !important;
+}
+
+/* Zorg dat saldo/prod/mont kleuren niet over weekend heen schilderen */
+.planner-table tbody td.wknd.cap-cell,
+.planner-table tbody td.wknd.sum-cell,
+.planner-table tbody td.wknd.balance-cell{
+  background: var(--wknd-bg) !important;
+}
+
+/* Als je zebra overlay gebruikt: weekend nooit “zebra overlay” geven */
+.planner-table tbody tr.zebra > td.wknd::after{
+  content:none !important;
+}
