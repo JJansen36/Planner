@@ -1734,23 +1734,35 @@ const renderBothLists = () => {
     rowP.querySelector("input").onchange = (e) => {
       const id = String(e.target.dataset.eid || "");
       if (!id) return;
-      if (e.target.checked) selected.productie.add(id);
-      else selected.productie.delete(id);
+
+      if (e.target.checked) {
+        // ✅ exclusief: als je iemand in Productie zet, haal hem uit Montage
+        selected.montage.delete(id);
+        selected.productie.add(id);
+      } else {
+        selected.productie.delete(id);
+      }
+
+      // ✅ UI direct syncen (montage checkbox uitzetten als die aan stond)
+      renderBothLists();
     };
     listProd.appendChild(rowP);
 
     // --- Montage rij ---
-    const rowM = document.createElement("label");
-    rowM.className = "assign-item";
-    rowM.innerHTML = `
-      <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
-      <span>${escapeHtml(name)}</span>
-    `;
     rowM.querySelector("input").onchange = (e) => {
       const id = String(e.target.dataset.eid || "");
       if (!id) return;
-      if (e.target.checked) selected.montage.add(id);
-      else selected.montage.delete(id);
+
+      if (e.target.checked) {
+        // ✅ exclusief: als je iemand in Montage zet, haal hem uit Productie
+        selected.productie.delete(id);
+        selected.montage.add(id);
+      } else {
+        selected.montage.delete(id);
+      }
+
+      // ✅ UI direct syncen (productie checkbox uitzetten als die aan stond)
+      renderBothLists();
     };
     listMont.appendChild(rowM);
   }
