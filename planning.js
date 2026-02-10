@@ -99,11 +99,12 @@ function buildPlannedSetsByDay(planningItems){
   const out = Object.create(null);
 
   for (const it of (planningItems || [])) {
-    const d = it.work_date;                 // "YYYY-MM-DD"
-    const wid = it.werknemer_id;            // id (number/string)
-    const kind = (it.work_type || it.kind || it.type || "").toLowerCase();
+    const d = String(it.work_date || "").trim();
+    const wid = String(it.werknemer_id ?? "").trim();
+    const kind = String(it.work_type || it.kind || it.type || "").toLowerCase().trim();
 
-    if (!d || wid === null || wid === undefined) continue;
+
+    if (!d || !wid) continue;
 
     const bucket =
       kind === "pro" || kind === "productie" ? "pro" :
@@ -793,10 +794,11 @@ async function fillOrderTypeFilterUI(){
     // assignments map: sectionId -> dateISO -> {productie:Set(empId), montage:Set(empId)}
     const assignMap = new Map();
     for (const a of assigns || []) {
-      const sid = String(a.section_id || "");
-      const d = String(a.work_date || "");
-      const emp = String(a.werknemer_id || "");
-      const wt = String(a.work_type || "").toLowerCase();
+      const sid = String(a.section_id || "").trim();
+      const d   = String(a.work_date || "").trim();
+      const emp = String(a.werknemer_id ?? "").trim();
+      const wt  = String(a.work_type || "").toLowerCase().trim();
+
       if (!sid || !d || !emp || !wt) continue;
 
       if (!assignMap.has(sid)) assignMap.set(sid, new Map());
@@ -855,16 +857,24 @@ for (const [sid, dm] of assignMap) {
   const pf = (settings.planFactor ?? 1);
 
   for (const d of dates){
-    const iso = toISODate(d);
-    const sets = plannedSetsByDay[iso];
+    const dayISO = toISODate(d);
+    const h = capByEmp.get(wid)?.get(dayISO) || 0;
 
-    const prodCount = (sets?.pro?.size || 0) + (sets?.dummyPro || 0);
-    const montCount = (sets?.mo?.size || 0) + (sets?.dummyMo || 0);
+    const td = document.createElement("td");
+    td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
 
-    plannedProdByDay[iso] = prodCount * HOURS_PER_PERSON_DAY * pf;
-    plannedMontByDay[iso] = montCount * HOURS_PER_PERSON_DAY * pf;
+    const empIdStr = String(wid ?? "").trim();
+    const inProd = !!empAssignByDay[dayISO]?.prod?.has(empIdStr);
+    const inMont = !!empAssignByDay[dayISO]?.mont?.has(empIdStr);
 
+    if (inProd && inMont) td.classList.add("cap-assigned-both");
+    else if (inProd) td.classList.add("cap-assigned-prod");
+    else if (inMont) td.classList.add("cap-assigned-mont");
+
+    td.textContent = formatHoursCell(h);
+    tr.appendChild(td);
   }
+
 
     // per dag: welke medewerkers ingepland zijn op productie / montage
     const empAssignByDay = Object.create(null); 

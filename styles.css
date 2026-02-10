@@ -1076,16 +1076,7 @@ td.section-click[data-tip]:hover::before{
 }
 
 
-/* Capaciteit: highlight medewerkers die ingepland zijn */
-.cap-cell.cap-assigned-prod {
-  background: rgba(34, 197, 94, 0.18); /* groenachtig */
-}
-
-.cap-cell.cap-assigned-mont {
-  background: rgba(236, 72, 153, 0.18); /* roze/paarsachtig */
-}
-
-.cap-cell.cap-assigned-both {
-  background: rgba(34, 197, 94, 0.12);
-  box-shadow: inset 0 -12px 0 rgba(236, 72, 153, 0.12); /* 2 kleuren in 1 cel */
-}
+/* werknemer-capaciteit kleuren obv planning */
+.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18); }   /* groen */
+.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18); }  /* roze */
+.cap-cell.cap-assigned-both { background: rgba(59,130,246,.18); }  /* blauw (als beide) */
