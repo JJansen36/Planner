@@ -1081,3 +1081,19 @@ td.section-click[data-tip]:hover::before{
 .planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18) !important; }
 .planner-table td.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18) !important; }
 .planner-table td.cap-cell.cap-assigned-both { background: rgba(59,130,246,.18) !important; }
+
+
+/* Gepland productie / montage: NIET standaard geel */
+.planner-table tr.planned-row td.sum-cell{
+  background:#fff !important;
+}
+
+/* Alleen kleur geven als er echt uren > 0 zijn */
+.planner-table tr.planned-prod td.sum-cell.has-val:not(.wknd){
+  background: rgba(34,197,94,.18) !important;   /* groen */
+}
+.planner-table tr.planned-mont td.sum-cell.has-val:not(.wknd){
+  background: rgba(236,72,153,.18) !important;  /* paars */
+}
+
+/* Weekend blijft weekendkleur (jouw wknd rules blijven leidend) */

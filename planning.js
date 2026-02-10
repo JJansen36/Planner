@@ -1218,10 +1218,10 @@ for (const oh of headers) {
 
 
     // Gepland productie
-    tbody.appendChild(labelRow("Gepland productie", dates, plannedProdByDay));
+    tbody.appendChild(labelRow("Gepland productie", dates, plannedProdByDay, "planned-prod"));
 
     // Gepland montage
-    tbody.appendChild(labelRow("Gepland montage", dates, plannedMontByDay));
+    tbody.appendChild(labelRow("Gepland montage", dates, plannedMontByDay, "planned-mont"));
 
     // Saldo (capaciteit - gepland)
     const saldoByDay = {};
@@ -2029,20 +2029,31 @@ const renderList = () => {
     tr.appendChild(fill);
     return tr;
   }
-  function labelRow(label, dates, byDay){
-    const tr = document.createElement("tr");
-    tr.className = "sum-row";
-    tr.appendChild(leftRowHdrCell(label, "sticky-left sum-label"));
-    for(const d of dates){
-      const iso = toISODate(d);
-      const h = byDay[iso] || 0;
-      const td = document.createElement("td");
-      td.className = `cell sum-cell ${isWeekend(d) ? "wknd" : ""}`;
-      td.textContent = formatHoursCell(h);
-      tr.appendChild(td);
+    function labelRow(label, dates, byDay, kind = "") {
+      const tr = document.createElement("tr");
+      tr.className = `sum-row ${kind ? "planned-row " + kind : ""}`.trim();
+
+      tr.appendChild(leftRowHdrCell(label, "sticky-left sum-label"));
+
+      for (const d of dates) {
+        const iso = toISODate(d);
+        const h = Number(byDay?.[iso] || 0);
+
+        const td = document.createElement("td");
+
+        // basis: zelfde structuur als nu, maar zonder “altijd geel” via CSS override
+        td.className = `cell sum-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+        // ✅ kleur alleen als er waarde is
+        if (h > 0 && kind) td.classList.add("has-val");
+
+        td.textContent = formatHoursCell(h);
+        tr.appendChild(td);
+      }
+
+      return tr;
     }
-    return tr;
-  }
+
   function infoRow(text, cols){
     const tr = document.createElement("tr");
     tr.className = "info-row";
