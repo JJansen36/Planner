@@ -988,9 +988,11 @@ async function fillOrderTypeFilterUI(){
       left.innerHTML = `
         <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
         <span class="projtext" data-proj="${escapeAttr(pid)}">
-          ${escapeHtml(nr)} - ${escapeHtml(kl)} - ${escapeHtml(nm)}
+          <div class="projline1">${escapeHtml(nr)} - ${escapeHtml(kl)}</div>
+          <div class="projline2">${escapeHtml(nm)}</div>
         </span>
       `;
+
       projRow.appendChild(left);
 
       

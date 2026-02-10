@@ -1128,3 +1128,8 @@ td.section-click[data-tip]:hover::before{
 .planner-table tbody tr.zebra > td.wknd::after{
   content:none !important;
 }
+
+
+.projtext{ display:flex; flex-direction:column; line-height:1.15; }
+.projline1{ font-weight:700; }
+.projline2{ font-weight:600; opacity:.9; margin-top:2px; }
