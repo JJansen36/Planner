@@ -79,29 +79,33 @@
   }
 
 
-  function restoreOpenState(){
-    if (!gridEl) return;
+    function restoreOpenState(){
+      if (!gridEl) return;
 
-    // projecten eerst (zodat secties überhaupt zichtbaar mogen worden)
-    for (const pid of (openState.projects || [])) {
-      toggleProject(pid, true);
+      // projecten eerst (zodat secties zichtbaar kunnen worden)
+      for (const pid of (openState.projects || [])) {
+        const btn = gridEl.querySelector(`.expander[data-proj="${cssEsc(pid)}"]`);
+        if (btn && btn.textContent !== "▼") btn.click();   // <-- geen toggleProject meer
+      }
+
+      // secties openklappen
+      for (const sid of (openState.sections || [])) {
+        const btn = gridEl.querySelector(`.expander-sec[data-sect="${cssEsc(sid)}"]`);
+        if (btn && btn.textContent !== "▼") btn.click();
+      }
+
+      // orders openklappen
+      for (const key of (openState.orders || [])) {
+        const [sid, bn] = String(key).split("||");
+        const btn = gridEl.querySelector(
+          `.expander-order[data-sect="${cssEsc(sid)}"][data-orderbn="${cssEsc(bn)}"]`
+        );
+        if (btn && btn.textContent !== "▼") btn.click();
+      }
+
+      applyZebraVisible();
     }
 
-    // secties openklappen
-    for (const sid of (openState.sections || [])) {
-      const btn = gridEl.querySelector(`.expander-sec[data-sect="${cssEsc(sid)}"]`);
-      if (btn && btn.textContent !== "▼") btn.click();
-    }
-
-    // orders openklappen
-    for (const key of (openState.orders || [])) {
-      const [sid, bn] = String(key).split("||");
-      const btn = gridEl.querySelector(`.expander-order[data-sect="${cssEsc(sid)}"][data-orderbn="${cssEsc(bn)}"]`);
-      if (btn && btn.textContent !== "▼") btn.click();
-    }
-
-    applyZebraVisible();
-  }
 
   const HOURS_PER_PERSON_DAY = 7.75;
 
