@@ -650,7 +650,15 @@ async function fillOrderTypeFilterUI(){
     const projIdKey = pickKey(projecten[0], ["project_id","id"]);
     const projNrKey = pickKey(projecten[0], ["offerno","projectnr","project_nr","nummer","nr"]);
     const projNameKey = pickKey(projecten[0], ["projectname","naam","name","omschrijving","titel","title"]);
-    const klantKey = pickKey(projecten[0], ["klantnaam","klant_name","klant","customer","relatie"]);
+    const klantKey = pickKey(projecten[0], [
+  "klantnaam",
+  "klant_name",
+  "customer_name",   // ✅ deze toevoegen
+  "klant",
+  "customer",
+  "relatie"
+]);
+
     const completionKey = pickKey(projecten[0], ["completiondate","completion_date","opleverdatum","end_date"]);
     const deliveryKey = pickKey(projecten[0], ["deliverydate","delivery_date","leverdatum"]);
 
@@ -964,7 +972,7 @@ async function fillOrderTypeFilterUI(){
       const pid = p?.[projIdKey];
       const nr  = p?.[projNrKey] ?? "";
       const nm  = p?.[projNameKey] ?? "";
-      const kl  = p?.[klantKey] ?? "";
+      const kl  = (p?.[klantKey] ?? p?.deliveryfullname ?? p?.deliveryname ?? "").trim();
       const complRaw = p?.[completionKey] ?? "";
       const complTxt = formatDateNL(complRaw);
       const complISO = asISODate(complRaw);
