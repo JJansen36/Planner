@@ -79,32 +79,33 @@
   }
 
 
-    function restoreOpenState(){
-      if (!gridEl) return;
+function restoreOpenState(){
+  if (!gridEl) return;
 
-      // projecten eerst (zodat secties zichtbaar kunnen worden)
-      for (const pid of (openState.projects || [])) {
-        const btn = gridEl.querySelector(`.expander[data-proj="${cssEsc(pid)}"]`);
-        if (btn && btn.textContent !== "▼") btn.click();   // <-- geen toggleProject meer
-      }
+  // 1) projecten openklappen
+  for (const pid of (openState.projects || [])) {
+    const btn = gridEl.querySelector(`.expander[data-proj="${cssEsc(pid)}"]`);
+    if (btn && btn.textContent !== "▼") btn.click();
+  }
 
-      // secties openklappen
-      for (const sid of (openState.sections || [])) {
-        const btn = gridEl.querySelector(`.expander-sec[data-sect="${cssEsc(sid)}"]`);
-        if (btn && btn.textContent !== "▼") btn.click();
-      }
+  // 2) secties openklappen
+  for (const sid of (openState.sections || [])) {
+    const btn = gridEl.querySelector(`.expander-sec[data-sect="${cssEsc(sid)}"]`);
+    if (btn && btn.textContent !== "▼") btn.click();
+  }
 
-      // orders openklappen
-      for (const key of (openState.orders || [])) {
-        const [sid, bn] = String(key).split("||");
-        const btn = gridEl.querySelector(
-          `.expander-order[data-sect="${cssEsc(sid)}"][data-orderbn="${cssEsc(bn)}"]`
-        );
-        if (btn && btn.textContent !== "▼") btn.click();
-      }
+  // 3) orders openklappen
+  for (const key of (openState.orders || [])) {
+    const [sid, bn] = String(key).split("||");
+    const btn = gridEl.querySelector(
+      `.expander-order[data-sect="${cssEsc(sid)}"][data-orderbn="${cssEsc(bn)}"]`
+    );
+    if (btn && btn.textContent !== "▼") btn.click();
+  }
 
-      applyZebraVisible();
-    }
+  applyZebraVisible();
+}
+
 
 
   const HOURS_PER_PERSON_DAY = 7.75;
@@ -1173,6 +1174,7 @@ for (const dd of dates) {
       // 1) Bestelling header-rij
       const orderRow = document.createElement("tr");
       orderRow.className = "order-row hidden";
+      orderRow.classList.add("order-topline"); // ✅ bovenlijn
       markZebra(orderRow);
       orderRow.dataset.parent = String(pid);
       orderRow.dataset.orderParent = String(sid);
@@ -1199,7 +1201,9 @@ for (const dd of dates) {
       const isLast = idx === items.length - 1;
 
       const lineRow = document.createElement("tr");
-      lineRow.className = `order-line-row hidden${isLast ? " last-in-order" : ""}`;
+      lineRow.className = "order-line-row hidden";
+      if (isLast) lineRow.classList.add("order-bottomline");
+
       markZebra(lineRow);
 
       lineRow.dataset.parent = String(pid);
@@ -1986,6 +1990,16 @@ const totals = {
 
     });
   });
+    // mount
+    gridEl.innerHTML = "";
+    gridEl.appendChild(table);
+
+    // ... hier komen al je listeners ...
+
+    applyZebraVisible();
+
+    // ✅ NA alles: state terugzetten
+    restoreOpenState();
 
   }
 

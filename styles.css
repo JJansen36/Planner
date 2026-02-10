@@ -1153,3 +1153,10 @@ tr.order-row td.rowhdr {
 tr.order-line-row.last-in-order td.rowhdr {
   padding-bottom: 6px;
 }
+tr.order-topline > td{
+  box-shadow: inset 0 2px 0 #cbd5e1;
+}
+
+tr.order-bottomline > td{
+  box-shadow: inset 0 -2px 0 #cbd5e1;
+}
