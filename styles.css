@@ -1054,3 +1054,38 @@ td.section-click[data-tip]:hover::before{
 .order-line{ padding:8px 0; border-top:1px dashed rgba(0,0,0,.08); }
 .order-line:first-child{ border-top:0; }
 .ol-meta{ color:var(--muted); font-size:12px; margin-top:2px; }
+
+/* Capaciteit: kleur aangeven als iemand ingepland is */
+.cap-cell.cap-assigned-prod{
+  background: rgba(34,197,94,.22);   /* groenig */
+}
+
+.cap-cell.cap-assigned-mont{
+  background: rgba(236,72,153,.18);  /* roze/paarsig */
+}
+
+/* Beide types op 1 dag (komt zelden voor, maar kan) */
+.cap-cell.cap-assigned-both{
+  background: linear-gradient(
+    90deg,
+    rgba(34,197,94,.22) 0%,
+    rgba(34,197,94,.22) 50%,
+    rgba(236,72,153,.18) 50%,
+    rgba(236,72,153,.18) 100%
+  );
+}
+
+
+/* Capaciteit: highlight medewerkers die ingepland zijn */
+.cap-cell.cap-assigned-prod {
+  background: rgba(34, 197, 94, 0.18); /* groenachtig */
+}
+
+.cap-cell.cap-assigned-mont {
+  background: rgba(236, 72, 153, 0.18); /* roze/paarsachtig */
+}
+
+.cap-cell.cap-assigned-both {
+  background: rgba(34, 197, 94, 0.12);
+  box-shadow: inset 0 -12px 0 rgba(236, 72, 153, 0.12); /* 2 kleuren in 1 cel */
+}

@@ -866,6 +866,22 @@ for (const [sid, dm] of assignMap) {
 
   }
 
+    // per dag: welke medewerkers ingepland zijn op productie / montage
+    const empAssignByDay = Object.create(null); 
+    // { "YYYY-MM-DD": { prod:Set(empId), mont:Set(empId) } }
+
+    for (const a of (assigns || [])) {
+      const iso = String(a.work_date || "");
+      const emp = String(a.werknemer_id || "");
+      const wt  = String(a.work_type || "").toLowerCase();
+      if (!iso || !emp) continue;
+
+      if (!empAssignByDay[iso]) empAssignByDay[iso] = { prod: new Set(), mont: new Set() };
+
+      if (wt === "productie") empAssignByDay[iso].prod.add(emp);
+      if (wt === "montage")   empAssignByDay[iso].mont.add(emp);
+    }
+
 
     // build table
     const table = document.createElement("table");
@@ -2371,21 +2387,26 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     }
 
     function appendOrderDayCells(tr, dates, leverISO){
-      for (const d of dates) {
+      for (const d of dates){
         const iso = toISODate(d);
+        const h = capByEmp.get(wid)?.get(iso) || 0;
 
         const td = document.createElement("td");
-        td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+        td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
 
-        if (leverISO && iso === leverISO) {
-          td.classList.add("bar-order");
-          td.innerHTML = `<div class="bar bar-order">lever</div>`;
-        } else {
-          td.innerHTML = "";
-        }
+        // ✅ ingeroosterd? (kleur op basis van productie/montage)
+        const empIdStr = String(wid ?? "");
+        const inProd = !!empAssignByDay[iso]?.prod?.has(empIdStr);
+        const inMont = !!empAssignByDay[iso]?.mont?.has(empIdStr);
 
+        if (inProd && inMont) td.classList.add("cap-assigned-both");
+        else if (inProd)      td.classList.add("cap-assigned-prod");
+        else if (inMont)      td.classList.add("cap-assigned-mont");
+
+        td.textContent = formatHoursCell(h);
         tr.appendChild(td);
       }
+
     }
 
 function applyZebraVisible(){
