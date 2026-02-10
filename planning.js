@@ -1163,58 +1163,63 @@ for (const dd of dates) {
         tbody.appendChild(secRow);
 
 
-// ======================
-// ✅ BESTELLINGEN ALS ECHTE KALENDER-RIJEN
-// ======================
-const headers = orderHeadersBySection.get(String(sid)) || [];
+    // ======================
+    // ✅ BESTELLINGEN ALS ECHTE KALENDER-RIJEN
+    // ======================
+    const headers = orderHeadersBySection.get(String(sid)) || [];
 
-for (const oh of headers) {
+    for (const oh of headers) {
 
-  // 1) Bestelling header-rij
-  const orderRow = document.createElement("tr");
-  orderRow.className = "order-row hidden";
-  markZebra(orderRow);
-  orderRow.dataset.parent = String(pid);
-  orderRow.dataset.orderParent = String(sid);
-  orderRow.dataset.orderBn = String(oh.bn || "");
+      // 1) Bestelling header-rij
+      const orderRow = document.createElement("tr");
+      orderRow.className = "order-row hidden";
+      markZebra(orderRow);
+      orderRow.dataset.parent = String(pid);
+      orderRow.dataset.orderParent = String(sid);
+      orderRow.dataset.orderBn = String(oh.bn || "");
 
-  const tdLeft = document.createElement("td");
-  tdLeft.className = "rowhdr sticky-left section-cell";
-  tdLeft.innerHTML =
-    `<button class="expander expander-order" ` +
-    `data-sect="${escapeAttr(sid)}" ` +
-    `data-parent="${escapeAttr(pid)}" ` +
-    `data-orderbn="${escapeAttr(oh.bn)}" ` +
-    `aria-label="toggle order">▶</button>` +
-    `<span class="sectext"> ↳ Bestelling ${escapeHtml(oh.bn)}</span>`;
+      const tdLeft = document.createElement("td");
+      tdLeft.className = "rowhdr sticky-left section-cell";
+      tdLeft.innerHTML =
+        `<button class="expander expander-order" ` +
+        `data-sect="${escapeAttr(sid)}" ` +
+        `data-parent="${escapeAttr(pid)}" ` +
+        `data-orderbn="${escapeAttr(oh.bn)}" ` +
+        `aria-label="toggle order">▶</button>` +
+        `<span class="sectext"> ↳ Bestelling ${escapeHtml(oh.bn)}</span>`;
 
-  orderRow.appendChild(tdLeft);
-  appendOrderDayCells(orderRow, dates, oh.leverISO);
-  tbody.appendChild(orderRow);
+      orderRow.appendChild(tdLeft);
+      appendOrderDayCells(orderRow, dates, oh.leverISO);
+      tbody.appendChild(orderRow);
 
-  // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
-  for (const it of (oh.items || [])) {
-    const lineRow = document.createElement("tr");
-    lineRow.className = "order-line-row hidden";
-    markZebra(lineRow);
+      // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
+      // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
+    const items = (oh.items || []);
+    items.forEach((it, idx) => {
+      const isLast = idx === items.length - 1;
 
-    lineRow.dataset.parent = String(pid);
-    lineRow.dataset.orderParent = String(sid);
-    lineRow.dataset.orderBn = String(oh.bn || "");
+      const lineRow = document.createElement("tr");
+      lineRow.className = `order-line-row hidden${isLast ? " last-in-order" : ""}`;
+      markZebra(lineRow);
 
-    const tdL = document.createElement("td");
-    tdL.className = "rowhdr sticky-left section-cell";
-    tdL.innerHTML =
-      `<span class="sectext">  ↳ ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}</span>`;
+      lineRow.dataset.parent = String(pid);
+      lineRow.dataset.orderParent = String(sid);
+      lineRow.dataset.orderBn = String(oh.bn || "");
 
-    lineRow.appendChild(tdL);
+      const tdL = document.createElement("td");
+      tdL.className = "rowhdr sticky-left section-cell";
+      tdL.innerHTML =
+        `<span class="sectext">  ↳ ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}</span>`;
 
-    const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
-    appendOrderDayCells(lineRow, dates, leverLineISO);
+      lineRow.appendChild(tdL);
 
-    tbody.appendChild(lineRow);
-  }
-}
+      const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
+      appendOrderDayCells(lineRow, dates, leverLineISO);
+
+      tbody.appendChild(lineRow);
+    });
+
+    }
       }}
 
     // CAPACITY BLOCK
