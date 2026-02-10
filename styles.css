@@ -1080,3 +1080,8 @@ td.section-click[data-tip]:hover::before{
 .cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18); }   /* groen */
 .cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18); }  /* roze */
 .cap-cell.cap-assigned-both { background: rgba(59,130,246,.18); }  /* blauw (als beide) */
+
+/* zebra alleen voor "normale" cellen, niet voor capaciteit-cellen */
+.planner-table tr.zebra td:not(.cap-cell):not(.sum-cell):not(.balance-cell) {
+  background: #f7f9fc; /* jouw zebra kleur */
+}
