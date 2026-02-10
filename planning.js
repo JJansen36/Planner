@@ -40,6 +40,65 @@
   let statusEl = null;
   let ordersBySection = new Map();
 
+  // ===== Open/close state bewaren =====
+  let openState = {
+    projects: new Set(),
+    sections: new Set(),
+    orders: new Set(), // key: `${sid}||${bn}`
+  };
+
+  function captureOpenState(){
+    const st = { projects: new Set(), sections: new Set(), orders: new Set() };
+
+    // projecten
+    gridEl?.querySelectorAll('.expander[data-proj].open').forEach(b=>{
+      const pid = String(b.dataset.proj || "");
+      if (pid) st.projects.add(pid);
+    });
+
+    // secties
+    gridEl?.querySelectorAll('.expander-sec').forEach(b=>{
+      if (b.textContent === "▼") {
+        const sid = String(b.dataset.sect || "");
+        if (sid) st.sections.add(sid);
+      }
+    });
+
+    // orders
+    gridEl?.querySelectorAll('.expander-order').forEach(b=>{
+      if (b.textContent === "▼") {
+        const sid = String(b.dataset.sect || "");
+        const bn  = String(b.dataset.orderbn || "");
+        if (sid && bn) st.orders.add(`${sid}||${bn}`);
+      }
+    });
+
+    openState = st;
+  }
+
+  function restoreOpenState(){
+    if (!gridEl) return;
+
+    // projecten eerst (zodat secties überhaupt zichtbaar mogen worden)
+    for (const pid of (openState.projects || [])) {
+      toggleProject(pid, true);
+    }
+
+    // secties openklappen
+    for (const sid of (openState.sections || [])) {
+      const btn = gridEl.querySelector(`.expander-sec[data-sect="${cssEsc(sid)}"]`);
+      if (btn && btn.textContent !== "▼") btn.click();
+    }
+
+    // orders openklappen
+    for (const key of (openState.orders || [])) {
+      const [sid, bn] = String(key).split("||");
+      const btn = gridEl.querySelector(`.expander-order[data-sect="${cssEsc(sid)}"][data-orderbn="${cssEsc(bn)}"]`);
+      if (btn && btn.textContent !== "▼") btn.click();
+    }
+
+    applyZebraVisible();
+  }
 
   const HOURS_PER_PERSON_DAY = 7.75;
 
