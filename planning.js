@@ -858,7 +858,7 @@ for (const [sid, dm] of assignMap) {
 
   for (const d of dates){
     const dayISO = toISODate(d);
-    const h = capByEmp.get(wid)?.get(dayISO) || 0;
+    const h = capByEmp.get(empId)?.get(dayISO) || 0;
 
     const td = document.createElement("td");
     td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
