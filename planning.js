@@ -1166,7 +1166,7 @@ for (const oh of headers) {
     const iso = toISODate(d);
     const td = document.createElement("td");
     td.className = `cell sum-cell ${isWeekend(d) ? "wknd" : ""}`;
-    td.textContent = formatHoursCell(capTotalByDay[iso] || 0);
+    td.textContent = fmt0(capTotalByDay[iso] || 0);
     trTotal.appendChild(td);
   }
   tbody.appendChild(trTotal);
@@ -1208,7 +1208,7 @@ for (const oh of headers) {
         else if (inProd) td.classList.add("cap-assigned-prod");
         else if (inMont) td.classList.add("cap-assigned-mont");
 
-        td.textContent = formatHoursCell(h);
+        td.textContent = fmt0(h);
         tr.appendChild(td);
       }
 
@@ -2047,7 +2047,7 @@ const renderList = () => {
         // ✅ kleur alleen als er waarde is
         if (h > 0 && kind) td.classList.add("has-val");
 
-        td.textContent = formatHoursCell(h);
+        td.textContent = fmt0(h);
         tr.appendChild(td);
       }
 
@@ -2084,7 +2084,7 @@ const renderList = () => {
       else if (v < -eps) td.classList.add("neg");
       else td.classList.add("zero");
 
-      td.textContent = formatHoursCell(v);
+      td.textContent = fmt0(v);
       tr.appendChild(td);
     }
     return tr;
@@ -2491,4 +2491,9 @@ function renderOrdersAccordion(byBN){
 
   html += `</div>`;
   return html;
+}
+
+function fmt0(n){
+  const v = Number(n || 0);
+  return (Math.abs(v) < 0.0001) ? "" : formatHoursCell(v);
 }
