@@ -1178,48 +1178,50 @@ for (const oh of headers) {
   }
   tbody.appendChild(trTotal);
 
-  // ---- medewerker rijen (standaard verborgen) ----
-const empIdKey = "id";
-const empNameKey = pickKey((werknemersCap?.[0] || werknemers?.[0]), ["naam","name","fullname","display_name"]);
+    // ---- medewerker rijen (standaard verborgen) ----
+    const empIdKey = "id";
+    const empNameKey = pickKey((werknemersCap?.[0] || werknemers?.[0]), ["naam","name","fullname","display_name"]);
 
-for (const w of (werknemersCap || []) ) {
-    const wid = w?.[empIdKey];
-    const wnm = w?.[empNameKey] ?? String(wid ?? "");
+    for (const w of (werknemersCap || [])) {
+      const empId = w?.[empIdKey];                 // <-- vaste naam
+      const empName = w?.[empNameKey] ?? String(empId ?? "");
 
-    const tr = document.createElement("tr");
-    tr.className = "cap-emp-row hidden";
-    tr.dataset.capParent = capKey; // koppeling aan totaal-row
+      const tr = document.createElement("tr");
+      tr.className = "cap-emp-row hidden";
+      tr.dataset.capParent = capKey;
 
-    markZebra(tr);
+      markZebra(tr);
 
-    const leftEmp = document.createElement("td");
-    leftEmp.className = "rowhdr sticky-left cap-name cap-emp-click";
-    leftEmp.textContent = wnm;
-    leftEmp.dataset.empId = String(wid ?? "");
-    leftEmp.dataset.empName = String(wnm ?? "");
-    tr.appendChild(leftEmp);
+      const leftEmp = document.createElement("td");
+      leftEmp.className = "rowhdr sticky-left cap-name cap-emp-click";
+      leftEmp.textContent = empName;
+      leftEmp.dataset.empId = String(empId ?? "");
+      leftEmp.dataset.empName = String(empName ?? "");
+      tr.appendChild(leftEmp);
 
-    for (const d of dates){
-      const iso = toISODate(d);
-      const h = capByEmp.get(wid)?.get(iso) || 0;
+      const empIdStr = String(empId ?? "").trim();
 
-      const td = document.createElement("td");
-      td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+      for (const d of dates) {
+        const dayISO = toISODate(d);
+        const h = capByEmp.get(empId)?.get(dayISO) || 0;
 
-      // ✅ ingeroosterd? (kleur op basis van productie/montage)
-      const empIdStr = String(wid ?? "");
-      const inProd = !!empAssignByDay[iso]?.prod?.has(empIdStr);
-      const inMont = !!empAssignByDay[iso]?.mont?.has(empIdStr);
+        const td = document.createElement("td");
+        td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
 
-      if (inProd && inMont) td.classList.add("cap-assigned-both");
-      else if (inProd)      td.classList.add("cap-assigned-prod");
-      else if (inMont)      td.classList.add("cap-assigned-mont");
+        const inProd = !!empAssignByDay[dayISO]?.prod?.has(empIdStr);
+        const inMont = !!empAssignByDay[dayISO]?.mont?.has(empIdStr);
+
+        if (inProd && inMont) td.classList.add("cap-assigned-both");
+        else if (inProd) td.classList.add("cap-assigned-prod");
+        else if (inMont) td.classList.add("cap-assigned-mont");
+
         td.textContent = formatHoursCell(h);
         tr.appendChild(td);
       }
 
       tbody.appendChild(tr);
-  }
+    }
+
 
 
     // Gepland productie
