@@ -1710,17 +1710,18 @@ const renderBothLists = () => {
   const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
 
   for (const w of werknemers || []) {
-    const eid = String(w?.[empIdKey] || "");
-    const name = String(w?.[empNameKey] || eid);
+    const eid = String(w?.[empIdKey] ?? "").trim();
+    const name = String(w?.[empNameKey] ?? eid).trim();
     if (!eid) continue;
 
-    const empCap = capByEmp.get(Number(eid)) || capByEmp.get(eid) || new Map();
+    const empCap = capByEmp.get(String(eid)) || new Map();
     const availHours = Number(empCap.get(dateISO) || 0);
+
     const isAvailable = availHours > 0;
     const isBusy = busySet.has(eid);
     const mustShow = keepVisible.has(eid);
 
-    // Dummy nooit verbergen; rest alleen tonen als beschikbaar of al geselecteerd, en niet "busy"
+    // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
     const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
     if (shouldHide) continue;
 
@@ -1736,13 +1737,9 @@ const renderBothLists = () => {
       if (!id) return;
 
       if (e.target.checked) {
-        // exclusief: uit montage halen
         selected.montage.delete(id);
-
-        // montage checkbox (zelfde id) uitvinken
-        const other = listMont?.querySelector(`input[data-eid="${id}"]`);
+        const other = listMont?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
         if (other) other.checked = false;
-
         selected.productie.add(id);
       } else {
         selected.productie.delete(id);
@@ -1750,28 +1747,30 @@ const renderBothLists = () => {
     };
     listProd.appendChild(rowP);
 
-        // --- Montage rij ---
+    // --- Montage rij ---
+    const rowM = document.createElement("label");
+    rowM.className = "assign-item";
+    rowM.innerHTML = `
+      <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
+      <span>${escapeHtml(name)}</span>
+    `;
     rowM.querySelector("input").onchange = (e) => {
       const id = String(e.target.dataset.eid || "");
       if (!id) return;
 
       if (e.target.checked) {
-        // exclusief: uit productie halen
         selected.productie.delete(id);
-
-        // productie checkbox (zelfde id) uitvinken
-        const other = listProd?.querySelector(`input[data-eid="${id}"]`);
+        const other = listProd?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
         if (other) other.checked = false;
-
         selected.montage.add(id);
       } else {
         selected.montage.delete(id);
       }
     };
+    listMont.appendChild(rowM);
+  }
+};
 
-        listMont.appendChild(rowM);
-      }
-    };
 
     renderBothLists();
 
