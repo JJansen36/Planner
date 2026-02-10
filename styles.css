@@ -724,13 +724,14 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
   z-index:1;
 }
 
-/* zebra UIT voor capaciteit + som + saldo (als jij die wilt laten “wit” houden) */
-.planner-table tbody tr.cap-total-row.zebra > td,
-.planner-table tbody tr.cap-emp-row.zebra > td,
-.planner-table tbody tr.sum-row.zebra > td,
-.planner-table tbody tr.balance-row.zebra > td{
-  background:transparent !important;
+/* zebra overlay UIT voor capaciteit/som/saldo, maar backgrounds intact laten */
+.planner-table tbody tr.cap-total-row.zebra > td::after,
+.planner-table tbody tr.cap-emp-row.zebra > td::after,
+.planner-table tbody tr.sum-row.zebra > td::after,
+.planner-table tbody tr.balance-row.zebra > td::after{
+  content:none !important;
 }
+
 .planner-table tbody tr.cap-total-row.zebra > td::after,
 .planner-table tbody tr.cap-emp-row.zebra > td::after,
 .planner-table tbody tr.sum-row.zebra > td::after,
@@ -1076,12 +1077,7 @@ td.section-click[data-tip]:hover::before{
 }
 
 
-/* werknemer-capaciteit kleuren obv planning */
-.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18); }   /* groen */
-.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18); }  /* roze */
-.cap-cell.cap-assigned-both { background: rgba(59,130,246,.18); }  /* blauw (als beide) */
 
-/* zebra alleen voor "normale" cellen, niet voor capaciteit-cellen */
-.planner-table tr.zebra td:not(.cap-cell):not(.sum-cell):not(.balance-cell) {
-  background: #f7f9fc; /* jouw zebra kleur */
-}
+.planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18) !important; }
+.planner-table td.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18) !important; }
+.planner-table td.cap-cell.cap-assigned-both { background: rgba(59,130,246,.18) !important; }
