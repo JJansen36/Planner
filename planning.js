@@ -1695,97 +1695,93 @@ const totals = {
       };
 
       const subEl = modal.wrap.querySelector("#amSub");
-const listProd = modal.wrap.querySelector("#amListProd");
-const listMont = modal.wrap.querySelector("#amListMont");
+      const listProd = modal.wrap.querySelector("#amListProd");
+      const listMont = modal.wrap.querySelector("#amListMont");
+      const saveBtn = modal.wrap.querySelector("#amSave");
+      if (subEl) subEl.textContent = `${dateISO} • ${sid}`;
 
-const renderBothLists = () => {
-  listProd.innerHTML = "";
-  listMont.innerHTML = "";
 
-  const busySet = busyByDay.get(dateISO) || new Set();
+      const renderBothLists = () => {
+        listProd.innerHTML = "";
+        listMont.innerHTML = "";
 
-  const keepVisible = new Set([
-    ...Array.from(selected.productie),
-    ...Array.from(selected.montage),
-  ]);
+        const busySet = busyByDay.get(dateISO) || new Set();
 
-  const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
+        const keepVisible = new Set([
+          ...Array.from(selected.productie),
+          ...Array.from(selected.montage),
+        ]);
 
-  for (const w of werknemers || []) {
-    const eid = String(w?.[empIdKey] ?? "").trim();
-    const name = String(w?.[empNameKey] ?? eid).trim();
-    if (!eid) continue;
+        const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
 
-    const empCap = capByEmp.get(String(eid)) || new Map();
-    const availHours = Number(empCap.get(dateISO) || 0);
+        for (const w of werknemers || []) {
+          const eid = String(w?.[empIdKey] ?? "").trim();
+          const name = String(w?.[empNameKey] ?? eid).trim();
+          if (!eid) continue;
 
-    const isAvailable = availHours > 0;
-    const isBusy = busySet.has(eid);
-    const mustShow = keepVisible.has(eid);
+          const empCap = capByEmp.get(String(eid)) || new Map();
+          const availHours = Number(empCap.get(dateISO) || 0);
 
-    // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
-    const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
-    if (shouldHide) continue;
+          const isAvailable = availHours > 0;
+          const isBusy = busySet.has(eid);
+          const mustShow = keepVisible.has(eid);
 
-    // --- Productie rij ---
-    const rowP = document.createElement("label");
-    rowP.className = "assign-item";
-    rowP.innerHTML = `
-      <input type="checkbox" ${selected.productie.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="productie" />
-      <span>${escapeHtml(name)}</span>
-    `;
-    rowP.querySelector("input").onchange = (e) => {
-      const id = String(e.target.dataset.eid || "");
-      if (!id) return;
+          // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
+          const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
+          if (shouldHide) continue;
 
-      if (e.target.checked) {
-        selected.montage.delete(id);
-        const other = listMont?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
-        if (other) other.checked = false;
-        selected.productie.add(id);
-      } else {
-        selected.productie.delete(id);
-      }
-    };
-    listProd.appendChild(rowP);
+          // --- Productie rij ---
+          const rowP = document.createElement("label");
+          rowP.className = "assign-item";
+          rowP.innerHTML = `
+            <input type="checkbox" ${selected.productie.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="productie" />
+            <span>${escapeHtml(name)}</span>
+          `;
+          rowP.querySelector("input").onchange = (e) => {
+            const id = String(e.target.dataset.eid || "");
+            if (!id) return;
 
-    // --- Montage rij ---
-    const rowM = document.createElement("label");
-    rowM.className = "assign-item";
-    rowM.innerHTML = `
-      <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
-      <span>${escapeHtml(name)}</span>
-    `;
-    rowM.querySelector("input").onchange = (e) => {
-      const id = String(e.target.dataset.eid || "");
-      if (!id) return;
+            if (e.target.checked) {
+              selected.montage.delete(id);
+              const other = listMont?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
+              if (other) other.checked = false;
+              selected.productie.add(id);
+            } else {
+              selected.productie.delete(id);
+            }
+          };
+          listProd.appendChild(rowP);
 
-      if (e.target.checked) {
-        selected.productie.delete(id);
-        const other = listProd?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
-        if (other) other.checked = false;
-        selected.montage.add(id);
-      } else {
-        selected.montage.delete(id);
-      }
-    };
-    listMont.appendChild(rowM);
-  }
-};
+          // --- Montage rij ---
+          const rowM = document.createElement("label");
+          rowM.className = "assign-item";
+          rowM.innerHTML = `
+            <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
+            <span>${escapeHtml(name)}</span>
+          `;
+          rowM.querySelector("input").onchange = (e) => {
+            const id = String(e.target.dataset.eid || "");
+            if (!id) return;
+
+            if (e.target.checked) {
+              selected.productie.delete(id);
+              const other = listProd?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
+              if (other) other.checked = false;
+              selected.montage.add(id);
+            } else {
+              selected.montage.delete(id);
+            }
+          };
+          listMont.appendChild(rowM);
+        }
+      };
 
 
     renderBothLists();
 
 
 
-      tabs.forEach(t => {
-        t.onclick = () => {
-          activeTab = String(t.dataset.tab || "productie");
-          renderList();
-        };
-      });
 
-      renderList();
 
       saveBtn.onclick = async () => {
         // delete existing for this section+day
