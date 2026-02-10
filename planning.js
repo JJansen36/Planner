@@ -808,36 +808,40 @@ async function fillOrderTypeFilterUI(){
       if (wt === "productie") dmA.get(d).productie.add(emp);
       if (wt === "montage") dmA.get(d).montage.add(emp);
     }
-// busyByDay: dateISO -> Set(empId) (ongeacht type)
-const busyByDay = new Map();
 
-for (const [sid, dm] of assignMap) {
-  for (const [dateISO, entry] of dm) {
-    if (!busyByDay.has(dateISO)) busyByDay.set(dateISO, new Set());
-    const set = busyByDay.get(dateISO);
+    // busyByDay: dateISO -> Set(empId) (ongeacht type)
+    const busyByDay = new Map();
 
-    for (const id of (entry.productie || [])) set.add(String(id));
-    for (const id of (entry.montage || [])) set.add(String(id));
-  }
-}
+    for (const [sid, dm] of assignMap) {
+      for (const [dateISO, entry] of dm) {
+        if (!busyByDay.has(dateISO)) busyByDay.set(dateISO, new Set());
+        const set = busyByDay.get(dateISO);
 
-    // capacity: per werknemer per dag
-    const capByEmp = new Map(); // empId -> dateISO -> sumHours
-    for(const r of cap || []){
-      const emp = r.werknemer_id;
-        // ✅ Dummy nooit meenemen in capaciteit
-      if (String(emp) === String(DUMMY_EMP_ID)) continue;
+        for (const id of (entry.productie || [])) set.add(String(id));
+        for (const id of (entry.montage || [])) set.add(String(id));
+      }
+    }
 
-      const d = r.work_date;
+    // capacity: per werknemer per dag  (KEYS ALS STRING!)
+    const capByEmp = new Map(); // empIdStr -> dateISO -> sumHours
+    for (const r of cap || []) {
+      const empStr = String(r.werknemer_id ?? "").trim();
+
+      // ✅ Dummy nooit meenemen in capaciteit
+      if (empStr === String(DUMMY_EMP_ID)) continue;
+
+      const d = String(r.work_date || "").trim();
       const h = Number(r.hours || 0);
-      // type filtering: alleen "werk" telt als capaciteit (pas aan als je anders wil)
       const t = String(r.type || "werk");
-      const sign = (t === "werk") ? 1 : 1; // als je verlof/ziek als 0 wil tellen, maak sign=0
-      if(!emp || !d) continue;
-      if(!capByEmp.has(emp)) capByEmp.set(emp, new Map());
-      const dm = capByEmp.get(emp);
+      const sign = (t === "werk") ? 1 : 1;
+
+      if (!empStr || !d) continue;
+
+      if (!capByEmp.has(empStr)) capByEmp.set(empStr, new Map());
+      const dm = capByEmp.get(empStr);
       dm.set(d, (dm.get(d) || 0) + (h * sign));
     }
+
 
     // totals capaciteit per dag
     const capTotalByDay = {};
@@ -847,33 +851,22 @@ for (const [sid, dm] of assignMap) {
       }
     }
 
-    // planned prod/mont per day
-    // -> op basis van section_assignments + capacity_entries (capByEmp)
-  // planned prod/mont per day (unieke medewerkers per dag * 7,75 * planFactor)
-  const plannedProdByDay = {};
-  const plannedMontByDay = {};
 
-  const plannedSetsByDay = buildPlannedSetsByDay(assigns || []);
-  const pf = (settings.planFactor ?? 1);
+    // planned prod/mont per day (unieke medewerkers per dag * 7,75 * planFactor)
+    const plannedProdByDay = {};
+    const plannedMontByDay = {};
 
-  for (const d of dates){
-    const dayISO = toISODate(d);
-    const h = capByEmp.get(empId)?.get(dayISO) || 0;
+    const plannedSetsByDay = buildPlannedSetsByDay(assigns || []);
+    const pf = (settings.planFactor ?? 1);
 
-    const td = document.createElement("td");
-    td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+    for (const d of dates) {
+      const dayISO = toISODate(d);
+      const sets = plannedSetsByDay[dayISO] || { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
 
-    const empIdStr = String(wid ?? "").trim();
-    const inProd = !!empAssignByDay[dayISO]?.prod?.has(empIdStr);
-    const inMont = !!empAssignByDay[dayISO]?.mont?.has(empIdStr);
+      plannedProdByDay[dayISO]  = (sets.pro.size + (sets.dummyPro || 0)) * HOURS_PER_PERSON_DAY * pf;
+      plannedMontByDay[dayISO]  = (sets.mo.size + (sets.dummyMo  || 0)) * HOURS_PER_PERSON_DAY * pf;
+    }
 
-    if (inProd && inMont) td.classList.add("cap-assigned-both");
-    else if (inProd) td.classList.add("cap-assigned-prod");
-    else if (inMont) td.classList.add("cap-assigned-mont");
-
-    td.textContent = formatHoursCell(h);
-    tr.appendChild(td);
-  }
 
 
     // per dag: welke medewerkers ingepland zijn op productie / montage
@@ -1203,7 +1196,7 @@ for (const oh of headers) {
 
       for (const d of dates) {
         const dayISO = toISODate(d);
-        const h = capByEmp.get(empId)?.get(dayISO) || 0;
+        const h = capByEmp.get(empIdStr)?.get(dayISO) || 0;
 
         const td = document.createElement("td");
         td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
@@ -2312,7 +2305,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       const empIdKey = "id";
       const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
       const empNameById = new Map((werknemers || []).map(w => [
-        String(w?.[empIdKey]),
+        String(w?.[empIdKey] ?? "").trim(),
         String(w?.[empNameKey] || w?.[empIdKey] || "")
       ]));
 
