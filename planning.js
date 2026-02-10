@@ -50,10 +50,12 @@
   function captureOpenState(){
     const st = { projects: new Set(), sections: new Set(), orders: new Set() };
 
-    // projecten
-    gridEl?.querySelectorAll('.expander[data-proj].open').forEach(b=>{
-      const pid = String(b.dataset.proj || "");
-      if (pid) st.projects.add(pid);
+    // projecten (betrouwbaar: kijk naar het symbool)
+    gridEl?.querySelectorAll('.expander[data-proj]').forEach(b=>{
+      if (b.textContent === "▼") {
+        const pid = String(b.dataset.proj || "");
+        if (pid) st.projects.add(pid);
+      }
     });
 
     // secties
@@ -75,6 +77,7 @@
 
     openState = st;
   }
+
 
   function restoreOpenState(){
     if (!gridEl) return;
@@ -532,6 +535,8 @@ async function fillOrderTypeFilterUI(){
     const endISO = toISODate(end);
     const todayISO = toISODate(new Date());
 
+
+    captureOpenState();  // ✅ hier direct
 
     statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
