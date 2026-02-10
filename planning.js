@@ -2377,9 +2377,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         const td = document.createElement("td");
         td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
 
-        // alleen op leverdatum een geel blokje
         if (leverISO && iso === leverISO) {
-          td.className += " bar-order";
+          td.classList.add("bar-order");
           td.innerHTML = `<div class="bar bar-order">lever</div>`;
         } else {
           td.innerHTML = "";
@@ -2388,7 +2387,6 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         tr.appendChild(td);
       }
     }
-
 
 function applyZebraVisible(){
   const tbody = gridEl?.querySelector(".planner-table tbody");

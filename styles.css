@@ -508,6 +508,19 @@ td.details-fill{ text-align:left !important; vertical-align:top; padding:0 !impo
 .bar-delivery .bar{ background:#ffd7b5; }
 .bar-generic .bar{ background:#e5e7eb; }
 
+.bar.bar-order{
+  background: #facc15;       /* geel */
+  color: #111827;            /* donkere tekst */
+  font-weight: 700;
+  border-radius: 10px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+
 /* markers (lever/oplever) – standalone (als je ze direct in cel zet) */
 .deadline,
 .delivery{
