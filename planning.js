@@ -1192,13 +1192,23 @@ for (const w of (werknemersCap || []) ) {
     for (const d of dates){
       const iso = toISODate(d);
       const h = capByEmp.get(wid)?.get(iso) || 0;
+
       const td = document.createElement("td");
       td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
-      td.textContent = formatHoursCell(h);
-      tr.appendChild(td);
-    }
 
-    tbody.appendChild(tr);
+      // ✅ ingeroosterd? (kleur op basis van productie/montage)
+      const empIdStr = String(wid ?? "");
+      const inProd = !!empAssignByDay[iso]?.prod?.has(empIdStr);
+      const inMont = !!empAssignByDay[iso]?.mont?.has(empIdStr);
+
+      if (inProd && inMont) td.classList.add("cap-assigned-both");
+      else if (inProd)      td.classList.add("cap-assigned-prod");
+      else if (inMont)      td.classList.add("cap-assigned-mont");
+        td.textContent = formatHoursCell(h);
+        tr.appendChild(td);
+      }
+
+      tbody.appendChild(tr);
   }
 
 
@@ -2386,28 +2396,23 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       }
     }
 
-    function appendOrderDayCells(tr, dates, leverISO){
-      for (const d of dates){
-        const iso = toISODate(d);
-        const h = capByEmp.get(wid)?.get(iso) || 0;
+function appendOrderDayCells(tr, dates, leverISO){
+  for (const d of dates) {
+    const iso = toISODate(d);
 
-        const td = document.createElement("td");
-        td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+    const td = document.createElement("td");
+    td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
 
-        // ✅ ingeroosterd? (kleur op basis van productie/montage)
-        const empIdStr = String(wid ?? "");
-        const inProd = !!empAssignByDay[iso]?.prod?.has(empIdStr);
-        const inMont = !!empAssignByDay[iso]?.mont?.has(empIdStr);
-
-        if (inProd && inMont) td.classList.add("cap-assigned-both");
-        else if (inProd)      td.classList.add("cap-assigned-prod");
-        else if (inMont)      td.classList.add("cap-assigned-mont");
-
-        td.textContent = formatHoursCell(h);
-        tr.appendChild(td);
-      }
-
+    if (leverISO && iso === leverISO) {
+      td.classList.add("bar-order");
+      td.innerHTML = `<div class="bar bar-order">lever</div>`;
+    } else {
+      td.innerHTML = "";
     }
+
+    tr.appendChild(td);
+  }
+}
 
 function applyZebraVisible(){
   const tbody = gridEl?.querySelector(".planner-table tbody");
