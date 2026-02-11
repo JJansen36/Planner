@@ -1344,70 +1344,7 @@ for (const dd of dates) {
     // EXPANDERS BINDEN (na render)
     // =========================
 
-    // Section expander (▶) opent: section-details + order-rijen
-    gridEl.querySelectorAll(".expander-sec").forEach(btn => {
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-
-        const sid = String(btn.dataset.sect || "");
-        const parentTr = btn.closest("tr");
-        const pid = String(parentTr?.dataset?.parent || "");
-        if (!sid || !pid) return;
-
-        const open = btn.textContent !== "▼";
-        btn.textContent = open ? "▼" : "▶";
-
-        // 1) sectie-details row (Bestellingen blok etc.)
-        gridEl.querySelectorAll(
-          `tr.section-details-row[data-sect="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
-        ).forEach(r => r.classList.toggle("hidden", !open));
-
-        // 2) bestelling header-rijen (order-row) tonen/verbergen bij sectie open/dicht
-        gridEl.querySelectorAll(
-          `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
-        ).forEach(r => r.classList.toggle("hidden", !open));
-
-        // 3) als sectie dicht gaat: verberg ook ALLE order-regel-rijen + zet order-pijltjes terug
-        if (!open) {
-          gridEl.querySelectorAll(
-            `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
-          ).forEach(r => r.classList.add("hidden"));
-
-          gridEl.querySelectorAll(
-            `.expander-order[data-sect="${cssEsc(sid)}"]`
-          ).forEach(b => b.textContent = "▶");
-        }
-
-        applyZebraVisible();
-
-      });
-    });
-
-    // Order expander (▶) opent alleen de details van die bestelling
-    gridEl.querySelectorAll(".expander-order").forEach(btn => {
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-
-        const sid = String(btn.dataset.sect || "");
-        const bn  = String(btn.dataset.orderbn || "");
-        const parentTr = btn.closest("tr");
-        const pid = String(parentTr?.dataset?.parent || "");
-        if (!sid || !bn || !pid) return;
-
-        const open = btn.textContent !== "▼";
-        btn.textContent = open ? "▼" : "▶";
-
-        const row = gridEl.querySelector(
-          `tr.order-details-row[data-order-parent="${cssEsc(sid)}"][data-order-bn="${cssEsc(bn)}"][data-parent="${cssEsc(pid)}"]`
-        );
-        if (row) row.classList.toggle("hidden", !open);
-
-        applyZebraVisible();
-      });
-    });
-
-
-    applyZebraVisible();
+     applyZebraVisible();
 
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
@@ -1434,6 +1371,39 @@ for (const dd of dates) {
       applyZebraVisible();
       return;
     } 
+
+    // ✅ klik op sectie pijltje => toon/verberg bestellingen (order-row) + reset order-lines
+    const sbtn = ev.target.closest(".expander-sec");
+    if (sbtn) {
+      ev.stopPropagation();
+
+      const sid = String(sbtn.dataset.sect || "");
+      const tr  = sbtn.closest("tr");
+      const pid = String(tr?.dataset?.parent || "");
+      if (!sid || !pid) return;
+
+      const open = sbtn.textContent !== "▼";
+      sbtn.textContent = open ? "▼" : "▶";
+
+      // toon/verberg order headers onder deze sectie
+      gridEl.querySelectorAll(
+        `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+      ).forEach(r => r.classList.toggle("hidden", !open));
+
+      // als sectie dicht gaat: verberg ook orderregels + pijltjes resetten
+      if (!open) {
+        gridEl.querySelectorAll(
+          `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+        ).forEach(r => r.classList.add("hidden"));
+
+        gridEl.querySelectorAll(
+          `.expander-order[data-sect="${cssEsc(sid)}"]`
+        ).forEach(b => b.textContent = "▶");
+      }
+
+      applyZebraVisible();
+      return;
+    }
 
     // ✅ click op order accordion head (in details)
     const oh = ev.target.closest(".order-head");
@@ -1957,29 +1927,6 @@ const totals = {
   gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
     btn.addEventListener("click", () => {
       toggleProject(String(btn.dataset.proj || ""));
-    });
-  });
-
-  // ===== ORDER EXPANDERS: toon/verberg orderregels (order-line-row) =====
-  gridEl.querySelectorAll(".expander-order").forEach(btn => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-
-      const sid = String(btn.dataset.sect || "");
-      const pid = String(btn.dataset.parent || "");
-      const bn  = String(btn.dataset.orderbn || "");
-
-      const open = btn.textContent !== "▼";
-      btn.textContent = open ? "▼" : "▶";
-
-      // toon/verberg ALLE orderregel-rijen die bij deze bestelling horen
-      gridEl.querySelectorAll(
-        `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]`
-      ).forEach(r => r.classList.toggle("hidden", !open));
-
-      applyZebraVisible();
-     
-
     });
   });
 
