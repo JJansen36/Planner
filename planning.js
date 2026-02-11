@@ -1051,6 +1051,7 @@ async function fillOrderTypeFilterUI(){
 
       const projRow = document.createElement("tr");
       projRow.className = "project-row";
+      projRow.classList.add("project-topline"); // ✅ altijd een bovenlijn voor de order/project
       let lastRowOfProject = projRow; // <-- ook meteen B1 (zie hieronder)
       markZebra(projRow);
       const left = document.createElement("td");
