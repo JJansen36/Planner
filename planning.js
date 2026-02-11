@@ -2573,23 +2573,31 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       }
     }
 
-function appendOrderDayCells(tr, dates, leverISO){
-  for (const d of dates) {
-    const iso = toISODate(d);
+    function appendOrderDayCells(tr, dates, leverISO){
+      const isTop = tr.classList.contains("order-topline");
+      const isBottom = tr.classList.contains("order-bottomline");
 
-    const td = document.createElement("td");
-    td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+      for (const d of dates) {
+        const iso = toISODate(d);
 
-    if (leverISO && iso === leverISO) {
-      td.classList.add("bar-order");
-      td.innerHTML = `<div class="bar bar-order">lever</div>`;
-    } else {
-      td.innerHTML = "";
+        const td = document.createElement("td");
+        td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+        // ✅ extra classes zodat CSS altijd kan tekenen
+        if (isTop) td.classList.add("order-topline-cell");
+        if (isBottom) td.classList.add("order-bottomline-cell");
+
+        if (leverISO && iso === leverISO) {
+          td.classList.add("bar-order");
+          td.innerHTML = `<div class="bar bar-order">lever</div>`;
+        } else {
+          td.innerHTML = "";
+        }
+
+        tr.appendChild(td);
+      }
     }
 
-    tr.appendChild(td);
-  }
-}
 
 function applyZebraVisible(){
   const tbody = gridEl?.querySelector(".planner-table tbody");
