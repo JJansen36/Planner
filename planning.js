@@ -1357,12 +1357,14 @@ for (const dd of dates) {
       const sid = String(obtn.dataset.sect || "");
       const bn  = String(obtn.dataset.orderbn || "");
 
-      // pid pakken we veilig van de rij zelf (betrouwbaarder dan dataset op de button)
       const tr = obtn.closest("tr");
       const pid = String(tr?.dataset?.parent || "");
 
       const open = obtn.textContent !== "▼";
       obtn.textContent = open ? "▼" : "▶";
+
+      // ✅ dit is de header-rij van de order
+      if (tr) tr.classList.toggle("is-open", open);
 
       gridEl.querySelectorAll(
         `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]`
@@ -1370,7 +1372,8 @@ for (const dd of dates) {
 
       applyZebraVisible();
       return;
-    } 
+    }
+
 
     // ✅ klik op sectie pijltje => toon/verberg bestellingen (order-row) + reset order-lines
     const sbtn = ev.target.closest(".expander-sec");
