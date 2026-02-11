@@ -867,8 +867,10 @@ async function fillOrderTypeFilterUI(){
     }
 
     
-    // assignments map: sectionId -> dateISO -> {productie:Set(empId), montage:Set(empId)}
+
+    // assignments map: sectionId -> dateISO -> {productie:Set(empId), montage:Set(empId), dummyProd:number, dummyMont:number}
     const assignMap = new Map();
+
     for (const a of assigns || []) {
       const sid = String(a.section_id || "").trim();
       const d   = String(a.work_date || "").trim();
@@ -879,11 +881,23 @@ async function fillOrderTypeFilterUI(){
 
       if (!assignMap.has(sid)) assignMap.set(sid, new Map());
       const dmA = assignMap.get(sid);
-      if (!dmA.has(d)) dmA.set(d, { productie: new Set(), montage: new Set() });
 
-      if (wt === "productie") dmA.get(d).productie.add(emp);
-      if (wt === "montage") dmA.get(d).montage.add(emp);
+      if (!dmA.has(d)) dmA.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
+      const entry = dmA.get(d);
+
+      const isDummy = (emp === String(DUMMY_EMP_ID)) || isConceptId(emp);
+
+      if (wt === "productie") {
+        if (isDummy) entry.dummyProd += 1;
+        else entry.productie.add(emp);
+      }
+
+      if (wt === "montage") {
+        if (isDummy) entry.dummyMont += 1;
+        else entry.montage.add(emp);
+      }
     }
+
 
     // busyByDay: dateISO -> Set(empId) (ongeacht type)
     const busyByDay = new Map();
@@ -1090,11 +1104,12 @@ for (const dd of dates) {
 
     const entry = assignMap.get(String(sid))?.get(iso);
     if (entry) {
-      prod += entry.productie.size;
-      mont += entry.montage.size;
+      prod += entry.productie.size + (entry.dummyProd || 0);
+      mont += entry.montage.size + (entry.dummyMont || 0);
 
-      if (entry.productie.has(String(DUMMY_EMP_ID)) || entry.productie.has(Number(DUMMY_EMP_ID))) dummyProd = true;
-      if (entry.montage.has(String(DUMMY_EMP_ID)) || entry.montage.has(Number(DUMMY_EMP_ID))) dummyMont = true;
+      if ((entry.dummyProd || 0) > 0) dummyProd = true;
+      if ((entry.dummyMont || 0) > 0) dummyMont = true;
+
     }
   }
 
@@ -1156,10 +1171,11 @@ for (const dd of dates) {
         for (const dd of dates) {
           const iso = toISODate(dd);
           const entry = dmA?.get(iso);
-          assignByDay[iso] = {
-            prod: entry ? entry.productie.size : 0,
-            mont: entry ? entry.montage.size : 0,
-          };
+        assignByDay[iso] = {
+          prod: entry ? (entry.productie.size + (entry.dummyProd || 0)) : 0,
+          mont: entry ? (entry.montage.size + (entry.dummyMont || 0)) : 0,
+        };
+
         }
 
         appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werknemers);
@@ -1720,6 +1736,17 @@ const totals = {
             });
           }
         }
+        
+        // ✅ Concepten: meerdere rijen met hetzelfde dummy-id (tellen mee als extra persoon)
+        const dummyProdCount = Number(selected.dummyProd || 0);
+        const dummyMontCount = Number(selected.dummyMont || 0);
+
+        for (let i = 0; i < dummyProdCount; i++) {
+          rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "productie" });
+        }
+        for (let i = 0; i < dummyMontCount; i++) {
+          rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
+        }
 
         // Eerst oude weekregels weg, dan nieuwe erin (veilig zonder unieke constraints)
         const del = await sb
@@ -1761,11 +1788,14 @@ const totals = {
       modal.wrap.classList.add("show");
 
       // current selection
-      const cur = assignMap.get(sid)?.get(dateISO) || { productie: new Set(), montage: new Set() };
+      const cur = assignMap.get(sid)?.get(dateISO) || { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 };
       const selected = {
         productie: new Set(cur.productie),
         montage: new Set(cur.montage),
+        dummyProd: Number(cur.dummyProd || 0),
+        dummyMont: Number(cur.dummyMont || 0),
       };
+
 
       const subEl = modal.wrap.querySelector("#amSub");
       const listProd = modal.wrap.querySelector("#amListProd");
@@ -1802,6 +1832,58 @@ const totals = {
           // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
           const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
           if (shouldHide) continue;
+// ✅ Concept (dummy) als teller i.p.v. checkbox (meerdere per dag)
+if (isDummy(eid)) {
+  // Productie concept row
+  const rowP = document.createElement("div");
+  rowP.className = "assign-item";
+  rowP.style.display = "flex";
+  rowP.style.justifyContent = "space-between";
+  rowP.style.alignItems = "center";
+  rowP.innerHTML = `
+    <span>${escapeHtml(name)}</span>
+    <span style="display:flex; gap:6px; align-items:center;">
+      <button type="button" class="btn small">−</button>
+      <span style="min-width:18px; text-align:center;">${selected.dummyProd || 0}</span>
+      <button type="button" class="btn small">+</button>
+    </span>
+  `;
+
+  const minusP = rowP.querySelectorAll("button")[0];
+  const plusP  = rowP.querySelectorAll("button")[1];
+  const countP = rowP.querySelectorAll("span")[1];
+
+  plusP.onclick = () => { selected.dummyProd = Number(selected.dummyProd || 0) + 1; countP.textContent = String(selected.dummyProd); };
+  minusP.onclick = () => { selected.dummyProd = Math.max(0, Number(selected.dummyProd || 0) - 1); countP.textContent = String(selected.dummyProd); };
+
+  listProd.appendChild(rowP);
+
+  // Montage concept row
+  const rowM = document.createElement("div");
+  rowM.className = "assign-item";
+  rowM.style.display = "flex";
+  rowM.style.justifyContent = "space-between";
+  rowM.style.alignItems = "center";
+  rowM.innerHTML = `
+    <span>${escapeHtml(name)}</span>
+    <span style="display:flex; gap:6px; align-items:center;">
+      <button type="button" class="btn small">−</button>
+      <span style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
+      <button type="button" class="btn small">+</button>
+    </span>
+  `;
+
+  const minusM = rowM.querySelectorAll("button")[0];
+  const plusM  = rowM.querySelectorAll("button")[1];
+  const countM = rowM.querySelectorAll("span")[1];
+
+  plusM.onclick = () => { selected.dummyMont = Number(selected.dummyMont || 0) + 1; countM.textContent = String(selected.dummyMont); };
+  minusM.onclick = () => { selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1); countM.textContent = String(selected.dummyMont); };
+
+  listMont.appendChild(rowM);
+
+  continue; // ✅ belangrijk: geen checkbox voor concept
+}
 
           // --- Productie rij ---
           const rowP = document.createElement("label");
