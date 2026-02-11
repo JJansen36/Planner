@@ -1135,12 +1135,23 @@ td.section-click[data-tip]:hover::before{
 .projline2{ font-weight:600; opacity:.9; margin-top:2px; }
 
 
-tr.order-bottomline > td,
-tr.order-bottomline > th{
-  border-bottom: 3px solid #f102dd !important;
+
+/* ===== DUIDELIJKE SCHEIDINGSLIJNEN ===== */
+
+/* project: onderlijn over de hele breedte */
+tr.project-bottomline > td,
+tr.project-bottomline > th{
+  border-bottom: 3px solid #f102dd !important; /* slate-400 */
 }
 
+/* order: bovenlijn (boven de order header-rij) */
 tr.order-topline > td,
 tr.order-topline > th{
-  border-top: 3px solid #f102dd !important;
+  border-top: 2px solid #f102dd !important; /* slate-300 */
+}
+
+/* order: onderlijn (onder de LAATSTE orderregel) */
+tr.order-bottomline > td,
+tr.order-bottomline > th{
+  border-bottom: 2px solid #f102dd !important;
 }
