@@ -1825,7 +1825,7 @@ const totals = {
 
         const shouldHide = (!mustShow) && (!isAvailable || isBusy);
 
-          if (shouldHide) continue;
+
 
           // --- Productie rij ---
           const rowP = document.createElement("label");
@@ -2139,8 +2139,7 @@ const usedIds = new Set((werknemers || []).map(w => String(w.id)));
     restoreOpenState();
 
 
-  }
-
+  
   // -------- RUN BUILDERS (bars via colspan) --------
   function buildBarRunsForSection(sectionId, workMap, dates){
     // per dag label kiezen (dominant type), en contiguous dagen samenvoegen
