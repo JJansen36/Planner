@@ -1945,19 +1945,7 @@ const totals = {
   });
 
 
-  // capacity dropdown (Totaal ▶ / ▼)
-  gridEl.querySelectorAll(".cap-expander").forEach(btn => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      const key = String(btn.dataset.cap || "");
-      const open = btn.classList.toggle("open");
-      btn.textContent = open ? "▼" : "▶";
-      toggleRowsByKey(key, open);
-      applyZebraVisible();
-   
 
-    });
-  });
 
   function bindExpandersAndClicks(){
 
@@ -2044,12 +2032,14 @@ const totals = {
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
-    // ... hier komen al je listeners ...
+    // ✅ NA mount: expander listeners opnieuw binden (project/sectie/order/capaciteit)
+    bindExpandersAndClicks();
 
     applyZebraVisible();
 
     // ✅ NA alles: state terugzetten
     restoreOpenState();
+
 
   }
 
