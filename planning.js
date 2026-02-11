@@ -1329,9 +1329,6 @@ for (const dd of dates) {
 
     table.appendChild(tbody);
 
-    // mount
-    gridEl.innerHTML = "";
-    gridEl.appendChild(table);
 
     // =========================
     // EXPANDERS BINDEN (na render)
@@ -1971,7 +1968,7 @@ const totals = {
       ).forEach(r => r.classList.toggle("hidden", !open));
 
       applyZebraVisible();
-      restoreOpenState();
+     
 
     });
   });
@@ -1986,10 +1983,92 @@ const totals = {
       btn.textContent = open ? "▼" : "▶";
       toggleRowsByKey(key, open);
       applyZebraVisible();
-      restoreOpenState();
+   
 
     });
   });
+
+  function bindExpandersAndClicks(){
+
+  // Project expander
+  gridEl.querySelectorAll('.expander[data-proj]').forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      toggleProject(String(btn.dataset.proj || ""));
+      applyZebraVisible();
+    });
+  });
+
+  // Sectie expander
+  gridEl.querySelectorAll(".expander-sec").forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+
+      const sid = String(btn.dataset.sect || "");
+      const parentTr = btn.closest("tr");
+      const pid = String(parentTr?.dataset?.parent || "");
+      if (!sid || !pid) return;
+
+      const open = btn.textContent !== "▼";
+      btn.textContent = open ? "▼" : "▶";
+
+      gridEl.querySelectorAll(
+        `tr.order-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+      ).forEach(r => r.classList.toggle("hidden", !open));
+
+      // als sectie dicht gaat: ook order-lines verbergen + pijltjes reset
+      if (!open) {
+        gridEl.querySelectorAll(
+          `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"]`
+        ).forEach(r => r.classList.add("hidden"));
+
+        gridEl.querySelectorAll(
+          `.expander-order[data-sect="${cssEsc(sid)}"]`
+        ).forEach(b => b.textContent = "▶");
+      }
+
+      applyZebraVisible();
+    });
+  });
+
+  // Order expander: toont order-line-rijen
+  gridEl.querySelectorAll(".expander-order").forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+
+      const sid = String(btn.dataset.sect || "");
+      const bn  = String(btn.dataset.orderbn || "");
+      const tr  = btn.closest("tr");
+      const pid = String(tr?.dataset?.parent || "");
+      if (!sid || !bn || !pid) return;
+
+      const open = btn.textContent !== "▼";
+      btn.textContent = open ? "▼" : "▶";
+
+      gridEl.querySelectorAll(
+        `tr.order-line-row[data-order-parent="${cssEsc(sid)}"][data-parent="${cssEsc(pid)}"][data-order-bn="${cssEsc(bn)}"]`
+      ).forEach(r => r.classList.toggle("hidden", !open));
+
+      applyZebraVisible();
+    });
+  });
+
+  // Capaciteit expander
+  gridEl.querySelectorAll(".cap-expander").forEach(btn => {
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const key = String(btn.dataset.cap || "");
+      const open = btn.classList.toggle("open");
+      btn.textContent = open ? "▼" : "▶";
+      toggleRowsByKey(key, open);
+      applyZebraVisible();
+    });
+  });
+
+  // Eén centrale click handler (die had je al) mag blijven,
+  // MAAR: haal hieruit elke restoreOpenState() weg.
+}
+
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
