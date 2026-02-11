@@ -1161,3 +1161,28 @@ tr.order-line-row.order-bottomline > td,
 tr.order-line-row.order-bottomline > th{
   box-shadow: inset 0 -2px 0 #f102dd !important;
 }
+/* ===== Order lijnen: nooit laten bedekken door zebra/weekend overlay ===== */
+
+/* 1) Zet eventuele overlays (zebra / wknd) uit op order-rijen */
+tr.order-row > td::after,
+tr.order-row > th::after,
+tr.order-line-row > td::after,
+tr.order-line-row > th::after{
+  content: none !important;
+}
+
+/* 2) Teken de scheidingslijnen (gebruik box-shadow zodat het altijd pakt) */
+tr.order-row.order-topline > td,
+tr.order-row.order-topline > th{
+  box-shadow: inset 0 2px 0 #f102dd !important;   /* bovenlijn */
+}
+
+tr.order-row.order-topline:not(.is-open) > td,
+tr.order-row.order-topline:not(.is-open) > th{
+  box-shadow: inset 0 2px 0 #f102dd, inset 0 -2px 0 #f102dd !important; /* dicht: ook onderlijn */
+}
+
+tr.order-line-row.order-bottomline > td,
+tr.order-line-row.order-bottomline > th{
+  box-shadow: inset 0 -2px 0 #f102dd !important; /* open: onderlijn op laatste regel */
+}
