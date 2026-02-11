@@ -1823,58 +1823,74 @@ const totals = {
           // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
           const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
           if (shouldHide) continue;
-// ✅ Concept (dummy) als teller i.p.v. checkbox (meerdere per dag)
-if (isDummy(eid)) {
-  // Productie concept row
-  const rowP = document.createElement("div");
-  rowP.className = "assign-item";
-  rowP.style.display = "flex";
-  rowP.style.justifyContent = "space-between";
-  rowP.style.alignItems = "center";
-  rowP.innerHTML = `
-    <span>${escapeHtml(name)}</span>
-    <span style="display:flex; gap:6px; align-items:center;">
-      <button type="button" class="btn small">−</button>
-      <span style="min-width:18px; text-align:center;">${selected.dummyProd || 0}</span>
-      <button type="button" class="btn small">+</button>
-    </span>
-  `;
 
-  const minusP = rowP.querySelectorAll("button")[0];
-  const plusP  = rowP.querySelectorAll("button")[1];
-  const countP = rowP.querySelectorAll("span")[1];
+          
+      // ✅ Concept (dummy) als teller i.p.v. checkbox (meerdere per dag)
+      if (isDummy(eid)) {
 
-  plusP.onclick = () => { selected.dummyProd = Number(selected.dummyProd || 0) + 1; countP.textContent = String(selected.dummyProd); };
-  minusP.onclick = () => { selected.dummyProd = Math.max(0, Number(selected.dummyProd || 0) - 1); countP.textContent = String(selected.dummyProd); };
+        // Productie concept row
+        const rowP = document.createElement("div");
+        rowP.className = "assign-item";
+        rowP.style.display = "flex";
+        rowP.style.justifyContent = "space-between";
+        rowP.style.alignItems = "center";
+        rowP.innerHTML = `
+          <span>${escapeHtml(name)}</span>
+          <span style="display:flex; gap:6px; align-items:center;">
+            <button type="button" class="btn small concept-minus">−</button>
+            <span class="concept-count" style="min-width:18px; text-align:center;">${Number(selected.dummyProd || 0)}</span>
+            <button type="button" class="btn small concept-plus">+</button>
+          </span>
+        `;
 
-  listProd.appendChild(rowP);
+        const minusP = rowP.querySelector(".concept-minus");
+        const plusP  = rowP.querySelector(".concept-plus");
+        const countP = rowP.querySelector(".concept-count");
 
-  // Montage concept row
-  const rowM = document.createElement("div");
-  rowM.className = "assign-item";
-  rowM.style.display = "flex";
-  rowM.style.justifyContent = "space-between";
-  rowM.style.alignItems = "center";
-  rowM.innerHTML = `
-    <span>${escapeHtml(name)}</span>
-    <span style="display:flex; gap:6px; align-items:center;">
-      <button type="button" class="btn small">−</button>
-      <span style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
-      <button type="button" class="btn small">+</button>
-    </span>
-  `;
+        plusP.onclick = () => {
+          selected.dummyProd = Number(selected.dummyProd || 0) + 1;
+          countP.textContent = String(selected.dummyProd);
+        };
+        minusP.onclick = () => {
+          selected.dummyProd = Math.max(0, Number(selected.dummyProd || 0) - 1);
+          countP.textContent = String(selected.dummyProd);
+        };
 
-  const minusM = rowM.querySelectorAll("button")[0];
-  const plusM  = rowM.querySelectorAll("button")[1];
-  const countM = rowM.querySelectorAll("span")[1];
+        listProd.appendChild(rowP);
 
-  plusM.onclick = () => { selected.dummyMont = Number(selected.dummyMont || 0) + 1; countM.textContent = String(selected.dummyMont); };
-  minusM.onclick = () => { selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1); countM.textContent = String(selected.dummyMont); };
+        // Montage concept row
+        const rowM = document.createElement("div");
+        rowM.className = "assign-item";
+        rowM.style.display = "flex";
+        rowM.style.justifyContent = "space-between";
+        rowM.style.alignItems = "center";
+        rowM.innerHTML = `
+          <span>${escapeHtml(name)}</span>
+          <span style="display:flex; gap:6px; align-items:center;">
+            <button type="button" class="btn small concept-minus">−</button>
+            <span class="concept-count" style="min-width:18px; text-align:center;">${Number(selected.dummyMont || 0)}</span>
+            <button type="button" class="btn small concept-plus">+</button>
+          </span>
+        `;
 
-  listMont.appendChild(rowM);
+        const minusM = rowM.querySelector(".concept-minus");
+        const plusM  = rowM.querySelector(".concept-plus");
+        const countM = rowM.querySelector(".concept-count");
 
-  continue; // ✅ belangrijk: geen checkbox voor concept
-}
+        plusM.onclick = () => {
+          selected.dummyMont = Number(selected.dummyMont || 0) + 1;
+          countM.textContent = String(selected.dummyMont);
+        };
+        minusM.onclick = () => {
+          selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1);
+          countM.textContent = String(selected.dummyMont);
+        };
+
+        listMont.appendChild(rowM);
+
+        continue; // ✅ belangrijk: geen checkbox voor concept
+      }
+
 
           // --- Productie rij ---
           const rowP = document.createElement("label");
