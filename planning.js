@@ -1050,8 +1050,8 @@ async function fillOrderTypeFilterUI(){
 
 
       const projRow = document.createElement("tr");
-      let lastRowOfProject = projRow; // <-- ook meteen B1 (zie hieronder)
       projRow.className = "project-row";
+      let lastRowOfProject = projRow; // <-- ook meteen B1 (zie hieronder)
       markZebra(projRow);
       const left = document.createElement("td");
       left.className = "rowhdr sticky-left project-cell";
@@ -1116,7 +1116,7 @@ for (const dd of dates) {
 
   appendProjectDayCells(projRow, dates, projLabels, complISO, deliveryISO, projAssignByDay);
   tbody.appendChild(projRow);
-  lastRowOfProject = secRow;
+  let lastRowOfProject = projRow;             // ✅ HIER pas initialiseren
 
 
   // section rows (hidden by default)
@@ -1164,6 +1164,7 @@ for (const dd of dates) {
 
 
         tbody.appendChild(secRow);
+        lastRowOfProject = secRow;
 
 
     // ======================
