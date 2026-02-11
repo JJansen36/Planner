@@ -112,9 +112,24 @@ function restoreOpenState(){
 
   // ---- Settings (uitbreidbaar) ----
   const SETTINGS_KEY = "lovd_planner_settings_v1";
-  // ===== Dummy medewerker (virtuele inhuur) =====
-  const DUMMY_EMP_ID = 999999;
-  const DUMMY_EMP_NAME = "Concept";
+// ===== Concept medewerkers (virtuele inhuur) =====
+const CONCEPT_FIRST_ID = 999999;   // Concept 1
+const CONCEPT_MIN_ID   = 999900;   // reserve-range 999900..999999
+
+const isConceptId = (wid) => {
+  const n = Number(wid);
+  return Number.isFinite(n) && n >= CONCEPT_MIN_ID && n <= CONCEPT_FIRST_ID;
+};
+const conceptIndexFromId = (id) => (CONCEPT_FIRST_ID - Number(id) + 1); // 999999->1, 999998->2, ...
+const conceptNameFromId  = (id) => `Concept ${conceptIndexFromId(id)}`;
+
+function nextConceptId(usedIdsSet){
+  for (let id = CONCEPT_FIRST_ID; id >= CONCEPT_MIN_ID; id--){
+    if (!usedIdsSet.has(String(id))) return id;
+  }
+  return null;
+}
+
 
 const defaultSettings = {
   planFactor: 0.80, // 80%
@@ -182,7 +197,7 @@ function buildPlannedSetsByDay(planningItems){
 
     if (!out[d]) out[d] = { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
 
-    const isDummy = String(wid) === String(DUMMY_EMP_ID);
+    const isDummy = isConceptId(wid);
 
     if (isDummy) {
       if (bucket === "pro") out[d].dummyPro += 1;
@@ -549,7 +564,7 @@ async function fillOrderTypeFilterUI(){
     const { data: projecten, error: pErr } = await sb
       .from("projecten")
       .select("*")
-      .in("salesstatus", [4,5,6,7,8])
+      .in("salesstatus", [3,4,5,6,7,8])
       .gte("completiondate", todayISO)
       .order("offerno", { ascending: true })
       .limit(500);
@@ -624,13 +639,24 @@ async function fillOrderTypeFilterUI(){
       .limit(500);
 
     if (eErr) { statusEl.textContent = "Fout werknemers: " + eErr.message; return; }
-    // ✅ Dummy medewerker toevoegen (altijd beschikbaar in UI)
-    if (!werknemers.some(w => String(w.id) === String(DUMMY_EMP_ID))) {
-      werknemers.push({ id: DUMMY_EMP_ID, name: DUMMY_EMP_NAME });
+
+    // ✅ Concept-medewerkers virtueel toevoegen op basis van assignments + altijd Concept 1
+    const seenConceptIds = new Set([String(CONCEPT_FIRST_ID)]);
+    for (const a of (safeAssigns || [])) {
+      const wid = a?.werknemer_id;
+      if (isConceptId(wid)) seenConceptIds.add(String(wid));
     }
 
-    // ✅ Voor capaciteit: dummy NIET meenemen
-    const werknemersCap = (werknemers || []).filter(w => String(w.id) !== String(DUMMY_EMP_ID));
+    // zorg dat ze in werknemers zitten
+    for (const cid of seenConceptIds) {
+      if (!werknemers.some(w => String(w.id) === String(cid))) {
+        werknemers.push({ id: Number(cid), name: conceptNameFromId(cid) });
+      }
+    }
+
+    // ✅ Voor capaciteit: concepten NIET meenemen
+    const werknemersCap = (werknemers || []).filter(w => !isConceptId(w.id));
+
 
         // 6) section_assignments in range (collega's per sectie/dag + type)
     const { data: assigns, error: aErr } = await sb
@@ -911,7 +937,8 @@ async function fillOrderTypeFilterUI(){
       const t = String(r.type || "werk");
       const sign = (t === "werk") ? 1 : 1;
 
-      if (!empStr || !d) continue;
+      if (isConceptId(empStr)) continue;
+
 
       if (!capByEmp.has(empStr)) capByEmp.set(empStr, new Map());
       const dm = capByEmp.get(empStr);
@@ -1028,6 +1055,10 @@ async function fillOrderTypeFilterUI(){
     // TBODY
     const tbody = document.createElement("tbody");
 
+    const setHasConcept = (set) => {
+      for (const x of (set || [])) if (isConceptId(x)) return true;
+      return false;
+    };
 
 
     // Projects + sections (expand/collapse)
@@ -1051,10 +1082,13 @@ async function fillOrderTypeFilterUI(){
 
       const projRow = document.createElement("tr");
       projRow.className = "project-row";
+      projRow.classList.add("project-topline"); // ✅ altijd een bovenlijn voor de order/project
       let lastRowOfProject = projRow; // <-- ook meteen B1 (zie hieronder)
       markZebra(projRow);
       const left = document.createElement("td");
       left.className = "rowhdr sticky-left project-cell";
+      left.classList.add("project-topline-cell");
+      if (projRow.classList.contains("project-bottomline")) left.classList.add("project-bottomline-cell");
       left.innerHTML = `
         <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
         <span class="projtext" data-proj="${escapeAttr(pid)}">
@@ -1090,8 +1124,8 @@ for (const dd of dates) {
       prod += entry.productie.size;
       mont += entry.montage.size;
 
-      if (entry.productie.has(String(DUMMY_EMP_ID)) || entry.productie.has(Number(DUMMY_EMP_ID))) dummyProd = true;
-      if (entry.montage.has(String(DUMMY_EMP_ID)) || entry.montage.has(Number(DUMMY_EMP_ID))) dummyMont = true;
+      if (setHasConcept(entry.productie)) dummyProd = true;
+      if (setHasConcept(entry.montage)) dummyMont = true;
     }
   }
 
@@ -1233,6 +1267,14 @@ for (const dd of dates) {
     }
       }
       if (lastRowOfProject) lastRowOfProject.classList.add("project-bottomline");
+      // ✅ ook linker kolom mee laten tekenen
+      const leftCell = lastRowOfProject?.querySelector("td.rowhdr");
+      if (leftCell) leftCell.classList.add("project-bottomline-cell");
+
+      // ✅ voor de project header zelf ook altijd bovenlijn (zekerheid)
+      const projLeft = projRow?.querySelector("td.project-cell");
+      if (projLeft) projLeft.classList.add("project-topline-cell");
+
 
     }
 
@@ -1764,173 +1806,166 @@ const totals = {
 
 
       const renderBothLists = () => {
-  listProd.innerHTML = "";
-  listMont.innerHTML = "";
+        listProd.innerHTML = "";
+        listMont.innerHTML = "";
 
-  const busySet = busyByDay.get(dateISO) || new Set();
+        const busySet = busyByDay.get(dateISO) || new Set();
 
-  // werknemers die al gekozen zijn altijd blijven tonen
-  const keepVisible = new Set([
-    ...Array.from(selected.productie),
-    ...Array.from(selected.montage),
-  ]);
+        const keepVisible = new Set([
+          ...Array.from(selected.productie),
+          ...Array.from(selected.montage),
+        ]);
 
-  // helper: haal beschikbaarheid (uren) uit capByEmp
-  const getAvailHours = (eid) => {
-    const empCap = capByEmp.get(String(eid)) || new Map();
-    return Number(empCap.get(dateISO) || 0);
-  };
+        // welke concept-id's bestaan er al in werknemers?
+        const usedConceptIds = new Set(
+          (werknemers || [])
+            .map(w => String(w?.[empIdKey] ?? "").trim())
+            .filter(id => isConceptId(id))
+        );
 
-  // =========================
-  // A) Echte medewerkers
-  // =========================
-  for (const w of (werknemers || [])) {
-    const eid = String(w?.[empIdKey] ?? "").trim();
-    const name = String(w?.[empNameKey] ?? eid).trim();
-    if (!eid) continue;
 
-    // concepten renderen we onderaan in sectie B
-    if (isConceptId(eid)) continue;
+        const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
 
-    const availHours = getAvailHours(eid);
-    const isAvailable = availHours > 0;
-    const isBusy = busySet.has(eid);
-    const mustShow = keepVisible.has(eid);
+        for (const w of werknemers || []) {
+          const eid = String(w?.[empIdKey] ?? "").trim();
+          const name = String(w?.[empNameKey] ?? eid).trim();
+          if (!eid) continue;
+          if (isConceptId(eid)) continue; // concepten renderen we apart onderaan (met +)
 
-    // Alleen tonen als:
-    // - beschikbaar (uren > 0) én niet busy
-    // - OF al geselecteerd (mustShow)
-    // Dummy's hadden we vroeger; nu is dat concepten → die staan in sectie B.
-    const shouldHide = (!mustShow) && (!isAvailable || isBusy);
-    if (shouldHide) continue;
 
-    // --- Productie rij ---
-    const rowP = document.createElement("label");
-    rowP.className = "assign-item";
-    rowP.innerHTML = `
-      <input type="checkbox" ${selected.productie.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="productie" />
-      <span>${escapeHtml(name)}</span>
-    `;
-    rowP.querySelector("input").onchange = (e) => {
-      const id = String(e.target.dataset.eid || "");
-      if (!id) return;
+          const empCap = capByEmp.get(String(eid)) || new Map();
+          const availHours = Number(empCap.get(dateISO) || 0);
 
-      if (e.target.checked) {
-        selected.montage.delete(id);
-        const other = listMont?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
-        if (other) other.checked = false;
-        selected.productie.add(id);
-      } else {
-        selected.productie.delete(id);
-      }
-    };
-    listProd.appendChild(rowP);
+          const isAvailable = availHours > 0;
+          const isBusy = busySet.has(eid);
+          const mustShow = keepVisible.has(eid);
 
-    // --- Montage rij ---
-    const rowM = document.createElement("label");
-    rowM.className = "assign-item";
-    rowM.innerHTML = `
-      <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
-      <span>${escapeHtml(name)}</span>
-    `;
-    rowM.querySelector("input").onchange = (e) => {
-      const id = String(e.target.dataset.eid || "");
-      if (!id) return;
+          // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
+          const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
+          if (shouldHide) continue;
 
-      if (e.target.checked) {
-        selected.productie.delete(id);
-        const other = listProd?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
-        if (other) other.checked = false;
-        selected.montage.add(id);
-      } else {
-        selected.montage.delete(id);
-      }
-    };
-    listMont.appendChild(rowM);
+          // --- Productie rij ---
+          const rowP = document.createElement("label");
+          rowP.className = "assign-item";
+          rowP.innerHTML = `
+            <input type="checkbox" ${selected.productie.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="productie" />
+            <span>${escapeHtml(name)}</span>
+          `;
+          rowP.querySelector("input").onchange = (e) => {
+            const id = String(e.target.dataset.eid || "");
+            if (!id) return;
+
+            if (e.target.checked) {
+              selected.montage.delete(id);
+              const other = listMont?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
+              if (other) other.checked = false;
+              selected.productie.add(id);
+            } else {
+              selected.productie.delete(id);
+            }
+          };
+          listProd.appendChild(rowP);
+
+          // --- Montage rij ---
+          const rowM = document.createElement("label");
+          rowM.className = "assign-item";
+          rowM.innerHTML = `
+            <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
+            <span>${escapeHtml(name)}</span>
+          `;
+          rowM.querySelector("input").onchange = (e) => {
+            const id = String(e.target.dataset.eid || "");
+            if (!id) return;
+
+            if (e.target.checked) {
+              selected.productie.delete(id);
+              const other = listProd?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
+              if (other) other.checked = false;
+              selected.montage.add(id);
+            } else {
+              selected.montage.delete(id);
+            }
+          };
+          listMont.appendChild(rowM);
+        }
+      
+      const ensureConceptEmployee = (id) => {
+  const cid = Number(id);
+  if (!werknemers.some(w => String(w.id) === String(cid))) {
+    werknemers.push({ id: cid, name: conceptNameFromId(cid) });
   }
+};
 
-  // =========================
-  // B) Concept medewerkers (+ knop)
-  // =========================
-  const conceptUsedIds = new Set();
+const usedIds = new Set((werknemers || []).map(w => String(w.id)));
 
-  // al geselecteerde concepten + concepten die al in werknemers zitten
-  for (const id of keepVisible) if (isConceptId(id)) conceptUsedIds.add(String(id));
-  for (const w of (werknemers || [])) {
-    const eid = String(w?.[empIdKey] ?? "").trim();
-    if (isConceptId(eid)) conceptUsedIds.add(String(eid));
-  }
+    function renderConceptColumn(listEl, type /* "productie"|"montage" */){
+      // concept IDs uit werknemers -> sorteer 999999, 999998, ...
+      const conceptIds = (werknemers || [])
+        .map(w => String(w?.id ?? w?.[empIdKey] ?? "")) // jouw werknemers hebben id
+        .filter(x => x && isConceptId(x))
+        .sort((a,b)=>Number(b)-Number(a));
 
-  const renderConceptItem = (eid, name, col /* "prod"|"mont" */) => {
-    const list = (col === "prod") ? listProd : listMont;
-    const set  = (col === "prod") ? selected.productie : selected.montage;
-    const otherSet = (col === "prod") ? selected.montage : selected.productie;
-    const otherList = (col === "prod") ? listMont : listProd;
+      // altijd Concept 1 tonen
+      if (!conceptIds.includes(String(CONCEPT_FIRST_ID))) conceptIds.unshift(String(CONCEPT_FIRST_ID));
 
-    const row = document.createElement("label");
-    row.className = "assign-item concept-item";
-    row.innerHTML = `
-      <input type="checkbox" ${set.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="${col === "prod" ? "productie" : "montage"}" />
-      <span>${escapeHtml(name)}</span>
-    `;
-    row.querySelector("input").onchange = (e) => {
-      const id = String(e.target.dataset.eid || "");
-      if (!id) return;
+      conceptIds.forEach((cid) => {
+        const name = conceptNameFromId(cid);
+        const showPlus = (Number(cid) === CONCEPT_FIRST_ID);
 
-      if (e.target.checked) {
-        otherSet.delete(id);
-        const other = otherList?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
-        if (other) other.checked = false;
-        set.add(id);
-      } else {
-        set.delete(id);
-      }
-    };
-    list.appendChild(row);
-  };
+        const row = document.createElement("label");
+        row.className = "assign-item";
+        row.innerHTML = `
+          <input type="checkbox" ${selected[type].has(cid) ? "checked" : ""} data-eid="${escapeAttr(cid)}" data-type="${type}" />
+          <span style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px;">
+            <span>${escapeHtml(name)}</span>
+            ${showPlus ? `<button type="button" class="btn small concept-plus" data-col="${type}">＋</button>` : ``}
+          </span>
+        `;
 
-  // toon bestaande concepten (die al geselecteerd zijn of al bestaan)
-  const conceptIdsSorted = Array.from(conceptUsedIds)
-    .map(x => Number(x))
-    .filter(Number.isFinite)
-    .sort((a,b)=>b-a) // 999999,999998,...
-    .map(String);
+        row.querySelector("input").onchange = (e) => {
+          const id = String(e.target.dataset.eid || "");
+          if (!id) return;
 
-  for (const cid of conceptIdsSorted) {
-    const name = conceptNameFromId(cid);
-    // concepten tonen in beide kolommen (zodat je kan kiezen prod/mont)
-    renderConceptItem(cid, name, "prod");
-    renderConceptItem(cid, name, "mont");
-  }
+          if (e.target.checked) {
+            const otherType = (type === "productie") ? "montage" : "productie";
+            selected[otherType].delete(id);
+            const otherList = (otherType === "productie") ? listProd : listMont;
+            const other = otherList?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
+            if (other) other.checked = false;
 
-  // + knop (maakt volgende concept aan)
-  const addBtnP = document.createElement("button");
-  addBtnP.type = "button";
-  addBtnP.className = "btn small concept-add";
-  addBtnP.textContent = "+ concept";
-  addBtnP.onclick = () => {
-    const nextId = nextConceptId(new Set(conceptIdsSorted));
-    if (!nextId) return;
-    const cid = String(nextId);
-    const name = conceptNameFromId(cid);
+            selected[type].add(id);
+          } else {
+            selected[type].delete(id);
+          }
+        };
 
-    // voeg toe aan werknemers-lijst zodat later in render cap/tooltip etc. bekend is
-    if (!werknemers.some(w => String(w?.[empIdKey]) === cid)) {
-      werknemers.push({ [empIdKey]: Number(cid), [empNameKey]: name });
+        const plus = row.querySelector(".concept-plus");
+        if (plus) {
+          plus.onclick = () => {
+            const newId = nextConceptId(usedIds);
+            if (!newId) { alert("Geen concept-IDs meer beschikbaar."); return; }
+            usedIds.add(String(newId));
+            ensureConceptEmployee(newId);
+
+            // direct selecteren in deze kolom
+            selected[type].add(String(newId));
+
+            // opnieuw renderen
+            renderBothLists();
+          };
+        }
+
+        listEl.appendChild(row);
+      });
     }
 
-    // meteen renderen + selecteren in productie (default)
-    renderConceptItem(cid, name, "prod");
-    renderConceptItem(cid, name, "mont");
-  };
+    renderConceptColumn(listProd, "productie");
+    renderConceptColumn(listMont, "montage");
 
-  // Plaats de + knop alleen één keer onderaan (bijv. productie kolom)
-  const wrapBtn = document.createElement("div");
-  wrapBtn.style.marginTop = "10px";
-  wrapBtn.appendChild(addBtnP);
-  listProd.appendChild(wrapBtn);
-};
-renderBothLists();
+      };
+
+
+    renderBothLists();
 
 
 
@@ -2025,19 +2060,7 @@ renderBothLists();
   });
 
 
-  // capacity dropdown (Totaal ▶ / ▼)
-  gridEl.querySelectorAll(".cap-expander").forEach(btn => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      const key = String(btn.dataset.cap || "");
-      const open = btn.classList.toggle("open");
-      btn.textContent = open ? "▼" : "▶";
-      toggleRowsByKey(key, open);
-      applyZebraVisible();
-   
 
-    });
-  });
 
   function bindExpandersAndClicks(){
 
@@ -2124,12 +2147,14 @@ renderBothLists();
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
-    // ... hier komen al je listeners ...
+    // ✅ NA mount: expander listeners opnieuw binden (project/sectie/order/capaciteit)
+    bindExpandersAndClicks();
 
     applyZebraVisible();
 
     // ✅ NA alles: state terugzetten
     restoreOpenState();
+
 
   }
 
@@ -2502,6 +2527,10 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
 
     const td = document.createElement("td");
+    // ✅ project scheidingslijnen op TD (altijd zichtbaar)
+    if (tr.classList.contains("project-topline")) td.classList.add("project-topline-cell");
+    if (tr.classList.contains("project-bottomline")) td.classList.add("project-bottomline-cell");
+
     td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
 
     // cel-kleur
@@ -2664,23 +2693,31 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       }
     }
 
-function appendOrderDayCells(tr, dates, leverISO){
-  for (const d of dates) {
-    const iso = toISODate(d);
+    function appendOrderDayCells(tr, dates, leverISO){
+      const isTop = tr.classList.contains("order-topline");
+      const isBottom = tr.classList.contains("order-bottomline");
 
-    const td = document.createElement("td");
-    td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+      for (const d of dates) {
+        const iso = toISODate(d);
 
-    if (leverISO && iso === leverISO) {
-      td.classList.add("bar-order");
-      td.innerHTML = `<div class="bar bar-order">lever</div>`;
-    } else {
-      td.innerHTML = "";
+        const td = document.createElement("td");
+        td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+        // ✅ extra classes zodat CSS altijd kan tekenen
+        if (isTop) td.classList.add("order-topline-cell");
+        if (isBottom) td.classList.add("order-bottomline-cell");
+
+        if (leverISO && iso === leverISO) {
+          td.classList.add("bar-order");
+          td.innerHTML = `<div class="bar bar-order">lever</div>`;
+        } else {
+          td.innerHTML = "";
+        }
+
+        tr.appendChild(td);
+      }
     }
 
-    tr.appendChild(td);
-  }
-}
 
 function applyZebraVisible(){
   const tbody = gridEl?.querySelector(".planner-table tbody");
