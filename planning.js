@@ -1251,6 +1251,52 @@ for (const dd of dates) {
 
     }
       }
+
+      
+    // ======================
+    // ✅ EXTRA "↳ Montage" SAMENVATTINGSREGEL PER PROJECT
+    // (alleen tonen als er montage-uren bestaan in dit project)
+    // ======================
+    const hasMontageHours = (secList || []).some(s => {
+      const v =
+        Number(s?.uren_montage ?? s?.uren_mont ?? s?.uren_montage_prod ?? 0);
+      return v > 0;
+    });
+
+    // fallback: als uren niet gevuld zijn, check of er montage gepland staat in assignments
+    const hasMontagePlanned = dates.some(dd => {
+      const iso = toISODate(dd);
+      return Number(projAssignByDay?.[iso]?.mont || 0) > 0;
+    });
+
+    if (hasMontageHours || hasMontagePlanned) {
+      // bouw project-level montage telling per dag (geaggregeerd uit alle secties)
+      const projMontByDay = {};
+      for (const dd of dates) {
+        const iso = toISODate(dd);
+        projMontByDay[iso] = {
+          mont: Number(projAssignByDay?.[iso]?.mont || 0),
+          dummyMont: !!projAssignByDay?.[iso]?.dummyMont
+        };
+      }
+
+      const montRow = document.createElement("tr");
+      montRow.className = "section-row hidden montage-summary-row";
+      montRow.dataset.parent = String(pid);
+      markZebra(montRow);
+
+      const leftM = document.createElement("td");
+      leftM.className = "rowhdr sticky-left section-cell";
+      leftM.innerHTML = `<span class="sectext">↳ Montage</span>`;
+      montRow.appendChild(leftM);
+
+      appendProjectMontageSummaryDayCells(montRow, dates, projMontByDay);
+
+      tbody.appendChild(montRow);
+      lastRowOfProject = montRow;
+    }
+
+
       if (lastRowOfProject) lastRowOfProject.classList.add("project-bottomline");
       // ✅ ook linker kolom mee laten tekenen
       const leftCell = lastRowOfProject?.querySelector("td.rowhdr");
@@ -2670,6 +2716,53 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
             const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
             html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
           }
+        }
+
+        html += `</div>`;
+        td.innerHTML = html;
+        tr.appendChild(td);
+      }
+    }
+
+    function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}) {
+      // projMontByDay[iso] = { mont:number, dummyMont:boolean }
+      const keys = dates.map(d => {
+        const iso = toISODate(d);
+        const mont = Number(projMontByDay?.[iso]?.mont || 0);
+        return mont > 0 ? "mont" : "";
+      });
+
+      for (let i = 0; i < dates.length; i++) {
+        const d = dates[i];
+        const iso = toISODate(d);
+
+        const mont = Number(projMontByDay?.[iso]?.mont || 0);
+        const dummyMont = !!projMontByDay?.[iso]?.dummyMont;
+
+        const key = keys[i];
+        const prevKey = (i > 0) ? keys[i - 1] : "";
+        const nextKey = (i < keys.length - 1) ? keys[i + 1] : "";
+
+        const td = document.createElement("td");
+        td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+        let html = `<div class="plan-stack">`;
+
+        // vaste hoogte zoals je andere cellen
+        html += `<div class="marker-row">`;
+        html += `<div class="marker delivery placeholder">lever</div>`;
+        html += `<div class="marker deadline placeholder">oplever</div>`;
+        html += `</div>`;
+
+        if (key) {
+          const isStart = key !== prevKey;
+          const isEnd = key !== nextKey;
+          const startCls = isStart ? " bar-start" : "";
+          const endCls = isEnd ? " bar-end" : "";
+          const dummyCls = dummyMont ? " dummy-hatch" : "";
+
+          // label alleen aan het begin van een run
+          html += `<div class="bar bar-mont${startCls}${endCls}${dummyCls}">${isStart ? "mon" : "&nbsp;"}</div>`;
         }
 
         html += `</div>`;
