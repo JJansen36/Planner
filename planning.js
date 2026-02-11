@@ -1055,6 +1055,8 @@ async function fillOrderTypeFilterUI(){
       markZebra(projRow);
       const left = document.createElement("td");
       left.className = "rowhdr sticky-left project-cell";
+      left.classList.add("project-topline-cell");
+      if (projRow.classList.contains("project-bottomline")) left.classList.add("project-bottomline-cell");
       left.innerHTML = `
         <button class="expander" data-proj="${escapeAttr(pid)}" aria-label="toggle">▶</button>
         <span class="projtext" data-proj="${escapeAttr(pid)}">
@@ -1233,6 +1235,14 @@ for (const dd of dates) {
     }
       }
       if (lastRowOfProject) lastRowOfProject.classList.add("project-bottomline");
+      // ✅ ook linker kolom mee laten tekenen
+      const leftCell = lastRowOfProject?.querySelector("td.rowhdr");
+      if (leftCell) leftCell.classList.add("project-bottomline-cell");
+
+      // ✅ voor de project header zelf ook altijd bovenlijn (zekerheid)
+      const projLeft = projRow?.querySelector("td.project-cell");
+      if (projLeft) projLeft.classList.add("project-topline-cell");
+
 
     }
 
@@ -2411,6 +2421,10 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
 
     const td = document.createElement("td");
+    // ✅ project scheidingslijnen op TD (altijd zichtbaar)
+    if (tr.classList.contains("project-topline")) td.classList.add("project-topline-cell");
+    if (tr.classList.contains("project-bottomline")) td.classList.add("project-bottomline-cell");
+
     td.dataset.proj = tr.querySelector(".expander")?.dataset?.proj || "";
 
     // cel-kleur
