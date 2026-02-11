@@ -1050,6 +1050,7 @@ async function fillOrderTypeFilterUI(){
 
 
       const projRow = document.createElement("tr");
+      let lastRowOfProject = projRow; // <-- ook meteen B1 (zie hieronder)
       projRow.className = "project-row";
       markZebra(projRow);
       const left = document.createElement("td");
@@ -1115,6 +1116,7 @@ for (const dd of dates) {
 
   appendProjectDayCells(projRow, dates, projLabels, complISO, deliveryISO, projAssignByDay);
   tbody.appendChild(projRow);
+  lastRowOfProject = secRow;
 
 
   // section rows (hidden by default)
@@ -1193,6 +1195,8 @@ for (const dd of dates) {
       orderRow.appendChild(tdLeft);
       appendOrderDayCells(orderRow, dates, oh.leverISO);
       tbody.appendChild(orderRow);
+      lastRowOfProject = orderRow;
+
 
       // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
       // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
@@ -1221,10 +1225,14 @@ for (const dd of dates) {
       appendOrderDayCells(lineRow, dates, leverLineISO);
 
       tbody.appendChild(lineRow);
+      lastRowOfProject = lineRow;
+
     });
 
     }
-      }}
+      }
+      if (lastRowOfProject) lastRowOfProject.classList.add("project-bottomline");
+    }
 
     // CAPACITY BLOCK
   tbody.appendChild(spacerRow(dates.length));
