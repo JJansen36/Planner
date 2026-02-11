@@ -1116,7 +1116,7 @@ for (const dd of dates) {
 
   appendProjectDayCells(projRow, dates, projLabels, complISO, deliveryISO, projAssignByDay);
   tbody.appendChild(projRow);
-  let lastRowOfProject = projRow;             // ✅ HIER pas initialiseren
+  lastRowOfProject = projRow;     // ✅ alleen assignen (mag ook weg, is al projRow)
 
 
   // section rows (hidden by default)
@@ -1233,6 +1233,7 @@ for (const dd of dates) {
     }
       }
       if (lastRowOfProject) lastRowOfProject.classList.add("project-bottomline");
+
     }
 
     // CAPACITY BLOCK
