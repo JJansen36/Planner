@@ -639,11 +639,24 @@ async function fillOrderTypeFilterUI(){
       .gte("work_date", startISO)
       .lte("work_date", endISO)
       .limit(200000);
-
+      
+    
     // Als tabel nog niet bestaat of er zijn geen rechten, wil je de planner niet "slopen".
     // We gaan dan verder zonder assignments.
     const safeAssigns = aErr ? [] : (assigns || []);
     if (aErr) console.warn("section_assignments niet geladen:", aErr.message);
+
+    // 6b) project_assignments in range (projectniveau planning zoals "↳ Montage"-regel)
+    const { data: pAssigns, error: paErr } = await sb
+      .from("project_assignments")
+      .select("project_id, work_date, werknemer_id, work_type")
+      .gte("work_date", startISO)
+      .lte("work_date", endISO)
+      .limit(200000);
+
+    const safePAssigns = paErr ? [] : (pAssigns || []);
+    if (paErr) console.warn("project_assignments niet geladen:", paErr.message);
+
 
     statusEl.textContent = "";
 
@@ -657,7 +670,8 @@ async function fillOrderTypeFilterUI(){
       werknemers,
       werknemersCap,
       assigns: safeAssigns,
-      orders // ✅ nieuw
+      pAssigns: safePAssigns,
+      orders
     });
 
 
@@ -705,8 +719,7 @@ async function fillOrderTypeFilterUI(){
 
 
     // -------- RENDER --------
-    function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, orders }){
-
+    function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders }) {
 
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
@@ -911,6 +924,37 @@ async function fillOrderTypeFilterUI(){
         for (const id of (entry.montage || [])) set.add(String(id));
       }
     }
+
+
+    // ======================
+// projectAssignMap: project_id -> dateISO -> { productie:Set, montage:Set, dummyProd:number, dummyMont:number }
+// ======================
+const projectAssignMap = new Map();
+
+for (const a of (pAssigns || [])) {
+  const pid = String(a.project_id || "").trim();
+  const d   = String(a.work_date || "").trim();
+  const emp = String(a.werknemer_id ?? "").trim();
+  const wt  = String(a.work_type || "").toLowerCase().trim();
+  if (!pid || !d || !emp || !wt) continue;
+
+  if (!projectAssignMap.has(pid)) projectAssignMap.set(pid, new Map());
+  const dmP = projectAssignMap.get(pid);
+
+  if (!dmP.has(d)) dmP.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
+  const entry = dmP.get(d);
+
+  const isDummy = (emp === String(DUMMY_EMP_ID));
+
+  if (wt === "productie") {
+    if (isDummy) entry.dummyProd += 1;
+    else entry.productie.add(emp);
+  }
+  if (wt === "montage") {
+    if (isDummy) entry.dummyMont += 1;
+    else entry.montage.add(emp);
+  }
+}
 
     // capacity: per werknemer per dag  (KEYS ALS STRING!)
     const capByEmp = new Map(); // empIdStr -> dateISO -> sumHours
@@ -1252,7 +1296,7 @@ for (const dd of dates) {
     }
       }
 
-      
+
     // ======================
     // ✅ EXTRA "↳ Montage" SAMENVATTINGSREGEL PER PROJECT
     // (alleen tonen als er montage-uren bestaan in dit project)
@@ -1290,7 +1334,8 @@ for (const dd of dates) {
       leftM.innerHTML = `<span class="sectext">↳ Montage</span>`;
       montRow.appendChild(leftM);
 
-      appendProjectMontageSummaryDayCells(montRow, dates, projMontByDay);
+      appendProjectMontageSummaryDayCells(montRow, dates, projMontByDay, String(pid));
+
 
       tbody.appendChild(montRow);
       lastRowOfProject = montRow;
@@ -1809,6 +1854,147 @@ const totals = {
       modal.wrap.classList.add("show");
       return;
     }
+// ======================
+// ✅ klik op project-montage regel (↳ Montage) => zelfde modal, opslaan naar project_assignments
+// ======================
+const ptd = ev.target.closest("td.project-montage-click");
+if (ptd) {
+  const projectId = String(ptd.dataset.projectId || "");
+  const dateISO   = String(ptd.dataset.workDate || "");
+  if (!projectId || !dateISO) return;
+
+  const modal = ensureAssignModal();
+  modal.wrap.classList.add("show");
+
+  // current selection uit projectAssignMap
+  const cur = projectAssignMap.get(projectId)?.get(dateISO) || { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 };
+
+  const selected = {
+    productie: new Set(cur.productie),
+    montage: new Set(cur.montage),
+    dummyProd: Number(cur.dummyProd || 0),
+    dummyMont: Number(cur.dummyMont || 0),
+  };
+
+  const subEl   = modal.wrap.querySelector("#amSub");
+  const listProd = modal.wrap.querySelector("#amListProd");
+  const listMont = modal.wrap.querySelector("#amListMont");
+  const saveBtn  = modal.wrap.querySelector("#amSave");
+
+  if (subEl) subEl.textContent = `${dateISO} • ${projectId} • Montage (project)`;
+
+  // hergebruik jouw bestaande renderBothLists() (zelfde als sectie)
+  // TIP: haal jouw renderBothLists() functie omhoog zodat je hem 2x kunt gebruiken.
+  // Snelste: kopieer renderBothLists() uit je sectie branch, en plak hem hier 1-op-1.
+  const renderBothLists = () => {
+    listProd.innerHTML = "";
+    listMont.innerHTML = "";
+
+    const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
+
+    for (const w of werknemers || []) {
+      const eid = String(w?.id ?? "").trim();
+      const name = String(w?.name ?? eid).trim();
+      if (!eid) continue;
+
+      // ✅ bij projectniveau: GEEN busy filter op secties
+      // (anders kun je nooit meerdere secties tegelijk plannen)
+      const empCap = capByEmp.get(String(eid)) || new Map();
+      const availHours = Number(empCap.get(dateISO) || 0);
+      const isAvailable = isDummy(eid) ? true : (availHours > 0);
+
+      // alleen verbergen als niet beschikbaar én niet geselecteerd (dummy nooit verbergen)
+      const mustShow = selected.productie.has(eid) || selected.montage.has(eid);
+      if (!isDummy(eid) && !mustShow && !isAvailable) continue;
+
+      // ✅ Concept teller i.p.v. checkbox
+      if (isDummy(eid)) {
+        const rowM = document.createElement("div");
+        rowM.className = "assign-item";
+        rowM.style.display = "flex";
+        rowM.style.justifyContent = "space-between";
+        rowM.style.alignItems = "center";
+        rowM.innerHTML = `
+          <span>${escapeHtml(name)}</span>
+          <span style="display:flex; gap:6px; align-items:center;">
+            <button type="button" class="btn small">−</button>
+            <span style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
+            <button type="button" class="btn small">+</button>
+          </span>
+        `;
+        const minusM = rowM.querySelectorAll("button")[0];
+        const plusM  = rowM.querySelectorAll("button")[1];
+        const countM = rowM.querySelectorAll("span")[1];
+
+        plusM.onclick  = () => { selected.dummyMont = Number(selected.dummyMont || 0) + 1; countM.textContent = String(selected.dummyMont); };
+        minusM.onclick = () => { selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1); countM.textContent = String(selected.dummyMont); };
+
+        // ✅ bij project-montage wil je eigenlijk alleen montage-kolom tonen:
+        // daarom alleen in listMont plaatsen
+        listMont.appendChild(rowM);
+        continue;
+      }
+
+      // Montage checkbox
+      const rowM = document.createElement("label");
+      rowM.className = "assign-item";
+      rowM.innerHTML = `
+        <input type="checkbox" ${selected.montage.has(eid) ? "checked" : ""} data-eid="${escapeAttr(eid)}" data-type="montage" />
+        <span>${escapeHtml(name)}</span>
+      `;
+      rowM.querySelector("input").onchange = (e) => {
+        const id = String(e.target.dataset.eid || "");
+        if (!id) return;
+        if (e.target.checked) selected.montage.add(id);
+        else selected.montage.delete(id);
+      };
+      listMont.appendChild(rowM);
+    }
+
+    // optioneel: verberg productie-kolom visueel
+    listProd.innerHTML = `<div class="muted" style="padding:8px;">(n.v.t.)</div>`;
+  };
+
+  renderBothLists();
+
+  saveBtn.onclick = async () => {
+    // delete bestaande projectniveau planning voor deze dag
+    const del = await sb
+      .from("project_assignments")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("work_date", dateISO);
+
+    if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+
+    const rows = [];
+
+    for (const eid of selected.montage) {
+      const werknemerId = Number(eid);
+      if (!Number.isFinite(werknemerId)) {
+        alert(`Onjuiste werknemer_id (geen getal): "${eid}".`);
+        return;
+      }
+      rows.push({ project_id: projectId, work_date: dateISO, werknemer_id: werknemerId, work_type: "montage" });
+    }
+
+    // concepten (dummy) meerdere keren opslaan
+    const dummyMontCount = Number(selected.dummyMont || 0);
+    for (let i = 0; i < dummyMontCount; i++) {
+      rows.push({ project_id: projectId, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
+    }
+
+    if (rows.length) {
+      const ins = await sb.from("project_assignments").insert(rows);
+      if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+    }
+
+    modal.close();
+    loadAndRender();
+  };
+
+  return;
+}
 
       const td = ev.target.closest("td.section-click");
       if (!td) return;
@@ -2724,7 +2910,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       }
     }
 
-    function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}) {
+    function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}, projectId = "") {
+
       // projMontByDay[iso] = { mont:number, dummyMont:boolean }
       const keys = dates.map(d => {
         const iso = toISODate(d);
@@ -2745,6 +2932,10 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
         const td = document.createElement("td");
         td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+        td.classList.add("project-montage-click");
+        td.dataset.projectId = String(projectId || "");
+        td.dataset.workDate = iso;
+
 
         let html = `<div class="plan-stack">`;
 
