@@ -1135,28 +1135,12 @@ td.section-click[data-tip]:hover::before{
 .projline2{ font-weight:600; opacity:.9; margin-top:2px; }
 
 
-/* duidelijke scheiding rond orders */
-tr.order-row td,
-tr.order-row th {
-  border-top: 2px solid #94a3b8; /* blauwgrijs, pas aan naar smaak */
+tr.order-bottomline > td,
+tr.order-bottomline > th{
+  border-bottom: 3px solid #f102dd !important;
 }
 
-tr.order-line-row.last-in-order td,
-tr.order-line-row.last-in-order th {
-  border-bottom: 2px solid #94a3b8;
-}
-
-/* optioneel: iets meer ruimte voor orderblok */
-tr.order-row td.rowhdr {
-  padding-top: 6px;
-}
-tr.order-line-row.last-in-order td.rowhdr {
-  padding-bottom: 6px;
-}
-tr.order-topline > td{
-  box-shadow: inset 0 10px 0 #f102dd;
-}
-
-tr.order-bottomline > td{
-  box-shadow: inset 0 10px 0 #f102dd;
+tr.order-topline > td,
+tr.order-topline > th{
+  border-top: 3px solid #f102dd !important;
 }
