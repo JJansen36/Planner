@@ -885,7 +885,7 @@ async function fillOrderTypeFilterUI(){
       if (!dmA.has(d)) dmA.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
       const entry = dmA.get(d);
 
-      const isDummy = (emp === String(DUMMY_EMP_ID)) || isConceptId(emp);
+      const isDummy = (emp === String(DUMMY_EMP_ID));
 
       if (wt === "productie") {
         if (isDummy) entry.dummyProd += 1;
@@ -1736,17 +1736,8 @@ const totals = {
             });
           }
         }
-        
-        // ✅ Concepten: meerdere rijen met hetzelfde dummy-id (tellen mee als extra persoon)
-        const dummyProdCount = Number(selected.dummyProd || 0);
-        const dummyMontCount = Number(selected.dummyMont || 0);
 
-        for (let i = 0; i < dummyProdCount; i++) {
-          rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "productie" });
-        }
-        for (let i = 0; i < dummyMontCount; i++) {
-          rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
-        }
+
 
         // Eerst oude weekregels weg, dan nieuwe erin (veilig zonder unieke constraints)
         const del = await sb
@@ -1970,6 +1961,17 @@ if (isDummy(eid)) {
           return;
         }
         rows.push({ section_id: sid, work_date: dateISO, werknemer_id: werknemerId, work_type: "montage" });
+      }
+
+            // ✅ Concepten (dummy) als meerdere regels opslaan
+      const dummyProdCount = Number(selected.dummyProd || 0);
+      const dummyMontCount = Number(selected.dummyMont || 0);
+
+      for (let i = 0; i < dummyProdCount; i++) {
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "productie" });
+      }
+      for (let i = 0; i < dummyMontCount; i++) {
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
       }
 
 
@@ -2600,8 +2602,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
         // tooltip met namen
         const entry = assignMap?.get(String(sectionId))?.get(iso);
-        const dummyProd = entry?.productie?.has(String(DUMMY_EMP_ID)) || entry?.productie?.has(Number(DUMMY_EMP_ID));
-        const dummyMont = entry?.montage?.has(String(DUMMY_EMP_ID)) || entry?.montage?.has(Number(DUMMY_EMP_ID));
+        const dummyProd = (entry?.dummyProd || 0) > 0;
+        const dummyMont = (entry?.dummyMont || 0) > 0;
 
         if (entry) {
           const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
