@@ -112,9 +112,24 @@ function restoreOpenState(){
 
   // ---- Settings (uitbreidbaar) ----
   const SETTINGS_KEY = "lovd_planner_settings_v1";
-  // ===== Dummy medewerker (virtuele inhuur) =====
-  const DUMMY_EMP_ID = 999999;
-  const DUMMY_EMP_NAME = "Concept";
+// ===== Concept medewerkers (virtuele inhuur) =====
+const CONCEPT_FIRST_ID = 999999;   // Concept 1
+const CONCEPT_MIN_ID   = 999900;   // reserve-range 999900..999999
+
+const isConceptId = (wid) => {
+  const n = Number(wid);
+  return Number.isFinite(n) && n >= CONCEPT_MIN_ID && n <= CONCEPT_FIRST_ID;
+};
+const conceptIndexFromId = (id) => (CONCEPT_FIRST_ID - Number(id) + 1); // 999999->1, 999998->2, ...
+const conceptNameFromId  = (id) => `Concept ${conceptIndexFromId(id)}`;
+
+function nextConceptId(usedIdsSet){
+  for (let id = CONCEPT_FIRST_ID; id >= CONCEPT_MIN_ID; id--){
+    if (!usedIdsSet.has(String(id))) return id;
+  }
+  return null;
+}
+
 
 const defaultSettings = {
   planFactor: 0.80, // 80%
@@ -182,7 +197,7 @@ function buildPlannedSetsByDay(planningItems){
 
     if (!out[d]) out[d] = { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
 
-    const isDummy = String(wid) === String(DUMMY_EMP_ID);
+    const isDummy = isConceptId(wid);
 
     if (isDummy) {
       if (bucket === "pro") out[d].dummyPro += 1;
@@ -549,7 +564,7 @@ async function fillOrderTypeFilterUI(){
     const { data: projecten, error: pErr } = await sb
       .from("projecten")
       .select("*")
-      .in("salesstatus", [4,5,6,7,8])
+      .in("salesstatus", [3,4,5,6,7,8])
       .gte("completiondate", todayISO)
       .order("offerno", { ascending: true })
       .limit(500);
@@ -624,13 +639,24 @@ async function fillOrderTypeFilterUI(){
       .limit(500);
 
     if (eErr) { statusEl.textContent = "Fout werknemers: " + eErr.message; return; }
-    // ✅ Dummy medewerker toevoegen (altijd beschikbaar in UI)
-    if (!werknemers.some(w => String(w.id) === String(DUMMY_EMP_ID))) {
-      werknemers.push({ id: DUMMY_EMP_ID, name: DUMMY_EMP_NAME });
+
+    // ✅ Concept-medewerkers virtueel toevoegen op basis van assignments + altijd Concept 1
+    const seenConceptIds = new Set([String(CONCEPT_FIRST_ID)]);
+    for (const a of (safeAssigns || [])) {
+      const wid = a?.werknemer_id;
+      if (isConceptId(wid)) seenConceptIds.add(String(wid));
     }
 
-    // ✅ Voor capaciteit: dummy NIET meenemen
-    const werknemersCap = (werknemers || []).filter(w => String(w.id) !== String(DUMMY_EMP_ID));
+    // zorg dat ze in werknemers zitten
+    for (const cid of seenConceptIds) {
+      if (!werknemers.some(w => String(w.id) === String(cid))) {
+        werknemers.push({ id: Number(cid), name: conceptNameFromId(cid) });
+      }
+    }
+
+    // ✅ Voor capaciteit: concepten NIET meenemen
+    const werknemersCap = (werknemers || []).filter(w => !isConceptId(w.id));
+
 
         // 6) section_assignments in range (collega's per sectie/dag + type)
     const { data: assigns, error: aErr } = await sb
@@ -911,7 +937,8 @@ async function fillOrderTypeFilterUI(){
       const t = String(r.type || "werk");
       const sign = (t === "werk") ? 1 : 1;
 
-      if (!empStr || !d) continue;
+      if (isConceptId(empStr)) continue;
+
 
       if (!capByEmp.has(empStr)) capByEmp.set(empStr, new Map());
       const dm = capByEmp.get(empStr);
@@ -1028,6 +1055,10 @@ async function fillOrderTypeFilterUI(){
     // TBODY
     const tbody = document.createElement("tbody");
 
+    const setHasConcept = (set) => {
+      for (const x of (set || [])) if (isConceptId(x)) return true;
+      return false;
+    };
 
 
     // Projects + sections (expand/collapse)
@@ -1093,8 +1124,8 @@ for (const dd of dates) {
       prod += entry.productie.size;
       mont += entry.montage.size;
 
-      if (entry.productie.has(String(DUMMY_EMP_ID)) || entry.productie.has(Number(DUMMY_EMP_ID))) dummyProd = true;
-      if (entry.montage.has(String(DUMMY_EMP_ID)) || entry.montage.has(Number(DUMMY_EMP_ID))) dummyMont = true;
+      if (setHasConcept(entry.productie)) dummyProd = true;
+      if (setHasConcept(entry.montage)) dummyMont = true;
     }
   }
 
@@ -1785,22 +1816,15 @@ const totals = {
           ...Array.from(selected.montage),
         ]);
 
-        const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
+        // welke concept-id's bestaan er al in werknemers?
+        const usedConceptIds = new Set(
+          (werknemers || [])
+            .map(w => String(w?.[empIdKey] ?? "").trim())
+            .filter(id => isConceptId(id))
+        );
 
-        for (const w of werknemers || []) {
-          const eid = String(w?.[empIdKey] ?? "").trim();
-          const name = String(w?.[empNameKey] ?? eid).trim();
-          if (!eid) continue;
+        const shouldHide = (!mustShow) && (!isAvailable || isBusy);
 
-          const empCap = capByEmp.get(String(eid)) || new Map();
-          const availHours = Number(empCap.get(dateISO) || 0);
-
-          const isAvailable = availHours > 0;
-          const isBusy = busySet.has(eid);
-          const mustShow = keepVisible.has(eid);
-
-          // Dummy nooit verbergen; rest: alleen tonen als beschikbaar of al geselecteerd, en niet busy
-          const shouldHide = (!isDummy(eid)) && (!mustShow) && (!isAvailable || isBusy);
           if (shouldHide) continue;
 
           // --- Productie rij ---
@@ -1847,6 +1871,80 @@ const totals = {
           };
           listMont.appendChild(rowM);
         }
+      
+      const ensureConceptEmployee = (id) => {
+  const cid = Number(id);
+  if (!werknemers.some(w => String(w.id) === String(cid))) {
+    werknemers.push({ id: cid, name: conceptNameFromId(cid) });
+  }
+};
+
+const usedIds = new Set((werknemers || []).map(w => String(w.id)));
+
+    function renderConceptColumn(listEl, type /* "productie"|"montage" */){
+      // concept IDs uit werknemers -> sorteer 999999, 999998, ...
+      const conceptIds = (werknemers || [])
+        .map(w => String(w?.id ?? w?.[empIdKey] ?? "")) // jouw werknemers hebben id
+        .filter(x => x && isConceptId(x))
+        .sort((a,b)=>Number(b)-Number(a));
+
+      // altijd Concept 1 tonen
+      if (!conceptIds.includes(String(CONCEPT_FIRST_ID))) conceptIds.unshift(String(CONCEPT_FIRST_ID));
+
+      conceptIds.forEach((cid) => {
+        const name = conceptNameFromId(cid);
+        const showPlus = (Number(cid) === CONCEPT_FIRST_ID);
+
+        const row = document.createElement("label");
+        row.className = "assign-item";
+        row.innerHTML = `
+          <input type="checkbox" ${selected[type].has(cid) ? "checked" : ""} data-eid="${escapeAttr(cid)}" data-type="${type}" />
+          <span style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px;">
+            <span>${escapeHtml(name)}</span>
+            ${showPlus ? `<button type="button" class="btn small concept-plus" data-col="${type}">＋</button>` : ``}
+          </span>
+        `;
+
+        row.querySelector("input").onchange = (e) => {
+          const id = String(e.target.dataset.eid || "");
+          if (!id) return;
+
+          if (e.target.checked) {
+            const otherType = (type === "productie") ? "montage" : "productie";
+            selected[otherType].delete(id);
+            const otherList = (otherType === "productie") ? listProd : listMont;
+            const other = otherList?.querySelector(`input[data-eid="${cssEsc(id)}"]`);
+            if (other) other.checked = false;
+
+            selected[type].add(id);
+          } else {
+            selected[type].delete(id);
+          }
+        };
+
+        const plus = row.querySelector(".concept-plus");
+        if (plus) {
+          plus.onclick = () => {
+            const newId = nextConceptId(usedIds);
+            if (!newId) { alert("Geen concept-IDs meer beschikbaar."); return; }
+            usedIds.add(String(newId));
+            ensureConceptEmployee(newId);
+
+            // direct selecteren in deze kolom
+            selected[type].add(String(newId));
+
+            // opnieuw renderen
+            renderBothLists();
+          };
+        }
+
+        listEl.appendChild(row);
+      });
+    }
+
+    renderConceptColumn(listProd, "productie");
+    renderConceptColumn(listMont, "montage");
+
       };
 
 
