@@ -1268,12 +1268,10 @@ for (const dd of dates) {
       lastRowOfProject = orderRow;
 
 
-      // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
-      // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
+
     const items = (oh.items || []);
     items.forEach((it, idx) => {
-      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
-
+      const isLast = (idx === items.length - 1);
 
       const lineRow = document.createElement("tr");
       lineRow.className = "order-line-row hidden";
@@ -1295,11 +1293,10 @@ for (const dd of dates) {
       const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
       appendOrderDayCells(lineRow, dates, leverLineISO, pid, projectAssignMap);
 
-
       tbody.appendChild(lineRow);
       lastRowOfProject = lineRow;
-
     });
+
 
     }
       }
