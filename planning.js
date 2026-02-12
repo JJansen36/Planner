@@ -885,7 +885,8 @@ async function fillOrderTypeFilterUI(){
     const assignMap = new Map();
 
     for (const a of assigns || []) {
-      const sid = String(a.section_id || "").trim();
+      const rawSid = String(a.section_id || "").trim();
+      const sid = sectLookup.get(rawSid) || rawSid;   // ✅ canoniek
       const d   = String(a.work_date || "").trim();
       const emp = String(a.werknemer_id ?? "").trim();
       const wt  = String(a.work_type || "").toLowerCase().trim();
@@ -910,6 +911,7 @@ async function fillOrderTypeFilterUI(){
         else entry.montage.add(emp);
       }
     }
+
 
 
     // busyByDay: dateISO -> Set(empId) (ongeacht type)
@@ -1146,7 +1148,9 @@ for (const dd of dates) {
       : (s?.section_id ? String(s.section_id) : null);
     if (!sid) continue;
 
-    const entry = assignMap.get(String(sid))?.get(iso);
+    const sidC = sectLookup.get(String(sid)) || String(sid);
+    const entry = assignMap.get(sidC)?.get(iso);
+
     if (entry) {
       prod += entry.productie.size + (entry.dummyProd || 0);
       mont += entry.montage.size + (entry.dummyMont || 0);
