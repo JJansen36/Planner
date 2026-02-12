@@ -691,9 +691,9 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
   font-weight:400 !important;
   line-height:1.1;
 }
-.planner-table td.balance-cell.pos{ background:#5cc06d !important; }
-.planner-table td.balance-cell.neg{ background:#873232 !important; }
-.planner-table td.balance-cell.zero{ background:#f4c153 !important; }
+.planner-table td.balance-cell.pos{ background:#c7f7cf !important; }
+.planner-table td.balance-cell.neg{ background:#ffc6c6 !important; }
+.planner-table td.balance-cell.zero{ background:#ffe7b5 !important; }
 
 /* =========================
    ZEBRA (clean, predictable)
