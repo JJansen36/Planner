@@ -1263,7 +1263,7 @@ for (const dd of dates) {
         `<span class="sectext"> ↳ Bestelling ${escapeHtml(oh.bn)}</span>`;
 
       orderRow.appendChild(tdLeft);
-      appendOrderDayCells(orderRow, dates, oh.leverISO);
+      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
       tbody.appendChild(orderRow);
       lastRowOfProject = orderRow;
 
@@ -1272,7 +1272,8 @@ for (const dd of dates) {
       // 2) Orderregel-rijen (1 rij per orderregel) — standaard verborgen
     const items = (oh.items || []);
     items.forEach((it, idx) => {
-      const isLast = idx === items.length - 1;
+      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
+
 
       const lineRow = document.createElement("tr");
       lineRow.className = "order-line-row hidden";
@@ -1292,7 +1293,8 @@ for (const dd of dates) {
       lineRow.appendChild(tdL);
 
       const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
-      appendOrderDayCells(lineRow, dates, leverLineISO);
+      appendOrderDayCells(lineRow, dates, leverLineISO, pid, projectAssignMap);
+
 
       tbody.appendChild(lineRow);
       lastRowOfProject = lineRow;
@@ -2986,30 +2988,76 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       }
     }
 
-    function appendOrderDayCells(tr, dates, leverISO){
-      const isTop = tr.classList.contains("order-topline");
-      const isBottom = tr.classList.contains("order-bottomline");
+function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
+  const isTop = tr.classList.contains("order-topline");
+  const isBottom = tr.classList.contains("order-bottomline");
 
-      for (const d of dates) {
-        const iso = toISODate(d);
+  // keys op basis van project_assignments (voor start/eind van een run)
+  const keys = dates.map(d => {
+    const iso = toISODate(d);
+    const e = projectAssignMap?.get(String(pid))?.get(iso);
+    const prod = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
+    const mont = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
 
-        const td = document.createElement("td");
-        td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+    if (prod > 0 && mont > 0) return "both";
+    if (prod > 0) return "prod";
+    if (mont > 0) return "mont";
+    return "";
+  });
 
-        // ✅ extra classes zodat CSS altijd kan tekenen
-        if (isTop) td.classList.add("order-topline-cell");
-        if (isBottom) td.classList.add("order-bottomline-cell");
+  for (let i=0;i<dates.length;i++){
+    const d = dates[i];
+    const iso = toISODate(d);
 
-        if (leverISO && iso === leverISO) {
-          td.classList.add("bar-order");
-          td.innerHTML = `<div class="bar bar-order">lever</div>`;
-        } else {
-          td.innerHTML = "";
-        }
+    const key = keys[i];
+    const prevKey = (i>0) ? keys[i-1] : "";
+    const nextKey = (i<keys.length-1) ? keys[i+1] : "";
 
-        tr.appendChild(td);
+    const e = projectAssignMap?.get(String(pid))?.get(iso);
+    const dummyProd = !!(e && (e.dummyProd || 0) > 0);
+    const dummyMont = !!(e && (e.dummyMont || 0) > 0);
+
+    const td = document.createElement("td");
+    td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
+
+    if (isTop) td.classList.add("order-topline-cell");
+    if (isBottom) td.classList.add("order-bottomline-cell");
+
+    // basis kleur op type
+    if (key === "both") td.classList.add("bar-both");
+    else if (key === "prod") td.classList.add("bar-prod");
+    else if (key === "mont") td.classList.add("bar-mont");
+
+    let html = `<div class="plan-stack">`;
+
+    // lever marker (zoals nu)
+    if (leverISO && iso === leverISO) {
+      html += `<div class="bar bar-order">lever</div>`;
+    }
+
+    // montage/productie balkjes (projectniveau) — alleen aan begin van een run tekst
+    if (key) {
+      const isStart = key !== prevKey;
+      const isEnd   = key !== nextKey;
+      const startCls = isStart ? " bar-start" : "";
+      const endCls   = isEnd   ? " bar-end"   : "";
+
+      if (key === "both") {
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
+      } else if (key === "prod") {
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
+      } else if (key === "mont") {
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
       }
     }
+
+    html += `</div>`;
+    td.innerHTML = html;
+    tr.appendChild(td);
+  }
+}
+
 
 
 function applyZebraVisible(){
