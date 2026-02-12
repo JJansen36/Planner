@@ -1078,7 +1078,7 @@ td.section-click[data-tip]:hover::before{
 }
 
 .cap-cell.cap-assigned-mont{
-  background: rgba(236,72,153,.18);  /* roze/paarsig */
+  background: #f6c1f3;  /* roze/paarsig */
 }
 
 /* Beide types op 1 dag (komt zelden voor, maar kan) */
