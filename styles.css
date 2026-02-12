@@ -1165,4 +1165,11 @@ tr.project-topline > th{
   box-shadow: inset 0 2px 0 #626262 !important;
 }
 
-.bar { font-size: 11px; font-weight: 700; }
+.bar { font-size: 11px; font-weight: 400; }
+
+/* Concept / inhuur (dummy) moet er “niet-definitief” uitzien */
+.bar.dummy-hatch{
+  outline: 2px dashed rgba(0,0,0,.35);
+  outline-offset: -2px;
+  border-radius: 10px; /* match je bar rounding */
+}
