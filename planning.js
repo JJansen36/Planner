@@ -992,7 +992,9 @@ for (const a of (pAssigns || [])) {
     const plannedProdByDay = {};
     const plannedMontByDay = {};
 
-    const plannedSetsByDay = buildPlannedSetsByDay(assigns || []);
+    // ✅ ook projectniveau mee nemen (↳ Montage / ↳ Productie)
+    const plannedSetsByDay = buildPlannedSetsByDay([...(assigns || []), ...(pAssigns || [])]);
+
     const pf = (settings.planFactor ?? 1);
 
     for (const d of dates) {
@@ -1311,22 +1313,27 @@ for (const dd of dates) {
       return v > 0;
     });
 
-    // fallback: als uren niet gevuld zijn, check of er montage gepland staat in assignments
-    const hasMontagePlanned = dates.some(dd => {
+    // ✅ check project_assignments (↳ Montage regel)
+    const hasProjectMontPlanned = dates.some(dd => {
       const iso = toISODate(dd);
-      return Number(projAssignByDay?.[iso]?.mont || 0) > 0;
+      const e = projectAssignMap.get(String(pid))?.get(iso);
+      const montCnt = (e ? (e.montage.size + (e.dummyMont || 0)) : 0);
+      return montCnt > 0;
     });
 
-    if (hasMontageHours || hasMontagePlanned) {
-      // bouw project-level montage telling per dag (geaggregeerd uit alle secties)
-      const projMontByDay = {};
-      for (const dd of dates) {
-        const iso = toISODate(dd);
-        projMontByDay[iso] = {
-          mont: Number(projAssignByDay?.[iso]?.mont || 0),
-          dummyMont: !!projAssignByDay?.[iso]?.dummyMont
-        };
-      }
+    if (hasMontageHours || hasMontagePlanned || hasProjectMontPlanned) {
+    // ✅ project-level montage telling per dag uit project_assignments (↳ Montage regel)
+    const projMontByDay = {};
+    for (const dd of dates) {
+      const iso = toISODate(dd);
+
+      const e = projectAssignMap.get(String(pid))?.get(iso);
+      const montCnt = e ? (e.montage.size + (e.dummyMont || 0)) : 0;
+      const dummy = e ? (Number(e.dummyMont || 0) > 0) : false;
+
+      projMontByDay[iso] = { mont: montCnt, dummyMont: dummy };
+    }
+
 
       const montRow = document.createElement("tr");
       montRow.className = "section-row hidden montage-summary-row";
