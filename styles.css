@@ -1173,3 +1173,14 @@ tr.project-topline > th{
   outline-offset: -2px;
   border-radius: 10px;
 }
+
+
+/* Cijfer exact in het midden van het blokje */
+.planner-table .bar{
+  display: flex;
+  align-items: center;      /* verticaal midden */
+  justify-content: center;  /* horizontaal midden */
+  line-height: 1;
+  text-align: center;
+  padding: 0 !important;    /* voorkomt “scheef” door padding */
+}
