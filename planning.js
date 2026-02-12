@@ -2955,7 +2955,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
     function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}, projectId = "") {
 
-      // projMontByDay[iso] = { mont:number, dummyMont:boolean }
+      // key: wel/geen montage zodat start/einde afgerond blijft
       const keys = dates.map(d => {
         const iso = toISODate(d);
         const mont = Number(projMontByDay?.[iso]?.mont || 0);
@@ -2979,24 +2979,23 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         td.dataset.projectId = String(projectId || "");
         td.dataset.workDate = iso;
 
-
         let html = `<div class="plan-stack">`;
 
         // vaste hoogte zoals je andere cellen
-        html += `<div class="marker-row">`;
-        html += `<div class="marker delivery placeholder">lever</div>`;
-        html += `<div class="marker deadline placeholder">oplever</div>`;
-        html += `</div>`;
+        html += `<div class="marker-row">
+          <div class="marker delivery placeholder">lever</div>
+          <div class="marker deadline placeholder">oplever</div>
+        </div>`;
 
         if (key) {
           const isStart = key !== prevKey;
-          const isEnd = key !== nextKey;
+          const isEnd   = key !== nextKey;
           const startCls = isStart ? " bar-start" : "";
-          const endCls = isEnd ? " bar-end" : "";
+          const endCls   = isEnd   ? " bar-end"   : "";
           const dummyCls = dummyMont ? " dummy-hatch" : "";
 
-          // label alleen aan het begin van een run
-          html += `<div class="bar bar-mont${startCls}${endCls}${dummyCls}">${isStart ? "mon" : "&nbsp;"}</div>`;
+          // ✅ altijd het aantal tonen (niet "mon" en niet alleen bij start)
+          html += `<div class="bar bar-mont${startCls}${endCls}${dummyCls}">${mont}</div>`;
         }
 
         html += `</div>`;
@@ -3004,6 +3003,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         tr.appendChild(td);
       }
     }
+
 
 function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
   const isTop = tr.classList.contains("order-topline");
