@@ -1916,27 +1916,18 @@ if (ptd) {
         rowM.style.display = "flex";
         rowM.style.justifyContent = "space-between";
         rowM.style.alignItems = "center";
-        rowM.innerHTML = `
-          <span>${escapeHtml(name)}</span>
-          <span style="display:flex; gap:6px; align-items:center;">
-            <button type="button" class="btn small">−</button>
-            <span style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
-            <button type="button" class="btn small">+</button>
-          </span>
-        `;
-        const minusM = rowM.querySelector("button:nth-of-type(1)");
-        const plusM  = rowM.querySelector("button:nth-of-type(2)");
-        const countM = rowM.querySelector("span.concept-count"); // ✅ dit is alleen het cijfer
+rowM.innerHTML = `
+  <span>${escapeHtml(name)}</span>
+  <span style="display:flex; gap:6px; align-items:center;">
+    <button type="button" class="btn small concept-minus">−</button>
+    <span class="concept-count" style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
+    <button type="button" class="btn small concept-plus">+</button>
+  </span>
+`;
 
-        plusM.onclick = () => {
-          selected.dummyMont = Number(selected.dummyMont || 0) + 1;
-          countM.textContent = String(selected.dummyMont);
-        };
-
-        minusM.onclick = () => {
-          selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1);
-          countM.textContent = String(selected.dummyMont);
-        };
+const minusM = rowM.querySelector(".concept-minus");
+const plusM  = rowM.querySelector(".concept-plus");
+const countM = rowM.querySelector(".concept-count");
 
 
         plusM.onclick  = () => { selected.dummyMont = Number(selected.dummyMont || 0) + 1; countM.textContent = String(selected.dummyMont); };
@@ -2112,14 +2103,14 @@ if (ptd) {
         rowM.style.display = "flex";
         rowM.style.justifyContent = "space-between";
         rowM.style.alignItems = "center";
-          rowM.innerHTML = `
-            <span>${escapeHtml(name)}</span>
-            <span style="display:flex; gap:6px; align-items:center;">
-              <button type="button" class="btn small">−</button>
-              <span class="concept-count" style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
-              <button type="button" class="btn small">+</button>
-            </span>
-          `;
+        rowM.innerHTML = `
+          <span>${escapeHtml(name)}</span>
+          <span style="display:flex; gap:6px; align-items:center;">
+            <button type="button" class="btn small concept-minus">−</button>
+            <span class="concept-count" style="min-width:18px; text-align:center;">${Number(selected.dummyMont || 0)}</span>
+            <button type="button" class="btn small concept-plus">+</button>
+          </span>
+        `;
 
         const minusM = rowM.querySelector(".concept-minus");
         const plusM  = rowM.querySelector(".concept-plus");
@@ -2133,6 +2124,7 @@ if (ptd) {
           selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1);
           countM.textContent = String(selected.dummyMont);
         };
+
 
         listMont.appendChild(rowM);
 
