@@ -112,10 +112,13 @@ function restoreOpenState(){
 
   // ---- Settings (uitbreidbaar) ----
   const SETTINGS_KEY = "lovd_planner_settings_v1";
-  // ===== Dummy medewerker (virtuele inhuur) =====
+
+  
   const DUMMY_EMP_ID = 999999;
+  const DUMMY_SEC_ID = 999998;
   const DUMMY_EMP_NAME = "Concept";
-  // ===== Inhuur =====
+
+  
   const INHUUR_TABLE = "inhuur_krachten";
   const INHUUR_ENTRIES_TABLE = "inhuur_entries";
 
@@ -186,14 +189,17 @@ function buildPlannedSetsByDay(planningItems){
 
     if (!out[d]) out[d] = { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
 
-    const isDummy = String(wid) === String(DUMMY_EMP_ID);
+    const isProjectDummy = (String(wid) === String(DUMMY_EMP_ID));
+    const isSectionDummy = (String(wid) === String(DUMMY_SEC_ID));
 
-    if (isDummy) {
-      if (bucket === "pro") out[d].dummyPro += 1;
-      if (bucket === "mo")  out[d].dummyMo  += 1;
-    } else {
-      out[d][bucket].add(String(wid));
-    }
+
+
+if (isProjectDummy || isSectionDummy) {
+  if (bucket === "pro") out[d].dummyPro += 1;
+  if (bucket === "mo")  out[d].dummyMo  += 1;
+} else {
+  out[d][bucket].add(String(wid));
+}
   }
 
   return out;
@@ -1147,17 +1153,18 @@ async function openInhuurModalAtWeek(wkStart){
       if (!dmA.has(d)) dmA.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
       const entry = dmA.get(d);
 
-      const isDummy = (emp === String(DUMMY_EMP_ID));
+      const isDummy = (emp === String(DUMMY_SEC_ID)); // ✅ sectie dummy alleen
+
 
       if (wt === "productie") {
         if (isDummy) entry.dummyProd += 1;
         else entry.productie.add(emp);
       }
-
       if (wt === "montage") {
         if (isDummy) entry.dummyMont += 1;
         else entry.montage.add(emp);
       }
+
     }
 
 
@@ -1194,7 +1201,8 @@ for (const a of (pAssigns || [])) {
   if (!dmP.has(d)) dmP.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
   const entry = dmP.get(d);
 
-  const isDummy = (emp === String(DUMMY_EMP_ID));
+  const isDummy = (emp === String(DUMMY_EMP_ID)); // ✅ project dummy alleen
+
 
   if (wt === "productie") {
     if (isDummy) entry.dummyProd += 1;
@@ -2240,7 +2248,7 @@ if (ptd) {
     listProd.innerHTML = "";
     listMont.innerHTML = "";
 
-    const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
+    const isDummy = (eid) => String(eid) === String(DUMMY_SEC_ID);
 
     for (const w of werknemers || []) {
       const eid = String(w?.id ?? "").trim();
@@ -2572,10 +2580,10 @@ const countM = rowM.querySelector(".concept-count");
       const dummyMontCount = Number(selected.dummyMont || 0);
 
       for (let i = 0; i < dummyProdCount; i++) {
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "productie" });
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "productie" });
       }
       for (let i = 0; i < dummyMontCount; i++) {
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "montage" });
       }
 
 
