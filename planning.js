@@ -1141,9 +1141,11 @@ for (const a of (pAssigns || [])) {
 
 for (const dd of dates) {
   const iso = toISODate(dd);
-  let prod = 0, mont = 0;
-  let dummyProd = false, dummyMont = false; // ✅ FIX
 
+  let prod = 0, mont = 0;
+  let dummyProd = false, dummyMont = false;
+
+  // 1) sectie-niveau (section_assignments)
   for (const s of secs) {
     const sid = s?.[sectIdKey]
       ? String(s[sectIdKey])
@@ -1159,12 +1161,22 @@ for (const dd of dates) {
 
       if ((entry.dummyProd || 0) > 0) dummyProd = true;
       if ((entry.dummyMont || 0) > 0) dummyMont = true;
-
     }
+  }
+
+  // 2) project-niveau (project_assignments)  ✅ dit miste
+  const pe = projectAssignMap.get(String(pid))?.get(iso);
+  if (pe) {
+    prod += pe.productie.size + (pe.dummyProd || 0);
+    mont += pe.montage.size + (pe.dummyMont || 0);
+
+    if ((pe.dummyProd || 0) > 0) dummyProd = true;
+    if ((pe.dummyMont || 0) > 0) dummyMont = true;
   }
 
   projAssignByDay[iso] = { prod, mont, dummyProd, dummyMont };
 }
+
 
 
   // ✅ labels voor projectregel: op basis van assignments
