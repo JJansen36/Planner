@@ -2818,19 +2818,23 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       const dummyProd = !!assignByDay?.[iso]?.dummyProd;
       const dummyMont = !!assignByDay?.[iso]?.dummyMont;
 
-      // ✅ bij "both": 2 losse bars onder elkaar
-      if (key === "both") {
-        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
-        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
-      } else {
-        const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
-        const dummyCls =
-          (key === "prod" && dummyProd) ? " dummy-hatch" :
-          (key === "mont" && dummyMont) ? " dummy-hatch" : "";
+    if (key === "both") {
+      const prodTxt = prod > 0 ? String(prod) : "&nbsp;";
+      const montTxt = mont > 0 ? String(mont) : "&nbsp;";
 
-        // let op: class bar-prod / bar-mont toevoegen zodat kleur 100% klopt
-        const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
-        html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
+      html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodTxt}</div>`;
+      html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${montTxt}</div>`;
+    } else if (key === "prod") {
+      const prodTxt = prod > 0 ? String(prod) : "&nbsp;";
+      const dummyCls = dummyProd ? " dummy-hatch" : "";
+      html += `<div class="bar bar-prod${startCls}${endCls}${dummyCls}">${prodTxt}</div>`;
+    } else if (key === "mont") {
+      const montTxt = mont > 0 ? String(mont) : "&nbsp;";
+      const dummyCls = dummyMont ? " dummy-hatch" : "";
+      html += `<div class="bar bar-mont${startCls}${endCls}${dummyCls}">${montTxt}</div>`;
+    } else if (key.startsWith("lbl:")) {
+      // als je labels hebt (bijv. andere soorten), laat je dit staan of maak je ook een getal
+      html += `<div class="bar${startCls}${endCls}">${escapeHtml(label)}</div>`;
       }
     }
 
@@ -2926,17 +2930,21 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
           // ✅ bij "both": 2 losse bars stacken
           if (key === "both") {
-            html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
-            html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
-          } else {
-            const txt = isStart ? (label || (key === "prod" ? "pro" : "mon")) : "&nbsp;";
-            const dummyCls =
-              (key === "prod" && dummyProd) ? " dummy-hatch" :
-              (key === "mont" && dummyMont) ? " dummy-hatch" : "";
+            const prodTxt = prod > 0 ? String(prod) : "&nbsp;";
+            const montTxt = mont > 0 ? String(mont) : "&nbsp;";
 
-            const typeCls = (key === "prod") ? " bar-prod" : (key === "mont") ? " bar-mont" : "";
-            html += `<div class="bar${typeCls}${startCls}${endCls}${dummyCls}">${txt}</div>`;
+            html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodTxt}</div>`;
+            html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${montTxt}</div>`;
+          } else if (key === "prod") {
+            const prodTxt = prod > 0 ? String(prod) : "&nbsp;";
+            html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodTxt}</div>`;
+          } else if (key === "mont") {
+            const montTxt = mont > 0 ? String(mont) : "&nbsp;";
+            html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${montTxt}</div>`;
+          } else if (key.startsWith("lbl:")) {
+            html += `<div class="bar${startCls}${endCls}">${escapeHtml(label)}</div>`;
           }
+
         }
 
         html += `</div>`;
@@ -3051,14 +3059,26 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
       const startCls = isStart ? " bar-start" : "";
       const endCls   = isEnd   ? " bar-end"   : "";
 
+    if (key) {
+      const isStart = key !== prevKey;
+      const isEnd   = key !== nextKey;
+      const startCls = isStart ? " bar-start" : "";
+      const endCls   = isEnd   ? " bar-end"   : "";
+
+      // tel per dag (project_assignments)
+      const prodCnt = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
+      const montCnt = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
+
       if (key === "both") {
-        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
-        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodCnt || "&nbsp;"}</div>`;
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${montCnt || "&nbsp;"}</div>`;
       } else if (key === "prod") {
-        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${isStart ? "pro" : "&nbsp;"}</div>`;
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodCnt || "&nbsp;"}</div>`;
       } else if (key === "mont") {
-        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${isStart ? "mon" : "&nbsp;"}</div>`;
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${montCnt || "&nbsp;"}</div>`;
       }
+    }
+
     }
 
     html += `</div>`;
