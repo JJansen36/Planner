@@ -1312,6 +1312,11 @@ for (const dd of dates) {
         Number(s?.uren_montage ?? s?.uren_mont ?? s?.uren_montage_prod ?? 0);
       return v > 0;
     });
+    // ✅ check montage gepland via secties (section_assignments)
+    const hasMontagePlanned = dates.some(dd => {
+      const iso = toISODate(dd);
+      return Number(projAssignByDay?.[iso]?.mont || 0) > 0;
+    });
 
     // ✅ check project_assignments (↳ Montage regel)
     const hasProjectMontPlanned = dates.some(dd => {
