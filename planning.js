@@ -1464,6 +1464,8 @@ for (const dd of dates) {
 
      applyZebraVisible();
 
+
+     
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
 
@@ -1922,9 +1924,20 @@ if (ptd) {
             <button type="button" class="btn small">+</button>
           </span>
         `;
-        const minusM = rowM.querySelectorAll("button")[0];
-        const plusM  = rowM.querySelectorAll("button")[1];
-        const countM = rowM.querySelectorAll("span")[1];
+        const minusM = rowM.querySelector("button:nth-of-type(1)");
+        const plusM  = rowM.querySelector("button:nth-of-type(2)");
+        const countM = rowM.querySelector("span.concept-count"); // ✅ dit is alleen het cijfer
+
+        plusM.onclick = () => {
+          selected.dummyMont = Number(selected.dummyMont || 0) + 1;
+          countM.textContent = String(selected.dummyMont);
+        };
+
+        minusM.onclick = () => {
+          selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1);
+          countM.textContent = String(selected.dummyMont);
+        };
+
 
         plusM.onclick  = () => { selected.dummyMont = Number(selected.dummyMont || 0) + 1; countM.textContent = String(selected.dummyMont); };
         minusM.onclick = () => { selected.dummyMont = Math.max(0, Number(selected.dummyMont || 0) - 1); countM.textContent = String(selected.dummyMont); };
@@ -2003,7 +2016,10 @@ if (ptd) {
       const dateISO = String(td.dataset.workDate || "");
       if (!sid || !dateISO) return;
 
-          // ALT+klik => sectie gegevens popup (laat assignments modal met gewone klik)
+      const sObj = sectById.get(sid);
+      const projectId = String(sObj?.[sectProjKey] || "");
+
+
 
 
 
@@ -2096,14 +2112,14 @@ if (ptd) {
         rowM.style.display = "flex";
         rowM.style.justifyContent = "space-between";
         rowM.style.alignItems = "center";
-        rowM.innerHTML = `
-          <span>${escapeHtml(name)}</span>
-          <span style="display:flex; gap:6px; align-items:center;">
-            <button type="button" class="btn small concept-minus">−</button>
-            <span class="concept-count" style="min-width:18px; text-align:center;">${Number(selected.dummyMont || 0)}</span>
-            <button type="button" class="btn small concept-plus">+</button>
-          </span>
-        `;
+          rowM.innerHTML = `
+            <span>${escapeHtml(name)}</span>
+            <span style="display:flex; gap:6px; align-items:center;">
+              <button type="button" class="btn small">−</button>
+              <span class="concept-count" style="min-width:18px; text-align:center;">${selected.dummyMont || 0}</span>
+              <button type="button" class="btn small">+</button>
+            </span>
+          `;
 
         const minusM = rowM.querySelector(".concept-minus");
         const plusM  = rowM.querySelector(".concept-plus");
