@@ -115,6 +115,10 @@ function restoreOpenState(){
   // ===== Dummy medewerker (virtuele inhuur) =====
   const DUMMY_EMP_ID = 999999;
   const DUMMY_EMP_NAME = "Concept";
+  // ===== Inhuur =====
+  const INHUUR_TABLE = "inhuur_krachten";
+  const INHUUR_ENTRIES_TABLE = "inhuur_entries";
+
 
 const defaultSettings = {
   planFactor: 0.80, // 80%
@@ -531,6 +535,203 @@ async function fillOrderTypeFilterUI(){
     return capModal;
   }
 
+// -------- INHUUR MODAL (uren per inhuur per week) --------
+let inhuurModal = null;
+
+function ensureInhuurModal(){
+  if (inhuurModal) return inhuurModal;
+
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.id = "inhuurModalBackdrop";
+  wrap.innerHTML = `
+    <div class="modal assign-modal" role="dialog" aria-modal="true">
+      <div class="hd">
+        <div>
+          <div class="assign-title">Inhuur plannen</div>
+          <div class="assign-sub" id="imSub"></div>
+        </div>
+        <button class="btn small" id="imClose" type="button">✕</button>
+      </div>
+
+      <div class="bd">
+        <div class="row" style="justify-content:space-between; gap:10px; align-items:center;">
+          <button class="btn small" id="imPrevWeek" type="button">◀ Week</button>
+          <div class="muted" id="imWeekLabel"></div>
+          <button class="btn small" id="imNextWeek" type="button">Week ▶</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row" style="gap:10px; align-items:center; margin:10px 0;">
+          <select class="input" id="imSelect" style="flex:1;"></select>
+          <button class="btn small" id="imNew" type="button">+ Nieuw</button>
+        </div>
+
+        <div id="imForm"></div>
+      </div>
+
+      <div class="ft">
+        <button class="btn" id="imCancel" type="button">Annuleren</button>
+        <button class="btn primary" id="imSave" type="button">Opslaan</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(wrap);
+
+  const close = () => wrap.classList.remove("show");
+  wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector("#imClose").onclick = close;
+  wrap.querySelector("#imCancel").onclick = close;
+
+  inhuurModal = { wrap, close };
+  return inhuurModal;
+}
+
+async function loadAllInhuurKrachtenForModal(){
+  const sel = document.getElementById("imSelect");
+  if (!sel) return;
+
+  const { data, error } = await sb
+    .from(INHUUR_TABLE)
+    .select("inhuur_id,name")
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .limit(5000);
+
+  if (error) {
+    console.warn("Fout inhuur_krachten modal:", error.message);
+    sel.innerHTML = `<option value="">(fout)</option>`;
+    return;
+  }
+
+  const opts = (data || []).map(r => `<option value="${r.inhuur_id}">${escapeHtml(r.name)}</option>`).join("");
+  sel.innerHTML = opts || `<option value="">(geen inhuur)</option>`;
+}
+
+async function openInhuurModalAtWeek(wkStart){
+  const modal = ensureInhuurModal();
+  const subEl = modal.wrap.querySelector("#imSub");
+  const weekLabelEl = modal.wrap.querySelector("#imWeekLabel");
+  const formEl = modal.wrap.querySelector("#imForm");
+  const selEl = modal.wrap.querySelector("#imSelect");
+
+  let curWkStart = startOfISOWeek(new Date(wkStart));
+
+  const buildWeekDays = () => {
+    const ds = [];
+    for (let i=0;i<7;i++) ds.push(addDays(curWkStart, i));
+    return ds;
+  };
+
+  const renderWeek = async () => {
+    const days = buildWeekDays();
+    const startISO = toISODate(days[0]);
+    const endISO = toISODate(days[6]);
+
+    if (subEl) subEl.textContent = `${startISO} t/m ${endISO}`;
+    if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
+
+    const iid = String(selEl.value || "");
+    formEl.innerHTML = `
+      <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
+        ${days.map(d=>{
+          const iso = toISODate(d);
+          return `
+            <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+            <div class="value">
+              <input class="input" type="text" inputmode="decimal" data-iso="${iso}" value="" placeholder="0" />
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    // load bestaande waarden
+    if (iid) {
+      const { data, error } = await sb
+        .from(INHUUR_ENTRIES_TABLE)
+        .select("work_date,hours")
+        .eq("inhuur_id", iid)
+        .gte("work_date", startISO)
+        .lte("work_date", endISO);
+
+      if (!error && data) {
+        const map = new Map(data.map(r => [String(r.work_date), Number(r.hours || 0)]));
+        formEl.querySelectorAll("input[data-iso]").forEach(inp => {
+          const iso = String(inp.dataset.iso || "");
+          const v = map.get(iso) || 0;
+          inp.value = v ? String(v).replace(".", ",") : "";
+        });
+      }
+    }
+
+    // input sanitation
+    formEl.querySelectorAll('input.input[data-iso]').forEach(inp => {
+      inp.addEventListener("input", () => {
+        inp.value = inp.value.replace(/[^0-9.,]/g, "");
+      });
+      inp.addEventListener("blur", () => { inp.value = inp.value.replace(".", ","); });
+    });
+  };
+
+  await loadAllInhuurKrachtenForModal();
+  await renderWeek();
+
+  modal.wrap.querySelector("#imPrevWeek").onclick = async () => { curWkStart = addDays(curWkStart, -7); await renderWeek(); };
+  modal.wrap.querySelector("#imNextWeek").onclick = async () => { curWkStart = addDays(curWkStart, +7); await renderWeek(); };
+
+  selEl.onchange = async () => { await renderWeek(); };
+
+  modal.wrap.querySelector("#imNew").onclick = async () => {
+    const name = prompt("Naam ingehuurde kracht:");
+    if (!name) return;
+    const { data, error } = await sb.from(INHUUR_TABLE).insert({ name: name.trim(), is_active: true }).select("inhuur_id").single();
+    if (error) { alert("Fout opslaan: " + error.message); return; }
+    await loadAllInhuurKrachtenForModal();
+    selEl.value = data.inhuur_id;
+    await renderWeek();
+  };
+
+  modal.wrap.querySelector("#imSave").onclick = async () => {
+    const iid = String(selEl.value || "");
+    if (!iid) { alert("Kies een ingehuurde kracht."); return; }
+
+    const days = buildWeekDays();
+    const startISO = toISODate(days[0]);
+    const endISO = toISODate(days[6]);
+
+    // delete week
+    const del = await sb
+      .from(INHUUR_ENTRIES_TABLE)
+      .delete()
+      .eq("inhuur_id", iid)
+      .gte("work_date", startISO)
+      .lte("work_date", endISO);
+
+    if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+
+    // insert new
+    const rows = [];
+    modal.wrap.querySelectorAll("#imForm input[data-iso]").forEach(inp => {
+      const iso = String(inp.dataset.iso || "");
+      const raw = String(inp.value || "").trim().replace(",", ".");
+      const h = raw ? Number(raw) : 0;
+      if (iso && h > 0) rows.push({ inhuur_id: iid, work_date: iso, hours: h });
+    });
+
+    if (rows.length) {
+      const ins = await sb.from(INHUUR_ENTRIES_TABLE).insert(rows);
+      if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+    }
+
+    modal.close();
+    loadAndRender(); // ✅ refresh zodat rij alleen verschijnt als in view
+  };
+
+  modal.wrap.classList.add("show");
+}
 
   // -------- DATA LOAD --------
   async function loadAndRender(){
@@ -613,6 +814,50 @@ async function fillOrderTypeFilterUI(){
       .lte("work_date", endISO)
       .limit(200000);
 
+      // 4b) inhuur_entries in range (alleen uren > 0) + bijbehorende namen
+      let inhuurEntries = [];
+      let inhuurPeopleVisible = [];
+
+      try {
+        const { data: iData, error: iErr } = await sb
+          .from(INHUUR_ENTRIES_TABLE)
+          .select("work_date, inhuur_id, hours")
+          .gt("hours", 0)
+          .gte("work_date", startISO)
+          .lte("work_date", endISO)
+          .limit(200000);
+
+        if (iErr) {
+          console.warn("Fout inhuur_entries:", iErr.message);
+          inhuurEntries = [];
+        } else {
+          inhuurEntries = iData || [];
+        }
+
+        const inhuurIds = [...new Set(inhuurEntries.map(r => r.inhuur_id).filter(Boolean))];
+
+        if (inhuurIds.length) {
+          const { data: pData, error: pErr } = await sb
+            .from(INHUUR_TABLE)
+            .select("inhuur_id, name")
+            .in("inhuur_id", inhuurIds)
+            .order("name", { ascending: true })
+            .limit(5000);
+
+          if (pErr) {
+            console.warn("Fout inhuur_krachten:", pErr.message);
+            inhuurPeopleVisible = [];
+          } else {
+            inhuurPeopleVisible = pData || [];
+          }
+        }
+      } catch (e) {
+        console.warn("Inhuur load exception:", e);
+        inhuurEntries = [];
+        inhuurPeopleVisible = [];
+      }
+
+
     if (cErr) { statusEl.textContent = "Fout capaciteit: " + cErr.message; return; }
 
     // 5) werknemers (voor namen in capaciteitblok)
@@ -671,7 +916,9 @@ async function fillOrderTypeFilterUI(){
       werknemersCap,
       assigns: safeAssigns,
       pAssigns: safePAssigns,
-      orders
+      orders,
+      inhuurEntries,
+      inhuurPeopleVisible
     });
 
 
@@ -719,7 +966,8 @@ async function fillOrderTypeFilterUI(){
 
 
     // -------- RENDER --------
-    function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders }) {
+    function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders, inhuurEntries, inhuurPeopleVisible }) {
+
 
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
@@ -985,6 +1233,33 @@ for (const a of (pAssigns || [])) {
       for(const [d,h] of dm){
         capTotalByDay[d] = (capTotalByDay[d] || 0) + h;
       }
+    }
+
+    // ===== Inhuur aggregatie (per inhuur_id per dag + totaal per dag) =====
+    const inhuurById = new Map(); // inhuur_id -> { name }
+    for (const p of (inhuurPeopleVisible || [])) {
+      inhuurById.set(String(p.inhuur_id), { name: String(p.name || "").trim() || "Inhuur" });
+    }
+
+    const inhuurByEmp = new Map(); // inhuur_id -> Map(dateISO -> hours)
+    const inhuurTotalByDay = {};   // dateISO -> hours
+
+    for (const r of (inhuurEntries || [])) {
+      const iid = String(r.inhuur_id || "").trim();
+      const d = String(r.work_date || "").trim();
+      const h = Number(r.hours || 0);
+      if (!iid || !d || !(h > 0)) continue;
+
+      if (!inhuurByEmp.has(iid)) inhuurByEmp.set(iid, new Map());
+      const dm = inhuurByEmp.get(iid);
+      dm.set(d, (dm.get(d) || 0) + h);
+
+      inhuurTotalByDay[d] = (inhuurTotalByDay[d] || 0) + h;
+    }
+
+    // ✅ Inhuur meenemen in "Uren beschikbaar" totals
+    for (const k of Object.keys(inhuurTotalByDay)) {
+      capTotalByDay[k] = (capTotalByDay[k] || 0) + (inhuurTotalByDay[k] || 0);
     }
 
 
@@ -1399,7 +1674,9 @@ for (const dd of dates) {
   tdTotalLeft.innerHTML = `
     <button class="expander cap-expander" data-cap="${capKey}" aria-label="toggle capaciteit">▶</button>
     <b>Uren beschikbaar</b>
+    <button class="btn small" id="btnInhuurPlus" type="button" style="margin-left:8px;">+</button>
   `;
+
   trTotal.appendChild(tdTotalLeft);
 
   // totalen per dag (som van alle medewerkers)
@@ -1456,6 +1733,41 @@ for (const dd of dates) {
       tbody.appendChild(tr);
     }
 
+    // ---- Inhuur rijen (alleen zichtbaar als er uren in view zijn) ----
+for (const [iid, dm] of (inhuurByEmp || new Map())) {
+  // extra zekerheid: geen uren => geen rij
+  let hasAny = false;
+  for (const d of dates) {
+    const iso = toISODate(d);
+    if (Number(dm.get(iso) || 0) > 0) { hasAny = true; break; }
+  }
+  if (!hasAny) continue;
+
+  const name = inhuurById.get(String(iid))?.name || "Inhuur";
+
+  const trI = document.createElement("tr");
+  trI.className = "cap-emp-row hidden";     // ✅ valt onder hetzelfde expand/collapse
+  trI.dataset.capParent = capKey;
+  markZebra(trI);
+
+  const leftI = document.createElement("td");
+  leftI.className = "rowhdr sticky-left cap-name";
+  leftI.innerHTML = `🧑‍🔧 ${escapeHtml(name)}`;
+  trI.appendChild(leftI);
+
+  for (const d of dates) {
+    const iso = toISODate(d);
+    const h = Number(dm.get(iso) || 0);
+
+    const td = document.createElement("td");
+    td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+    td.textContent = fmt0(h);
+    trI.appendChild(td);
+  }
+
+  tbody.appendChild(trI);
+}
+
 
 
     // Gepland productie
@@ -1495,6 +1807,15 @@ for (const dd of dates) {
      
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
+
+      // ✅ Inhuur "+" knop (naast Uren beschikbaar)
+      const inBtn = ev.target.closest("#btnInhuurPlus");
+      if (inBtn) {
+        ev.stopPropagation();
+        openInhuurModalAtWeek(new Date(rangeStart)); // start week van huidige view
+        return;
+      }
+
 
      // ✅ klik op bestelling pijltje => toon/verberg orderregel-rijen
     const obtn = ev.target.closest(".expander-order");
