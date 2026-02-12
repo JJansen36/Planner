@@ -631,13 +631,13 @@ td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
   inset:0;
   pointer-events:none;
   z-index:3;                 /* <-- belangrijk: bovenop bar + tekst */
-  background:repeating-linear-gradient(
+ /* background:repeating-linear-gradient(
     45deg,
     rgba(0,0,0,0.00) 0px,
     rgba(0,0,0,0.00) 6px,
-    rgba(0,0,0,0.18) 6px,     /* <-- donkerder: veel beter zichtbaar */
+    rgba(0,0,0,0.18) 6px,
     rgba(0,0,0,0.18) 10px
-  );
+  );*/
 }
 
 
