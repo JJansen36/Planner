@@ -969,7 +969,7 @@ async function openInhuurModalAtWeek(wkStart){
           tr.classList.toggle("zebra", (zebraIndex % 2) === 1);
           zebraIndex++;
         }
-        
+
 // hoeveel dummy's staan er NU op projectniveau?
 const dbg = await sb
   .from("project_assignments")
@@ -2725,20 +2725,7 @@ console.log("DBG deltaMont:", {
 
 await dbgProjectDummyMontageCount(projectId, dateISO);
 
-if (projectId && deltaMont !== 0) {
-  if (deltaMont > 0) {
-    console.log("DBG consumeProjectConceptMontage call:", { projectId, dateISO, deltaMont });
-    await consumeProjectConceptMontage(projectId, dateISO, deltaMont);
-  } else {
-    const addBack = Math.abs(deltaMont);
-    console.log("DBG add back dummy montage:", { projectId, dateISO, addBack });
-    for (let i = 0; i < addBack; i++) {
-      await addOneProjectDummyMontage(projectId, dateISO);
-    }
-  }
-}
 
-await dbgProjectDummyMontageCount(projectId, dateISO);
 
 
 
