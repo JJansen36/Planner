@@ -969,67 +969,66 @@ async function openInhuurModalAtWeek(wkStart){
           tr.classList.toggle("zebra", (zebraIndex % 2) === 1);
           zebraIndex++;
         }
+        
+// hoeveel dummy's staan er NU op projectniveau?
+const dbg = await sb
+  .from("project_assignments")
+  .select("id", { count: "exact", head: true })
+  .eq("project_id", projectId)
+  .eq("work_date", dateISO)
+  .eq("work_type", "montage")
+  .eq("werknemer_id", DUMMY_EMP_ID);
 
-        async function consumeProjectConceptMontage(projectId, dateISO, consumeCount){
-        try{
-          const pid = String(projectId || "").trim();
-          const d   = String(dateISO || "").trim();
-          const n   = Number(consumeCount || 0);
-          if (!pid || !d || n <= 0) return;
+console.log("[sectie-save] project dummy montage count BEFORE:", dbg.count);
 
-          // ✅ BETROUWBAAR tellen zonder data op te halen
-          const { count, error: cntErr } = await sb
-            .from("project_assignments")
-            .select("project_id", { count: "exact", head: true })
-            .eq("project_id", pid)
-            .eq("work_date", d)
-            .eq("work_type", "montage")
-            .eq("werknemer_id", Number(DUMMY_EMP_ID));
+ async function consumeProjectConceptMontage(projectId, dateISO, consumeCount){
+  try{
+    const pid = String(projectId || "").trim();
+    const d   = String(dateISO || "").trim();
+    const n   = Number(consumeCount || 0);
 
-          if (cntErr) {
-            console.warn("consumeProjectConceptMontage: count error", cntErr.message);
-            return;
-          }
+    if (!pid || !d || n <= 0) return;
 
-          const cur = Number(count || 0);
-          if (cur <= 0) return;
+    // 1) pak ID's van dummy montage rows (max N)
+    const { data: rows, error: selErr } = await sb
+      .from("project_assignments")
+      .select("id")
+      .eq("project_id", pid)
+      .eq("work_date", d)
+      .eq("work_type", "montage")
+      // LET OP: geen Number() gebruiken → exact dezelfde waarde als je insert
+      .eq("werknemer_id", DUMMY_EMP_ID)
+      .limit(n);
 
-          const keep = Math.max(0, cur - n);
+    if (selErr) {
+      console.warn("consumeProjectConceptMontage: select error", selErr.message);
+      return;
+    }
 
-          // delete alle dummy montage regels
-          const del = await sb
-            .from("project_assignments")
-            .delete()
-            .eq("project_id", pid)
-            .eq("work_date", d)
-            .eq("work_type", "montage")
-            .eq("werknemer_id", Number(DUMMY_EMP_ID));
+    const ids = (rows || []).map(r => r.id).filter(Boolean);
+    if (!ids.length) {
+      console.log("[consume] geen dummy montage om af te boeken", { pid, d, n });
+      return;
+    }
 
-          if (del.error) {
-            console.warn("consumeProjectConceptMontage: delete error", del.error.message);
-            return;
-          }
+    // 2) delete alleen die N rows
+    const { error: delErr } = await sb
+      .from("project_assignments")
+      .delete()
+      .in("id", ids);
 
-          // zet terug wat er nog moet blijven staan (keep)
-          if (keep > 0) {
-            const rows = Array.from({ length: keep }, () => ({
-              project_id: pid,
-              work_date: d,
-              werknemer_id: Number(DUMMY_EMP_ID),
-              work_type: "montage",
-            }));
+    if (delErr) {
+      console.warn("consumeProjectConceptMontage: delete error", delErr.message);
+      return;
+    }
 
-            const ins = await sb.from("project_assignments").insert(rows);
-            if (ins.error) {
-              console.warn("consumeProjectConceptMontage: insert error", ins.error.message);
-              return;
-            }
-          }
+    console.log("[consume] dummy montage afgeboekt:", ids.length, { pid, d });
 
-        } catch(e){
-          console.warn("consumeProjectConceptMontage exception:", e);
-        }
-      }
+  } catch(e){
+    console.warn("consumeProjectConceptMontage exception:", e);
+  }
+}
+
 
 
 
@@ -2712,6 +2711,11 @@ if (rows.length) {
 const newSectMontCount = Number(selected.montage.size || 0) + Number(dummyMontCount || 0);
 const deltaMont = newSectMontCount - Number(prevSectMontCount || 0);
 
+console.log("[sectie-save] prevSectMontCount:", prevSectMontCount);
+console.log("[sectie-save] newSectMontCount :", newSectMontCount);
+console.log("[sectie-save] deltaMont        :", deltaMont, { projectId, dateISO, sid });
+
+
 console.log("DBG deltaMont:", {
   sid, projectId, dateISO,
   prevSectMontCount,
@@ -3576,7 +3580,7 @@ async function removeOneProjectDummyMontage(projectId, dateISO) {
     .eq("project_id", projectId)
     .eq("work_date", dateISO)
     .eq("work_type", "montage")
-    .eq("werknemer_id", Number(DUMMY_EMP_ID))
+    .eq("werknemer_id", DUMMY_EMP_ID)
     .limit(1);
 
   if (error) {
@@ -3593,14 +3597,15 @@ async function removeOneProjectDummyMontage(projectId, dateISO) {
 
 async function addOneProjectDummyMontage(projectId, dateISO) {
   const ins = await sb.from("project_assignments").insert([{
-    project_id: projectId,
-    work_date: dateISO,
-    werknemer_id: Number(DUMMY_EMP_ID),
+    project_id: String(projectId),
+    work_date: String(dateISO),
+    werknemer_id: DUMMY_EMP_ID,      // ✅ geen Number()
     work_type: "montage",
   }]);
 
   if (ins.error) console.warn("addOneProjectDummyMontage insert error:", ins.error.message);
 }
+
 
 async function dbgProjectDummyMontageCount(projectId, dateISO){
   const { data, error } = await sb
