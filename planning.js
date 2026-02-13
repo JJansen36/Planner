@@ -971,14 +971,7 @@ async function openInhuurModalAtWeek(wkStart){
           zebraIndex++;
         }
 
-// hoeveel dummy's staan er NU op projectniveau?
-const dbg = await sb
-  .from("project_assignments")
-  .select("id", { count: "exact", head: true })
-  .eq("project_id", projectId)
-  .eq("work_date", dateISO)
-  .eq("work_type", "montage")
-  .eq("werknemer_id", DUMMY_EMP_ID);
+
 
 console.log("[sectie-save] project dummy montage count BEFORE:", dbg.count);
 
@@ -3720,7 +3713,6 @@ function fmt0(n){
 // DRAG & DROP (planned days)
 // ======================
 
-
 function wireDragDrop(root){
   if (!root) return;
 
@@ -3737,7 +3729,10 @@ function wireDragDrop(root){
         fromDate: td.dataset.workDate || ""
       };
 
+      // ✅ belangrijker voor betrouwbare drop
       e.dataTransfer.setData("application/json", JSON.stringify(payload));
+      e.dataTransfer.setData("text/plain", "1");
+
       e.dataTransfer.effectAllowed = "move";
       td.classList.add("is-dragging");
     });
@@ -3748,10 +3743,9 @@ function wireDragDrop(root){
     });
   });
 
-  // DROPZONES
-  root.querySelectorAll("td.dd-dropzone").forEach(cell => {
+  // ✅ alleen dropzones die ook echt een datum hebben
+  root.querySelectorAll("td.dd-dropzone[data-work-date]").forEach(cell => {
     cell.addEventListener("dragover", (e) => {
-      // allow drop
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       cell.classList.add("is-drop-target");
@@ -3778,7 +3772,6 @@ function wireDragDrop(root){
 
       if (!toDate || !fromDate || toDate === fromDate) return;
 
-      // ✅ SECTION: alleen droppen binnen dezelfde sectie
       if (kind === "section") {
         const fromSid = String(payload.sectionId || "");
         const toSid   = String(cell.dataset.sectionId || "");
@@ -3789,7 +3782,6 @@ function wireDragDrop(root){
         return;
       }
 
-      // ✅ PROJECT MONTAGE: alleen droppen binnen hetzelfde project
       if (kind === "project-montage") {
         const fromPid = String(payload.projectId || "");
         const toPid   = String(cell.dataset.projectId || "");
@@ -3802,6 +3794,8 @@ function wireDragDrop(root){
     });
   });
 }
+
+
 
 async function moveSectionDay(sectionId, fromDate, toDate){
   // verplaats ALLE section_assignments van die sectie+dag -> nieuwe dag
