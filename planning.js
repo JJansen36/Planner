@@ -112,10 +112,13 @@ function restoreOpenState(){
 
   // ---- Settings (uitbreidbaar) ----
   const SETTINGS_KEY = "lovd_planner_settings_v1";
-  // ===== Dummy medewerker (virtuele inhuur) =====
+
+  
   const DUMMY_EMP_ID = 999999;
+  const DUMMY_SEC_ID = 999998;
   const DUMMY_EMP_NAME = "Concept";
-  // ===== Inhuur =====
+
+  
   const INHUUR_TABLE = "inhuur_krachten";
   const INHUUR_ENTRIES_TABLE = "inhuur_entries";
 
@@ -186,14 +189,17 @@ function buildPlannedSetsByDay(planningItems){
 
     if (!out[d]) out[d] = { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
 
-    const isDummy = String(wid) === String(DUMMY_EMP_ID);
+    const isProjectDummy = (String(wid) === String(DUMMY_EMP_ID));
+    const isSectionDummy = (String(wid) === String(DUMMY_SEC_ID));
 
-    if (isDummy) {
-      if (bucket === "pro") out[d].dummyPro += 1;
-      if (bucket === "mo")  out[d].dummyMo  += 1;
-    } else {
-      out[d][bucket].add(String(wid));
-    }
+
+
+if (isProjectDummy || isSectionDummy) {
+  if (bucket === "pro") out[d].dummyPro += 1;
+  if (bucket === "mo")  out[d].dummyMo  += 1;
+} else {
+  out[d][bucket].add(String(wid));
+}
   }
 
   return out;
@@ -923,50 +929,114 @@ async function openInhuurModalAtWeek(wkStart){
 
 
 
-  }
-  /* ======================
-    SECTION WORK MAP (section_id -> date -> rows[])
-  ====================== */
-  function buildWorkMap(workRows){
-    const map = new Map();
-    if(!Array.isArray(workRows) || workRows.length===0) return map;
+      }
+      /* ======================
+        SECTION WORK MAP (section_id -> date -> rows[])
+      ====================== */
+      function buildWorkMap(workRows){
+        const map = new Map();
+        if(!Array.isArray(workRows) || workRows.length===0) return map;
 
-    const sidKey  = pickKey(workRows[0], ["section_id","sectionid","sectie_id","sectieid"]);
-    const dateKey = pickKey(workRows[0], ["work_date","date","datum","dag"]);
-    if(!sidKey || !dateKey) return map;
+        const sidKey  = pickKey(workRows[0], ["section_id","sectionid","sectie_id","sectieid"]);
+        const dateKey = pickKey(workRows[0], ["work_date","date","datum","dag"]);
+        if(!sidKey || !dateKey) return map;
 
-    for(const r of workRows){
-      const sidRaw = r?.[sidKey];
-      if(!sidRaw) continue;
-      const sid = String(sidRaw);
+        for(const r of workRows){
+          const sidRaw = r?.[sidKey];
+          if(!sidRaw) continue;
+          const sid = String(sidRaw);
 
-      const d = parseISODate(String(r?.[dateKey] || ""));
-      if(!d) continue;
-      const iso = toISODate(d);
+          const d = parseISODate(String(r?.[dateKey] || ""));
+          if(!d) continue;
+          const iso = toISODate(d);
 
-      if(!map.has(sid)) map.set(sid, new Map());
-      const byDate = map.get(sid);
-      if(!byDate.has(iso)) byDate.set(iso, []);
-      byDate.get(iso).push(r);
-    }
-    return map;
-  }
+          if(!map.has(sid)) map.set(sid, new Map());
+          const byDate = map.get(sid);
+          if(!byDate.has(iso)) byDate.set(iso, []);
+          byDate.get(iso).push(r);
+        }
+        return map;
+      }
 
-      // ===== Zebra rows (om-en-om rij achtergrond) =====
-    let zebraIndex = 0;
+          // ===== Zebra rows (om-en-om rij achtergrond) =====
+        let zebraIndex = 0;
 
-    function resetZebra(){
-      zebraIndex = 0;
-    }
+        function resetZebra(){
+          zebraIndex = 0;
+        }
 
-    function markZebra(tr){
-      tr.classList.toggle("zebra", (zebraIndex % 2) === 1);
-      zebraIndex++;
-    }
+        function markZebra(tr){
+          tr.classList.toggle("zebra", (zebraIndex % 2) === 1);
+          zebraIndex++;
+        }
+
+        async function consumeProjectConceptMontage(projectId, dateISO, consumeCount){
+        try{
+          const pid = String(projectId || "").trim();
+          const d   = String(dateISO || "").trim();
+          const n   = Number(consumeCount || 0);
+          if (!pid || !d || n <= 0) return;
+
+          // ✅ BETROUWBAAR tellen zonder data op te halen
+          const { count, error: cntErr } = await sb
+            .from("project_assignments")
+            .select("project_id", { count: "exact", head: true })
+            .eq("project_id", pid)
+            .eq("work_date", d)
+            .eq("work_type", "montage")
+            .eq("werknemer_id", Number(DUMMY_EMP_ID));
+
+          if (cntErr) {
+            console.warn("consumeProjectConceptMontage: count error", cntErr.message);
+            return;
+          }
+
+          const cur = Number(count || 0);
+          if (cur <= 0) return;
+
+          const keep = Math.max(0, cur - n);
+
+          // delete alle dummy montage regels
+          const del = await sb
+            .from("project_assignments")
+            .delete()
+            .eq("project_id", pid)
+            .eq("work_date", d)
+            .eq("work_type", "montage")
+            .eq("werknemer_id", Number(DUMMY_EMP_ID));
+
+          if (del.error) {
+            console.warn("consumeProjectConceptMontage: delete error", del.error.message);
+            return;
+          }
+
+          // zet terug wat er nog moet blijven staan (keep)
+          if (keep > 0) {
+            const rows = Array.from({ length: keep }, () => ({
+              project_id: pid,
+              work_date: d,
+              werknemer_id: Number(DUMMY_EMP_ID),
+              work_type: "montage",
+            }));
+
+            const ins = await sb.from("project_assignments").insert(rows);
+            if (ins.error) {
+              console.warn("consumeProjectConceptMontage: insert error", ins.error.message);
+              return;
+            }
+          }
+
+        } catch(e){
+          console.warn("consumeProjectConceptMontage exception:", e);
+        }
+      }
+
 
 
     // -------- RENDER --------
     function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders, inhuurEntries, inhuurPeopleVisible }) {
+const DEBUG_OFFNR = "2600013";   // <-- zet hier jouw projectnr uit de screenshot
+const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in range
 
 
     const dates = [];
@@ -1147,19 +1217,39 @@ async function openInhuurModalAtWeek(wkStart){
       if (!dmA.has(d)) dmA.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
       const entry = dmA.get(d);
 
-      const isDummy = (emp === String(DUMMY_EMP_ID));
+      const isDummy = (emp === String(DUMMY_SEC_ID)); // ✅ sectie dummy alleen
+
 
       if (wt === "productie") {
         if (isDummy) entry.dummyProd += 1;
         else entry.productie.add(emp);
       }
-
       if (wt === "montage") {
         if (isDummy) entry.dummyMont += 1;
         else entry.montage.add(emp);
       }
+
     }
 
+function dbgSectionKeysForProject(pid){
+  const secs = sectiesByProject.get(pid) || [];
+
+  const secIdsFromSecties = secs.map(s => {
+    const raw = s?.[sectIdKey] ? String(s[sectIdKey]) : (s?.section_id ? String(s.section_id) : "");
+    const canon = sectLookup.get(raw) || raw;
+    return { raw, canon };
+  });
+
+  const assignKeys = Array.from(assignMap.keys());
+
+  console.log("DEBUG sectiesByProject sectionIds:", secIdsFromSecties);
+  console.log("DEBUG assignMap keys (first 20):", assignKeys.slice(0,20));
+
+  console.log("DEBUG matches:", secIdsFromSecties.map(x => ({
+    ...x,
+    inAssignMap: assignMap.has(x.canon)
+  })));
+}
 
 
     // busyByDay: dateISO -> Set(empId) (ongeacht type)
@@ -1194,7 +1284,8 @@ for (const a of (pAssigns || [])) {
   if (!dmP.has(d)) dmP.set(d, { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 });
   const entry = dmP.get(d);
 
-  const isDummy = (emp === String(DUMMY_EMP_ID));
+  const isDummy = (emp === String(DUMMY_EMP_ID)); // ✅ project dummy alleen
+
 
   if (wt === "productie") {
     if (isDummy) entry.dummyProd += 1;
@@ -1371,6 +1462,10 @@ for (const a of (pAssigns || [])) {
     for(const p of projecten || []){
       const pid = p?.[projIdKey];
       const nr  = p?.[projNrKey] ?? "";
+const isDebugProj = String(nr).includes(DEBUG_OFFNR);
+if (isDebugProj) dbgSectionKeysForProject(String(pid));
+
+
       const nm  = p?.[projNameKey] ?? "";
       const kl = String(p?.deliveryname || p?.[klantKey] || "").trim();
       const complRaw = p?.[completionKey] ?? "";
@@ -1515,7 +1610,8 @@ for (const dd of dates) {
 
         }
 
-        appendSectionDayCells(secRow, dates, labels, sid, assignByDay, assignMap, werknemers);
+        appendSectionDayCells(secRow, dates, labels, sid, String(pid), assignByDay, assignMap, werknemers);
+
 
 
 
@@ -1613,17 +1709,42 @@ for (const dd of dates) {
     });
 
     if (hasMontageHours || hasMontagePlanned || hasProjectMontPlanned) {
-    // ✅ project-level montage telling per dag uit project_assignments (↳ Montage regel)
+
+    // ✅ montage-summary toont RESTANT: projectniveau - sectieniveau
     const projMontByDay = {};
+    const secsForProj = sectiesByProject.get(pid) || [];
+
     for (const dd of dates) {
       const iso = toISODate(dd);
 
-      const e = projectAssignMap.get(String(pid))?.get(iso);
-      const montCnt = e ? (e.montage.size + (e.dummyMont || 0)) : 0;
-      const dummy = e ? (Number(e.dummyMont || 0) > 0) : false;
+      // 1) projectniveau montage (project_assignments)
+      const pe = projectAssignMap.get(String(pid))?.get(iso);
+      const projMont = pe ? (pe.montage.size + Number(pe.dummyMont || 0)) : 0;
+      const projDummyMont = pe ? Number(pe.dummyMont || 0) : 0;
 
-      projMontByDay[iso] = { mont: montCnt, dummyMont: dummy };
+      // 2) sectieniveau montage (section_assignments) optellen
+      let sectMont = 0;
+      for (const s of secsForProj) {
+        const sidRaw = s?.[sectIdKey] ? String(s[sectIdKey]) : (s?.section_id ? String(s.section_id) : "");
+        if (!sidRaw) continue;
+
+        const sid = sectLookup.get(sidRaw) || sidRaw;
+        const se = assignMap.get(String(sid))?.get(iso);
+        if (!se) continue;
+
+        sectMont += (se.montage.size + Number(se.dummyMont || 0));
+      }
+
+      // 3) restant (nooit negatief tonen)
+      const remaining = Math.max(0, projMont - sectMont);
+
+      // hatch alleen als er nog dummy over is (ruw maar werkt visueel)
+      const dummyRemaining = Math.max(0, projDummyMont - Math.max(0, sectMont - (projMont - projDummyMont)));
+      const dummy = dummyRemaining > 0;
+
+      projMontByDay[iso] = { mont: remaining, dummyMont: dummy };
     }
+
 
 
       const montRow = document.createElement("tr");
@@ -1802,7 +1923,6 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
     // =========================
 
      applyZebraVisible();
-
 
      
     // click on section cell -> assignments modal
@@ -2242,6 +2362,7 @@ if (ptd) {
 
     const isDummy = (eid) => String(eid) === String(DUMMY_EMP_ID);
 
+
     for (const w of werknemers || []) {
       const eid = String(w?.id ?? "").trim();
       const name = String(w?.name ?? eid).trim();
@@ -2341,6 +2462,7 @@ const countM = rowM.querySelector(".concept-count");
       if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
     }
 
+    
     modal.close();
     loadAndRender();
   };
@@ -2356,7 +2478,8 @@ const countM = rowM.querySelector(".concept-count");
       if (!sid || !dateISO) return;
 
       const sObj = sectById.get(sid);
-      const projectId = String(sObj?.[sectProjKey] || "");
+      const projectId = String(td.dataset.projectId || "");
+
 
 
 
@@ -2374,6 +2497,8 @@ const countM = rowM.querySelector(".concept-count");
         dummyMont: Number(cur.dummyMont || 0),
       };
 
+      // ✅ snapshot: hoeveel montage stond er al op deze sectie (incl concept)
+      const prevSectMontCount = (cur?.montage?.size || 0) + Number(cur?.dummyMont || 0);
 
       const subEl = modal.wrap.querySelector("#amSub");
       const listProd = modal.wrap.querySelector("#amListProd");
@@ -2572,20 +2697,52 @@ const countM = rowM.querySelector(".concept-count");
       const dummyMontCount = Number(selected.dummyMont || 0);
 
       for (let i = 0; i < dummyProdCount; i++) {
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "productie" });
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "productie" });
       }
       for (let i = 0; i < dummyMontCount; i++) {
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "montage" });
       }
 
 
-        if (rows.length) {
-          const ins = await sb.from("section_assignments").insert(rows);
-          if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
-        }
+if (rows.length) {
+  const ins = await sb.from("section_assignments").insert(rows);
+  if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+}
 
-        modal.close();
-        loadAndRender();
+const newSectMontCount = Number(selected.montage.size || 0) + Number(dummyMontCount || 0);
+const deltaMont = newSectMontCount - Number(prevSectMontCount || 0);
+
+console.log("DBG deltaMont:", {
+  sid, projectId, dateISO,
+  prevSectMontCount,
+  newSectMontCount,
+  deltaMont
+});
+
+await dbgProjectDummyMontageCount(projectId, dateISO);
+
+if (projectId && deltaMont !== 0) {
+  if (deltaMont > 0) {
+    console.log("DBG consumeProjectConceptMontage call:", { projectId, dateISO, deltaMont });
+    await consumeProjectConceptMontage(projectId, dateISO, deltaMont);
+  } else {
+    const addBack = Math.abs(deltaMont);
+    console.log("DBG add back dummy montage:", { projectId, dateISO, addBack });
+    for (let i = 0; i < addBack; i++) {
+      await addOneProjectDummyMontage(projectId, dateISO);
+    }
+  }
+}
+
+await dbgProjectDummyMontageCount(projectId, dateISO);
+
+
+
+
+modal.close();
+loadAndRender();
+
+
       };
     };
 
@@ -3170,7 +3327,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
 
     // like appendDayCells, but makes section-day cells clickable for assignments
-    function appendSectionDayCells(tr, dates, labels, sectionId, assignCountByDay, assignMap, werknemers) {
+    function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCountByDay, assignMap, werknemers) {
+
       const empIdKey = "id";
       const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
       const empNameById = new Map((werknemers || []).map(w => [
@@ -3206,6 +3364,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
         const td = document.createElement("td");
         td.dataset.sectionId = String(sectionId || "");
+        td.dataset.projectId = String(projectId || "");
+
         td.dataset.workDate = iso;
 
         // tooltip met namen
@@ -3406,6 +3566,69 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
     td.innerHTML = html;
     tr.appendChild(td);
   }
+}
+
+async function removeOneProjectDummyMontage(projectId, dateISO) {
+  // 1 dummy regel verwijderen (als die bestaat)
+  const { data, error } = await sb
+    .from("project_assignments")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("work_date", dateISO)
+    .eq("work_type", "montage")
+    .eq("werknemer_id", Number(DUMMY_EMP_ID))
+    .limit(1);
+
+  if (error) {
+    console.warn("removeOneProjectDummyMontage select error:", error.message);
+    return;
+  }
+
+  const id = data?.[0]?.id;
+  if (!id) return; // niks om te verwijderen
+
+  const del = await sb.from("project_assignments").delete().eq("id", id);
+  if (del.error) console.warn("removeOneProjectDummyMontage delete error:", del.error.message);
+}
+
+async function addOneProjectDummyMontage(projectId, dateISO) {
+  const ins = await sb.from("project_assignments").insert([{
+    project_id: projectId,
+    work_date: dateISO,
+    werknemer_id: Number(DUMMY_EMP_ID),
+    work_type: "montage",
+  }]);
+
+  if (ins.error) console.warn("addOneProjectDummyMontage insert error:", ins.error.message);
+}
+
+async function dbgProjectDummyMontageCount(projectId, dateISO){
+  const { data, error } = await sb
+    .from("project_assignments")
+    .select("id, werknemer_id, work_type")
+    .eq("project_id", String(projectId))
+    .eq("work_date", String(dateISO))
+    .eq("werknemer_id", Number(DUMMY_EMP_ID)); // concept op project
+
+  if (error) {
+    console.error("DBG project_assignments select error:", error.message);
+    return null;
+  }
+
+  const rows = data || [];
+  const byType = rows.reduce((acc, r) => {
+    const t = String(r.work_type || "").toLowerCase();
+    acc[t] = (acc[t] || 0) + 1;
+    return acc;
+  }, {});
+
+  console.log("DBG project dummy rows:", {
+    projectId, dateISO,
+    totalDummy: rows.length,
+    byType
+  });
+
+  return { total: rows.length, byType };
 }
 
 
