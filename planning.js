@@ -2328,6 +2328,7 @@ const totals = {
 // ======================
 const ptd = ev.target.closest("td.project-montage-click");
 if (ptd) {
+  if (__wasDragging) return;
   const projectId = String(ptd.dataset.projectId || "");
   const dateISO   = String(ptd.dataset.workDate || "");
   if (!projectId || !dateISO) return;
@@ -2468,6 +2469,7 @@ const countM = rowM.querySelector(".concept-count");
 
   return;
 }
+      if (__wasDragging) return;
 
       const td = ev.target.closest("td.section-click");
       if (!td) return;
@@ -2868,14 +2870,11 @@ loadAndRender();
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
-    // ✅ NA mount: expander listeners opnieuw binden (project/sectie/order/capaciteit)
+
     bindExpandersAndClicks();
-
     applyZebraVisible();
-
-    // ✅ NA alles: state terugzetten
+    wireDragDrop(gridEl);
     restoreOpenState();
-
 
   }
 
@@ -3356,8 +3355,19 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         const td = document.createElement("td");
         td.dataset.sectionId = String(sectionId || "");
         td.dataset.projectId = String(projectId || "");
-
         td.dataset.workDate = iso;
+
+        // ✅ Drag & Drop metadata
+        td.classList.add("dd-dropzone");               // mag altijd droppable zijn
+        td.dataset.ddKind = "section";
+
+        // alleen draggable maken als er écht iets gepland is op die dag
+        const hasPlan = (prod > 0) || (mont > 0);
+        if (hasPlan) {
+          td.setAttribute("draggable", "true");
+          td.classList.add("dd-draggable");
+        }
+
 
         // tooltip met namen
         const entry = assignMap?.get(String(sectionId))?.get(iso);
@@ -3450,6 +3460,17 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         td.classList.add("project-montage-click");
         td.dataset.projectId = String(projectId || "");
         td.dataset.workDate = iso;
+
+        // ✅ Drag & Drop metadata
+        td.classList.add("dd-dropzone");
+        td.dataset.ddKind = "project-montage";
+
+        // alleen draggable als er montage gepland is
+        if (mont > 0) {
+          td.setAttribute("draggable", "true");
+          td.classList.add("dd-draggable");
+        }
+
 
         let html = `<div class="plan-stack">`;
 
@@ -3691,4 +3712,121 @@ function renderOrdersAccordion(byBN){
 function fmt0(n){
   const v = Number(n || 0);
   return (Math.abs(v) < 0.0001) ? "" : formatHoursCell(v);
+}
+
+
+// ======================
+// DRAG & DROP (planned days)
+// ======================
+let __wasDragging = false;
+
+function wireDragDrop(root){
+  if (!root) return;
+
+  // DRAG START / END
+  root.querySelectorAll("td.dd-draggable[draggable='true']").forEach(td => {
+    td.addEventListener("dragstart", (e) => {
+      __wasDragging = true;
+
+      const kind = String(td.dataset.ddKind || "");
+      const payload = {
+        kind,
+        sectionId: td.dataset.sectionId || "",
+        projectId: td.dataset.projectId || "",
+        fromDate: td.dataset.workDate || ""
+      };
+
+      e.dataTransfer.setData("application/json", JSON.stringify(payload));
+      e.dataTransfer.effectAllowed = "move";
+      td.classList.add("is-dragging");
+    });
+
+    td.addEventListener("dragend", () => {
+      td.classList.remove("is-dragging");
+      setTimeout(() => { __wasDragging = false; }, 150);
+    });
+  });
+
+  // DROPZONES
+  root.querySelectorAll("td.dd-dropzone").forEach(cell => {
+    cell.addEventListener("dragover", (e) => {
+      // allow drop
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      cell.classList.add("is-drop-target");
+    });
+
+    cell.addEventListener("dragleave", () => {
+      cell.classList.remove("is-drop-target");
+    });
+
+    cell.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      cell.classList.remove("is-drop-target");
+
+      let payload;
+      try {
+        payload = JSON.parse(e.dataTransfer.getData("application/json"));
+      } catch {
+        return;
+      }
+
+      const toDate = String(cell.dataset.workDate || "");
+      const kind = String(payload.kind || "");
+      const fromDate = String(payload.fromDate || "");
+
+      if (!toDate || !fromDate || toDate === fromDate) return;
+
+      // ✅ SECTION: alleen droppen binnen dezelfde sectie
+      if (kind === "section") {
+        const fromSid = String(payload.sectionId || "");
+        const toSid   = String(cell.dataset.sectionId || "");
+        if (!fromSid || !toSid || fromSid !== toSid) return;
+
+        await moveSectionDay(fromSid, fromDate, toDate);
+        loadAndRender();
+        return;
+      }
+
+      // ✅ PROJECT MONTAGE: alleen droppen binnen hetzelfde project
+      if (kind === "project-montage") {
+        const fromPid = String(payload.projectId || "");
+        const toPid   = String(cell.dataset.projectId || "");
+        if (!fromPid || !toPid || fromPid !== toPid) return;
+
+        await moveProjectMontageDay(fromPid, fromDate, toDate);
+        loadAndRender();
+        return;
+      }
+    });
+  });
+}
+
+async function moveSectionDay(sectionId, fromDate, toDate){
+  // verplaats ALLE section_assignments van die sectie+dag -> nieuwe dag
+  const { error } = await sb
+    .from("section_assignments")
+    .update({ work_date: toDate })
+    .eq("section_id", sectionId)
+    .eq("work_date", fromDate);
+
+  if (error) {
+    console.warn("moveSectionDay error:", error.message);
+    alert("Verplaatsen mislukt: " + error.message);
+  }
+}
+
+async function moveProjectMontageDay(projectId, fromDate, toDate){
+  // verplaats ALLE montage project_assignments van die dag -> nieuwe dag
+  const { error } = await sb
+    .from("project_assignments")
+    .update({ work_date: toDate })
+    .eq("project_id", projectId)
+    .eq("work_date", fromDate)
+    .eq("work_type", "montage");
+
+  if (error) {
+    console.warn("moveProjectMontageDay error:", error.message);
+    alert("Verplaatsen mislukt: " + error.message);
+  }
 }

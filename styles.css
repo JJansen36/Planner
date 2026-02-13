@@ -1184,3 +1184,6 @@ tr.project-topline > th{
   text-align: center;
   padding: 0 !important;    /* voorkomt “scheef” door padding */
 }
+
+td.is-drop-target { outline: 2px dashed #2563eb; outline-offset: -2px; }
+td.is-dragging { opacity: .55; }
