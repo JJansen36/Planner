@@ -39,6 +39,7 @@
   let gridEl = null;
   let statusEl = null;
   let ordersBySection = new Map();
+  let __wasDragging = false;
 
   // ===== Open/close state bewaren =====
   let openState = {
@@ -3718,7 +3719,7 @@ function fmt0(n){
 // ======================
 // DRAG & DROP (planned days)
 // ======================
-let __wasDragging = false;
+
 
 function wireDragDrop(root){
   if (!root) return;
