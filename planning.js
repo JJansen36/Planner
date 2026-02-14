@@ -3811,35 +3811,38 @@ function wireDragDrop(root){
 
   // DRAG START / END
   root.querySelectorAll("td.dd-draggable[draggable='true']").forEach(td => {
-const kind = String(td.dataset.ddKind || "");
-const fromDate = String(td.dataset.workDate || "");
 
-let fromStart = fromDate;
-let fromEnd   = fromDate;
+    td.addEventListener("dragstart", (e) => {
+      __wasDragging = true;
 
-// ✅ ALT = hele run pakken
-if (e.altKey) {
-  const run = getContiguousRunFromCell(td);
-  fromStart = run.startISO;
-  fromEnd   = run.endISO;
-}
+      const kind = String(td.dataset.ddKind || "");
+      const fromDate = String(td.dataset.workDate || "");
 
-const payload = {
-  kind,
-  sectionId: td.dataset.sectionId || "",
-  projectId: td.dataset.projectId || "",
-  fromDate,          // oorspronkelijke cel
-  fromStart,         // run start (ALT)
-  fromEnd,           // run end   (ALT)
-  isRange: !!e.altKey
-};
+      let fromStart = fromDate;
+      let fromEnd   = fromDate;
 
+      // ✅ ALT = hele run pakken
+      if (e.altKey) {
+        const run = getContiguousRunFromCell(td);
+        fromStart = run.startISO;
+        fromEnd   = run.endISO;
+      }
+
+      const payload = {
+        kind,
+        sectionId: td.dataset.sectionId || "",
+        projectId: td.dataset.projectId || "",
+        fromDate,
+        fromStart,
+        fromEnd,
+        isRange: !!e.altKey
+      };
 
       // ✅ belangrijker voor betrouwbare drop
       e.dataTransfer.setData("application/json", JSON.stringify(payload));
       e.dataTransfer.setData("text/plain", "1");
-
       e.dataTransfer.effectAllowed = "move";
+
       td.classList.add("is-dragging");
     });
 
@@ -3847,9 +3850,9 @@ const payload = {
       td.classList.remove("is-dragging");
       setTimeout(() => { __wasDragging = false; }, 150);
     });
+  });
 
-
-  // ✅ alleen dropzones die ook echt een datum hebben
+  // DROPZONES
   root.querySelectorAll("td.dd-dropzone").forEach(cell => {
 
     cell.addEventListener("dragover", (e) => {
@@ -3876,6 +3879,7 @@ const payload = {
       const toDate = String(cell.dataset.workDate || "");
       const kind = String(payload.kind || "");
       const fromDate = String(payload.fromDate || "");
+
       // ✅ alleen droppen op dezelfde soort cel
       const targetKind = String(cell.dataset.ddKind || "");
       if (!targetKind || targetKind !== kind) {
@@ -3883,48 +3887,47 @@ const payload = {
         return;
       }
 
-
       if (!toDate || !fromDate || toDate === fromDate) return;
 
-if (kind === "section") {
-  const fromSid = String(payload.sectionId || "");
-  const toSid   = String(cell.dataset.sectionId || "");
-  if (!fromSid || !toSid || fromSid !== toSid) return;
+      if (kind === "section") {
+        const fromSid = String(payload.sectionId || "");
+        const toSid   = String(cell.dataset.sectionId || "");
+        if (!fromSid || !toSid || fromSid !== toSid) return;
 
-  if (payload.isRange) {
-    const startISO = String(payload.fromStart || fromDate);
-    const endISO   = String(payload.fromEnd   || fromDate);
-    const delta    = daysBetweenISO(startISO, toDate);
-    await moveSectionRange(fromSid, startISO, endISO, delta);
-  } else {
-    await moveSectionDay(fromSid, fromDate, toDate);
-  }
+        if (payload.isRange) {
+          const startISO = String(payload.fromStart || fromDate);
+          const endISO   = String(payload.fromEnd   || fromDate);
+          const delta    = daysBetweenISO(startISO, toDate);
+          await moveSectionRange(fromSid, startISO, endISO, delta);
+        } else {
+          await moveSectionDay(fromSid, fromDate, toDate);
+        }
 
-  loadAndRender();
-  return;
-}
+        loadAndRender();
+        return;
+      }
 
-if (kind === "project-montage") {
-  const fromPid = String(payload.projectId || "");
-  const toPid   = String(cell.dataset.projectId || "");
-  if (!fromPid || !toPid || fromPid !== toPid) return;
+      if (kind === "project-montage") {
+        const fromPid = String(payload.projectId || "");
+        const toPid   = String(cell.dataset.projectId || "");
+        if (!fromPid || !toPid || fromPid !== toPid) return;
 
-  if (payload.isRange) {
-    const startISO = String(payload.fromStart || fromDate);
-    const endISO   = String(payload.fromEnd   || fromDate);
-    const delta    = daysBetweenISO(startISO, toDate);
-    await moveProjectMontageRange(fromPid, startISO, endISO, delta);
-  } else {
-    await moveProjectMontageDay(fromPid, fromDate, toDate);
-  }
+        if (payload.isRange) {
+          const startISO = String(payload.fromStart || fromDate);
+          const endISO   = String(payload.fromEnd   || fromDate);
+          const delta    = daysBetweenISO(startISO, toDate);
+          await moveProjectMontageRange(fromPid, startISO, endISO, delta);
+        } else {
+          await moveProjectMontageDay(fromPid, fromDate, toDate);
+        }
 
-  loadAndRender();
-  return;
-}
-
+        loadAndRender();
+        return;
+      }
     });
   });
 }
+
 
 
 
