@@ -41,6 +41,83 @@
   let ordersBySection = new Map();
   let __wasDragging = false;
 
+
+  // ======================
+// UNDO (Ctrl+Z) voor drag & drop
+// ======================
+const undoStack = [];   // laatste actie achteraan
+const UNDO_LIMIT = 50;  // max acties bewaren
+
+function pushUndo(action){
+  undoStack.push(action);
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+}
+
+async function undoLast(){
+  const action = undoStack.pop();
+  if (!action) return;
+
+  try{
+    if (action.kind === "section") {
+      // delete op "to" en insert terug naar "from"
+      await sb
+        .from("section_assignments")
+        .delete()
+        .eq("section_id", action.section_id)
+        .eq("work_date", action.to_date);
+
+      if (action.rows?.length) {
+        const backRows = action.rows.map(r => ({
+          section_id: action.section_id,
+          work_date: action.from_date,
+          werknemer_id: r.werknemer_id,
+          work_type: r.work_type
+        }));
+        await sb.from("section_assignments").insert(backRows);
+      }
+    }
+
+    if (action.kind === "project-montage") {
+      await sb
+        .from("project_assignments")
+        .delete()
+        .eq("project_id", action.project_id)
+        .eq("work_date", action.to_date)
+        .eq("work_type", "montage");
+
+      if (action.rows?.length) {
+        const backRows = action.rows.map(r => ({
+          project_id: action.project_id,
+          work_date: action.from_date,
+          werknemer_id: r.werknemer_id,
+          work_type: r.work_type
+        }));
+        await sb.from("project_assignments").insert(backRows);
+      }
+    }
+
+    loadAndRender();
+  } catch(e){
+    console.warn("Undo error:", e);
+    alert("Undo mislukt. Check console.");
+  }
+}
+
+// Ctrl+Z handler (alleen als je niet in een input/textarea zit)
+document.addEventListener("keydown", (e) => {
+  const isMac = navigator.platform.toLowerCase().includes("mac");
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+
+  if (!mod || e.key.toLowerCase() !== "z") return;
+
+  const tag = (document.activeElement?.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea" || document.activeElement?.isContentEditable;
+  if (typing) return; // laat normale Ctrl+Z in inputs
+
+  e.preventDefault();
+  undoLast();
+});
+
   // ===== Open/close state bewaren =====
   let openState = {
     projects: new Set(),
@@ -3839,7 +3916,15 @@ async function moveSectionDay(sectionId, fromDate, toDate){
   if (!rows || rows.length === 0) {
     alert("Er is niets verplaatst (0 regels).");
     return;
+
   }
+pushUndo({
+  kind: "section",
+  section_id: sectionId,
+  from_date: fromDate,
+  to_date: toDate,
+  rows: rows.map(r => ({ werknemer_id: r.werknemer_id, work_type: r.work_type }))
+});
 
   // 2) delete oude dag
   const { error: delErr } = await sb
@@ -3891,6 +3976,16 @@ async function moveProjectMontageDay(projectId, fromDate, toDate){
 
   if (selErr) { alert("Select fout: " + selErr.message); return; }
   if (!rows || rows.length === 0) { alert("Er is niets verplaatst (0 regels)."); return; }
+
+  // ✅ UNDO snapshot opslaan (voor we deleten)
+pushUndo({
+  kind: "project-montage",
+  project_id: pid,
+  from_date: f,
+  to_date: t,
+  rows: rows.map(r => ({ werknemer_id: r.werknemer_id, work_type: r.work_type }))
+});
+
 
   const { error: delErr } = await sb
     .from("project_assignments")
