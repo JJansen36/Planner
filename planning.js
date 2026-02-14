@@ -3465,6 +3465,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         td.dataset.ddKind = "section";
 
         // alleen draggable maken als er écht iets gepland is op die dag
+        td.dataset.ddKey = key || "";   // ✅ belangrijk voor Alt-blok-drag
         const hasPlan = (prod > 0) || (mont > 0);
         if (hasPlan) {
           td.setAttribute("draggable", "true");
@@ -3550,6 +3551,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         td.dataset.ddKind = "project-montage";
 
         // alleen draggable als er montage gepland is
+        td.dataset.ddKey = key || "";  // bij montage is key = "mont"
+
         if (mont > 0) {
           td.setAttribute("draggable", "true");
           td.classList.add("dd-draggable");
@@ -3808,16 +3811,29 @@ function wireDragDrop(root){
 
   // DRAG START / END
   root.querySelectorAll("td.dd-draggable[draggable='true']").forEach(td => {
-    td.addEventListener("dragstart", (e) => {
-      __wasDragging = true;
+const kind = String(td.dataset.ddKind || "");
+const fromDate = String(td.dataset.workDate || "");
 
-      const kind = String(td.dataset.ddKind || "");
-      const payload = {
-        kind,
-        sectionId: td.dataset.sectionId || "",
-        projectId: td.dataset.projectId || "",
-        fromDate: td.dataset.workDate || ""
-      };
+let fromStart = fromDate;
+let fromEnd   = fromDate;
+
+// ✅ ALT = hele run pakken
+if (e.altKey) {
+  const run = getContiguousRunFromCell(td);
+  fromStart = run.startISO;
+  fromEnd   = run.endISO;
+}
+
+const payload = {
+  kind,
+  sectionId: td.dataset.sectionId || "",
+  projectId: td.dataset.projectId || "",
+  fromDate,          // oorspronkelijke cel
+  fromStart,         // run start (ALT)
+  fromEnd,           // run end   (ALT)
+  isRange: !!e.altKey
+};
+
 
       // ✅ belangrijker voor betrouwbare drop
       e.dataTransfer.setData("application/json", JSON.stringify(payload));
@@ -3831,7 +3847,7 @@ function wireDragDrop(root){
       td.classList.remove("is-dragging");
       setTimeout(() => { __wasDragging = false; }, 150);
     });
-  });
+
 
   // ✅ alleen dropzones die ook echt een datum hebben
   root.querySelectorAll("td.dd-dropzone").forEach(cell => {
@@ -3870,25 +3886,42 @@ function wireDragDrop(root){
 
       if (!toDate || !fromDate || toDate === fromDate) return;
 
-      if (kind === "section") {
-        const fromSid = String(payload.sectionId || "");
-        const toSid   = String(cell.dataset.sectionId || "");
-        if (!fromSid || !toSid || fromSid !== toSid) return;
+if (kind === "section") {
+  const fromSid = String(payload.sectionId || "");
+  const toSid   = String(cell.dataset.sectionId || "");
+  if (!fromSid || !toSid || fromSid !== toSid) return;
 
-        await moveSectionDay(fromSid, fromDate, toDate);
-        loadAndRender();
-        return;
-      }
+  if (payload.isRange) {
+    const startISO = String(payload.fromStart || fromDate);
+    const endISO   = String(payload.fromEnd   || fromDate);
+    const delta    = daysBetweenISO(startISO, toDate);
+    await moveSectionRange(fromSid, startISO, endISO, delta);
+  } else {
+    await moveSectionDay(fromSid, fromDate, toDate);
+  }
 
-      if (kind === "project-montage") {
-        const fromPid = String(payload.projectId || "");
-        const toPid   = String(cell.dataset.projectId || "");
-        if (!fromPid || !toPid || fromPid !== toPid) return;
+  loadAndRender();
+  return;
+}
 
-        await moveProjectMontageDay(fromPid, fromDate, toDate);
-        loadAndRender();
-        return;
-      }
+if (kind === "project-montage") {
+  const fromPid = String(payload.projectId || "");
+  const toPid   = String(cell.dataset.projectId || "");
+  if (!fromPid || !toPid || fromPid !== toPid) return;
+
+  if (payload.isRange) {
+    const startISO = String(payload.fromStart || fromDate);
+    const endISO   = String(payload.fromEnd   || fromDate);
+    const delta    = daysBetweenISO(startISO, toDate);
+    await moveProjectMontageRange(fromPid, startISO, endISO, delta);
+  } else {
+    await moveProjectMontageDay(fromPid, fromDate, toDate);
+  }
+
+  loadAndRender();
+  return;
+}
+
     });
   });
 }
@@ -3958,6 +3991,43 @@ pushUndo({
   console.log("moveSectionDay OK:", rows.length, { sid, f, t });
 }
 
+async function moveSectionRange(sectionId, fromStartISO, fromEndISO, deltaDays){
+  // 1) rows ophalen binnen range
+  const { data: rows, error: selErr } = await sb
+    .from("section_assignments")
+    .select("id, section_id, work_date, werknemer_id, work_type")
+    .eq("section_id", sectionId)
+    .gte("work_date", fromStartISO)
+    .lte("work_date", fromEndISO)
+    .limit(200000);
+
+  if (selErr) { alert("Range select fout: " + selErr.message); return; }
+  if (!rows || rows.length === 0) { alert("Er is niets verplaatst (0 regels)."); return; }
+
+  // 2) delete originele range
+  const { error: delErr } = await sb
+    .from("section_assignments")
+    .delete()
+    .eq("section_id", sectionId)
+    .gte("work_date", fromStartISO)
+    .lte("work_date", fromEndISO);
+
+  if (delErr) { alert("Range delete fout: " + delErr.message); return; }
+
+  // 3) insert met verschoven datum
+  const newRows = rows.map(r => {
+    const newISO = toISODate(addDays(parseISODate(r.work_date), deltaDays));
+    return {
+      section_id: r.section_id,
+      work_date: newISO,
+      werknemer_id: r.werknemer_id,
+      work_type: r.work_type
+    };
+  });
+
+  const { error: insErr } = await sb.from("section_assignments").insert(newRows);
+  if (insErr) { alert("Range insert fout: " + insErr.message); return; }
+}
 
 
 
@@ -4010,4 +4080,84 @@ pushUndo({
   if (insErr) { alert("Insert fout: " + insErr.message); return; }
 
   console.log("moveProjectMontageDay OK:", rows.length, { pid, f, t });
+}
+
+async function moveProjectMontageRange(projectId, fromStartISO, fromEndISO, deltaDays){
+  const { data: rows, error: selErr } = await sb
+    .from("project_assignments")
+    .select("id, project_id, work_date, werknemer_id, work_type")
+    .eq("project_id", projectId)
+    .eq("work_type", "montage")
+    .gte("work_date", fromStartISO)
+    .lte("work_date", fromEndISO)
+    .limit(200000);
+
+  if (selErr) { alert("Range select fout: " + selErr.message); return; }
+  if (!rows || rows.length === 0) { alert("Er is niets verplaatst (0 regels)."); return; }
+
+  const { error: delErr } = await sb
+    .from("project_assignments")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("work_type", "montage")
+    .gte("work_date", fromStartISO)
+    .lte("work_date", fromEndISO);
+
+  if (delErr) { alert("Range delete fout: " + delErr.message); return; }
+
+  const newRows = rows.map(r => {
+    const newISO = toISODate(addDays(parseISODate(r.work_date), deltaDays));
+    return {
+      project_id: r.project_id,
+      work_date: newISO,
+      werknemer_id: r.werknemer_id,
+      work_type: r.work_type
+    };
+  });
+
+  const { error: insErr } = await sb.from("project_assignments").insert(newRows);
+  if (insErr) { alert("Range insert fout: " + insErr.message); return; }
+}
+
+function daysBetweenISO(fromISO, toISO){
+  const a = parseISODate(fromISO);
+  const b = parseISODate(toISO);
+  if (!a || !b) return 0;
+  const ms = (b.getTime() - a.getTime());
+  return Math.round(ms / 86400000);
+}
+
+// zoekt in dezelfde rij links/rechts cellen met dezelfde ddKey (dus hetzelfde “blok”)
+function getContiguousRunFromCell(td){
+  const key = String(td.dataset.ddKey || "");
+  const tr = td.closest("tr");
+  if (!tr || !key) return { startISO: td.dataset.workDate, endISO: td.dataset.workDate };
+
+  const cells = Array.from(tr.querySelectorAll("td.dd-draggable[draggable='true']"));
+  // map ISO -> cell
+  const byISO = new Map(cells.map(c => [String(c.dataset.workDate||""), c]));
+  const curISO = String(td.dataset.workDate || "");
+
+  let startISO = curISO;
+  let endISO   = curISO;
+
+  // links uitbreiden
+  while(true){
+    const prev = toISODate(addDays(parseISODate(startISO), -1));
+    const c = byISO.get(prev);
+    if (!c) break;
+    if (String(c.dataset.ddKey||"") !== key) break;
+    startISO = prev;
+  }
+
+  // rechts uitbreiden
+  while(true){
+    const next = toISODate(addDays(parseISODate(endISO), +1));
+    const c = byISO.get(next);
+    if (!c) break;
+    if (String(c.dataset.ddKey||"") !== key) break;
+    endISO = next;
+  }
+
+  return { startISO, endISO };
 }
