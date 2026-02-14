@@ -3359,16 +3359,6 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         td.dataset.projectId = String(projectId || "");
         td.dataset.workDate = iso;
 
-        // ✅ Drag & Drop metadata
-        td.classList.add("dd-dropzone");               // mag altijd droppable zijn
-        td.dataset.ddKind = "section";
-
-        // alleen draggable maken als er écht iets gepland is op die dag
-        const hasPlan = (prod > 0) || (mont > 0);
-        if (hasPlan) {
-          td.setAttribute("draggable", "true");
-          td.classList.add("dd-draggable");
-        }
 
 
         // tooltip met namen
@@ -3392,6 +3382,21 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         else if (key === "mont") cls += " bar-mont";
         else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
         td.className = cls;
+
+        // ✅ Drag & Drop metadata (NA className, anders wordt het gewist)
+        td.classList.add("dd-dropzone");
+        td.dataset.ddKind = "section";
+
+        // alleen draggable maken als er écht iets gepland is op die dag
+        const hasPlan = (prod > 0) || (mont > 0);
+        if (hasPlan) {
+          td.setAttribute("draggable", "true");
+          td.classList.add("dd-draggable");
+        } else {
+          td.removeAttribute("draggable");
+          td.classList.remove("dd-draggable");
+        }
+
 
         let html = `<div class="plan-stack">`;
 
@@ -3752,7 +3757,8 @@ function wireDragDrop(root){
   });
 
   // ✅ alleen dropzones die ook echt een datum hebben
-  root.querySelectorAll("td.dd-dropzone[data-work-date]").forEach(cell => {
+  root.querySelectorAll("td.dd-dropzone").forEach(cell => {
+
     cell.addEventListener("dragover", (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
