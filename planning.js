@@ -3822,42 +3822,97 @@ async function moveSectionDay(sectionId, fromDate, toDate){
   const sid = String(sectionId || "").trim();
   const f = String(fromDate || "").trim();
   const t = String(toDate || "").trim();
+  if (!sid || !f || !t || f === t) return;
 
-  // ✅ update + select zodat je ziet hoeveel regels geraakt zijn
-  const { data, error } = await sb
+  // 1) haal bestaande regels op (zodat we ze 1-op-1 kunnen kopiëren)
+  const { data: rows, error: selErr } = await sb
     .from("section_assignments")
-    .update({ work_date: t })
+    .select("id, section_id, werknemer_id, work_type")
     .eq("section_id", sid)
-    .eq("work_date", f)
-    .select("id"); // <-- belangrijk
+    .eq("work_date", f);
 
-  if (error) {
-    console.warn("moveSectionDay error:", error.message);
-    alert("Verplaatsen mislukt: " + error.message);
+  if (selErr) {
+    alert("Select fout: " + selErr.message);
     return;
   }
 
-  const moved = (data || []).length;
-  console.log("moveSectionDay moved rows:", moved, { sid, f, t });
-
-  if (moved === 0) {
-    alert("Er is niets verplaatst (0 regels). Check: bestaat er planning op die dag, of RLS/keys mismatch.");
+  if (!rows || rows.length === 0) {
+    alert("Er is niets verplaatst (0 regels).");
+    return;
   }
+
+  // 2) delete oude dag
+  const { error: delErr } = await sb
+    .from("section_assignments")
+    .delete()
+    .eq("section_id", sid)
+    .eq("work_date", f);
+
+  if (delErr) {
+    alert("Delete fout: " + delErr.message);
+    return;
+  }
+
+  // 3) insert nieuwe dag
+  const newRows = rows.map(r => ({
+    section_id: r.section_id,
+    work_date: t,
+    werknemer_id: r.werknemer_id,
+    work_type: r.work_type
+  }));
+
+  const { error: insErr } = await sb
+    .from("section_assignments")
+    .insert(newRows);
+
+  if (insErr) {
+    alert("Insert fout: " + insErr.message);
+    return;
+  }
+
+  console.log("moveSectionDay OK:", rows.length, { sid, f, t });
 }
 
 
 
+
 async function moveProjectMontageDay(projectId, fromDate, toDate){
-  // verplaats ALLE montage project_assignments van die dag -> nieuwe dag
-  const { error } = await sb
+  const pid = String(projectId || "").trim();
+  const f = String(fromDate || "").trim();
+  const t = String(toDate || "").trim();
+  if (!pid || !f || !t || f === t) return;
+
+  const { data: rows, error: selErr } = await sb
     .from("project_assignments")
-    .update({ work_date: toDate })
-    .eq("project_id", projectId)
-    .eq("work_date", fromDate)
+    .select("id, project_id, werknemer_id, work_type")
+    .eq("project_id", pid)
+    .eq("work_date", f)
     .eq("work_type", "montage");
 
-  if (error) {
-    console.warn("moveProjectMontageDay error:", error.message);
-    alert("Verplaatsen mislukt: " + error.message);
-  }
+  if (selErr) { alert("Select fout: " + selErr.message); return; }
+  if (!rows || rows.length === 0) { alert("Er is niets verplaatst (0 regels)."); return; }
+
+  const { error: delErr } = await sb
+    .from("project_assignments")
+    .delete()
+    .eq("project_id", pid)
+    .eq("work_date", f)
+    .eq("work_type", "montage");
+
+  if (delErr) { alert("Delete fout: " + delErr.message); return; }
+
+  const newRows = rows.map(r => ({
+    project_id: r.project_id,
+    work_date: t,
+    werknemer_id: r.werknemer_id,
+    work_type: r.work_type
+  }));
+
+  const { error: insErr } = await sb
+    .from("project_assignments")
+    .insert(newRows);
+
+  if (insErr) { alert("Insert fout: " + insErr.message); return; }
+
+  console.log("moveProjectMontageDay OK:", rows.length, { pid, f, t });
 }
