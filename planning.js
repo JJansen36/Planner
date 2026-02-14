@@ -3783,6 +3783,13 @@ function wireDragDrop(root){
       const toDate = String(cell.dataset.workDate || "");
       const kind = String(payload.kind || "");
       const fromDate = String(payload.fromDate || "");
+      // ✅ alleen droppen op dezelfde soort cel
+      const targetKind = String(cell.dataset.ddKind || "");
+      if (!targetKind || targetKind !== kind) {
+        console.log("DROP ignored: kind mismatch", { kind, targetKind });
+        return;
+      }
+
 
       if (!toDate || !fromDate || toDate === fromDate) return;
 
@@ -3812,18 +3819,33 @@ function wireDragDrop(root){
 
 
 async function moveSectionDay(sectionId, fromDate, toDate){
-  // verplaats ALLE section_assignments van die sectie+dag -> nieuwe dag
-  const { error } = await sb
+  const sid = String(sectionId || "").trim();
+  const f = String(fromDate || "").trim();
+  const t = String(toDate || "").trim();
+
+  // ✅ update + select zodat je ziet hoeveel regels geraakt zijn
+  const { data, error } = await sb
     .from("section_assignments")
-    .update({ work_date: toDate })
-    .eq("section_id", sectionId)
-    .eq("work_date", fromDate);
+    .update({ work_date: t })
+    .eq("section_id", sid)
+    .eq("work_date", f)
+    .select("id"); // <-- belangrijk
 
   if (error) {
     console.warn("moveSectionDay error:", error.message);
     alert("Verplaatsen mislukt: " + error.message);
+    return;
+  }
+
+  const moved = (data || []).length;
+  console.log("moveSectionDay moved rows:", moved, { sid, f, t });
+
+  if (moved === 0) {
+    alert("Er is niets verplaatst (0 regels). Check: bestaat er planning op die dag, of RLS/keys mismatch.");
   }
 }
+
+
 
 async function moveProjectMontageDay(projectId, fromDate, toDate){
   // verplaats ALLE montage project_assignments van die dag -> nieuwe dag
