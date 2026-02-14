@@ -1581,10 +1581,11 @@ for (const dd of dates) {
 
         const sn = s?.[sectNameKey] || "sectie";
 
-      leftS.innerHTML = `
+        leftS.innerHTML = `
           <button class="expander expander-sec" data-sect="${escapeAttr(sid)}" aria-label="toggle sectie">▶</button>
           <span class="sectext sectname" data-sect="${escapeAttr(sid)}">↳ ${escapeHtml(sn)}</span>
         `;
+
 
         secRow.appendChild(leftS);
 
@@ -1718,10 +1719,14 @@ for (const dd of dates) {
       // 2) sectieniveau montage (section_assignments) optellen
       let sectMont = 0;
       for (const s of secsForProj) {
-        const sidRaw = s?.[sectIdKey] ? String(s[sectIdKey]) : (s?.section_id ? String(s.section_id) : "");
-        if (!sidRaw) continue;
+      const sidRaw = s?.[sectIdKey]
+        ? String(s[sectIdKey])
+        : (s?.section_id ? String(s.section_id) : null);
 
-        const sid = sectLookup.get(sidRaw) || sidRaw;
+      if (!sidRaw) continue;
+
+      // ✅ canonieke sid (zelfde als assignMap / ordersBySection)
+      const sid = sectLookup.get(String(sidRaw)) || String(sidRaw);
         const se = assignMap.get(String(sid))?.get(iso);
         if (!se) continue;
 
