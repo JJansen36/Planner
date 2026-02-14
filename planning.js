@@ -1575,9 +1575,12 @@ for (const dd of dates) {
         const leftS = document.createElement("td");
         leftS.className = "rowhdr sticky-left section-cell";
 
-        const sid = s?.[sectIdKey]
+        const sidRaw = s?.[sectIdKey]
           ? String(s[sectIdKey])
           : (s?.section_id ? String(s.section_id) : null);
+
+        const sid = sidRaw ? (sectLookup.get(String(sidRaw)) || String(sidRaw)) : null;
+
 
         const sn = s?.[sectNameKey] || "sectie";
 
