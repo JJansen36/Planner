@@ -445,20 +445,14 @@ async function fillOrderTypeFilterUI(){
   }
 
 
-  function asISODate(v){
+function asISODate(v){
   if(!v) return "";
-  const s = String(v);
-
-  // al een pure date: "YYYY-MM-DD"
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-  // timestamp: "YYYY-MM-DDTHH:mm:ss..."
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return s.slice(0,10); // fallback
-
-  // lokale dag teruggeven (NL), niet de UTC dag uit de string
-  return toISODate(d);
+  const s = String(v).trim();
+  // Pak altijd alleen de datumcomponent (YYYY-MM-DD), voorkomt timezone-shift
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : "";
 }
+
 
   // -------- SECTION DETAILS MODAL (sectie gegevens) --------
   let secModal = null;
