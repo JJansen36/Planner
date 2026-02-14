@@ -826,10 +826,10 @@ async function openInhuurModalAtWeek(wkStart){
 
     // 1) projecten
     const { data: projecten, error: pErr } = await sb
-      .from("projecten")
+      .from("projecten_planner")
       .select("*")
       .in("salesstatus", [3,4,5,6,7,8])
-      .gte("completiondate", todayISO)
+      .gte("completiondate_d", todayISO)
       .order("offerno", { ascending: true })
       .limit(500);
 
@@ -1117,8 +1117,9 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
     const klantKey = pickKey(projecten[0], ["deliveryname", "klantnaam","klant_name","klant","customer","relatie"]);
 
 
-    const completionKey = pickKey(projecten[0], ["completiondate","completion_date","opleverdatum","end_date"]);
-    const deliveryKey = pickKey(projecten[0], ["deliverydate","delivery_date","leverdatum"]);
+    const completionKey = pickKey(projecten[0], ["completiondate_d","completiondate","completion_date","opleverdatum","end_date"]);
+    const deliveryKey   = pickKey(projecten[0], ["deliverydate_d","deliverydate","delivery_date","leverdatum"]);
+
 
 
     const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
