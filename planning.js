@@ -123,10 +123,19 @@ document.addEventListener("keydown", (e) => {
     projects: new Set(),
     sections: new Set(),
     orders: new Set(), // key: `${sid}||${bn}`
+    caps: new Set(),
   };
 
   function captureOpenState(){
     const st = { projects: new Set(), sections: new Set(), orders: new Set() };
+
+    // capaciteit (betrouwbaar: kijk naar het symbool)
+    gridEl?.querySelectorAll('.cap-expander[data-cap]').forEach(b=>{
+      if (b.textContent === "▼") {
+        const key = String(b.dataset.cap || "");
+        if (key) st.caps.add(key);
+      }
+    });
 
     // projecten (betrouwbaar: kijk naar het symbool)
     gridEl?.querySelectorAll('.expander[data-proj]').forEach(b=>{
@@ -180,6 +189,13 @@ function restoreOpenState(){
     );
     if (btn && btn.textContent !== "▼") btn.click();
   }
+
+  // 4) capaciteit openklappen
+  for (const key of (openState.caps || [])) {
+    const btn = gridEl.querySelector(`.cap-expander[data-cap="${cssEsc(key)}"]`);
+    if (btn && btn.textContent !== "▼") btn.click();
+  }
+
 
   applyZebraVisible();
 }
@@ -2022,7 +2038,7 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
         openInhuurModalAtWeek(new Date(rangeStart)); // start week van huidige view
         return;
       }
-      
+
       // ✅ click op INHUUR-capaciteit cel => open inhuur modal op week + selecteer persoon
       const inhuurCell = ev.target.closest("td.inhuur-cell-click");
       if (inhuurCell) {
