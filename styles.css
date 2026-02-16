@@ -765,33 +765,6 @@ td.section-click{
 /* verberg badges (zoals je had) */
 .assign-badge{ display:none !important; }
 
-/* tooltip */
-td.section-click[data-tip]:hover::after{
-  content:attr(data-tip);
-  position:absolute;
-  left:6px;
-  top:calc(100% + 6px);
-  z-index:200;
-  background:#111827;
-  color:#fff;
-  padding:8px 10px;
-  border-radius:10px;
-  font-size:12px;
-  line-height:1.25;
-  white-space:pre-line;
-  min-width:160px;
-  max-width:320px;
-  box-shadow:0 10px 26px rgba(0,0,0,.18);
-}
-td.section-click[data-tip]:hover::before{
-  content:"";
-  position:absolute;
-  left:14px;
-  top:calc(100% + 2px);
-  border:6px solid transparent;
-  border-bottom-color:#111827;
-  z-index:201;
-}
 
 /* assignment modal variant */
 .modal.assign-modal{
