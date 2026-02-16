@@ -1962,9 +1962,15 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
     const h = Number(dm.get(iso) || 0);
 
     const td = document.createElement("td");
-    td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+    td.className = `cell cap-cell inhuur-cell-click ${isWeekend(d) ? "wknd" : ""}`;
+
+    // ✅ nodig om op cel te kunnen klikken
+    td.dataset.inhuurId = String(iid);
+    td.dataset.workDate = iso;
+
     td.textContent = fmt0(h);
     trI.appendChild(td);
+
   }
 
   tbody.appendChild(trI);
@@ -2014,6 +2020,32 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
       if (inBtn) {
         ev.stopPropagation();
         openInhuurModalAtWeek(new Date(rangeStart)); // start week van huidige view
+        return;
+      }
+      
+      // ✅ click op INHUUR-capaciteit cel => open inhuur modal op week + selecteer persoon
+      const inhuurCell = ev.target.closest("td.inhuur-cell-click");
+      if (inhuurCell) {
+        ev.stopPropagation();
+
+        const iid = String(inhuurCell.dataset.inhuurId || "");
+        const dateISO = String(inhuurCell.dataset.workDate || "");
+        if (!iid || !dateISO) return;
+
+        // week van aangeklikte datum
+        const wkStart = startOfISOWeek(parseISODate(dateISO) || new Date());
+
+        // open modal
+        await openInhuurModalAtWeek(wkStart);
+
+        // selecteer de juiste inhuur in de dropdown
+        const sel = document.getElementById("imSelect");
+        if (sel) {
+          sel.value = iid;
+          // trigger onchange zodat week opnieuw rendert met juiste waarden
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
         return;
       }
 

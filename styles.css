@@ -1190,3 +1190,6 @@ td.is-dragging { opacity: .55; }
 
 td.cap-cell-click { cursor: pointer; }
 td.cap-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
+
+td.inhuur-cell-click { cursor:pointer; }
+td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
