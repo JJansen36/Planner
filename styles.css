@@ -1187,3 +1187,6 @@ tr.project-topline > th{
 
 td.is-drop-target { outline: 2px dashed #2563eb; outline-offset: -2px; }
 td.is-dragging { opacity: .55; }
+
+td.cap-cell-click { cursor: pointer; }
+td.cap-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }

@@ -1911,8 +1911,14 @@ for (const dd of dates) {
         const dayISO = toISODate(d);
         const h = capByEmp.get(empIdStr)?.get(dayISO) || 0;
 
+
         const td = document.createElement("td");
-        td.className = `cell cap-cell ${isWeekend(d) ? "wknd" : ""}`;
+        td.className = `cell cap-cell cap-cell-click ${isWeekend(d) ? "wknd" : ""}`;
+
+        // ✅ nodig voor click op cel
+        td.dataset.empId = String(empId ?? "");
+        td.dataset.empName = String(empName ?? "");
+        td.dataset.workDate = dayISO;
 
         const inProd = !!empAssignByDay[dayISO]?.prod?.has(empIdStr);
         const inMont = !!empAssignByDay[dayISO]?.mont?.has(empIdStr);
@@ -1923,6 +1929,7 @@ for (const dd of dates) {
 
         td.textContent = fmt0(h);
         tr.appendChild(td);
+
       }
 
       tbody.appendChild(tr);
@@ -2153,6 +2160,201 @@ const totals = {
         });
         return;
       }
+
+
+      // ✅ click op capaciteit-cel => open modal (zelfde als klik op medewerkernaam)
+const capCell = ev.target.closest("td.cap-cell-click");
+if (capCell) {
+  const empId = String(capCell.dataset.empId || "");
+  const empName = String(capCell.dataset.empName || empId);
+  const dateISO = String(capCell.dataset.workDate || "");
+  if (!empId || !dateISO) return;
+
+  // hergebruik exact dezelfde flow als je cap-emp-click,
+  // maar start week op basis van aangeklikte datum
+  const modal = ensureCapModal();
+  const subEl = modal.wrap.querySelector("#capModalSub");
+  const weekLabelEl = modal.wrap.querySelector("#capWeekLabel");
+  const formEl = modal.wrap.querySelector("#capForm");
+  const btnPrevW = modal.wrap.querySelector("#capPrevWeek");
+  const btnNextW = modal.wrap.querySelector("#capNextWeek");
+  const btnSave  = modal.wrap.querySelector("#capSave");
+  const btnApplyEven = modal.wrap.querySelector("#capApplyEven");
+  const btnApplyOdd  = modal.wrap.querySelector("#capApplyOdd");
+  const btnApplyAll  = modal.wrap.querySelector("#capApplyAll");
+
+  // ✅ start bij week van de aangeklikte datum (niet rangeStart)
+  let wkStart = startOfISOWeek(parseISODate(dateISO) || new Date());
+
+  const buildWeekDays = () => {
+    const days = [];
+    for (let i=0;i<7;i++) days.push(addDays(wkStart, i));
+    return days;
+  };
+
+  const renderWeek = () => {
+    const days = buildWeekDays();
+    const startISO = toISODate(days[0]);
+    const endISO = toISODate(days[6]);
+
+    if (subEl) subEl.textContent = `${empName} • ${startISO} t/m ${endISO}`;
+    if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
+
+    const empMap = capByEmp.get(String(empId)) || new Map();
+
+    formEl.innerHTML = `
+      <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
+        ${days.map(d=>{
+          const iso = toISODate(d);
+          const val = Number(empMap.get(iso) || 0);
+          return `
+            <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+            <div class="value" style="gap:10px;">
+              <input
+                class="input"
+                type="text"
+                inputmode="decimal"
+                pattern="[0-9]*[.,]?[0-9]*"
+                data-iso="${iso}"
+                value="${val ? String(val).replace(".", ",") : ""}"
+                placeholder="0"
+              />
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    formEl.querySelectorAll('input.input[data-iso]').forEach(inp => {
+      inp.addEventListener("input", () => {
+        inp.value = inp.value.replace(/[^0-9.,]/g, "");
+      });
+      inp.addEventListener("blur", () => {
+        inp.value = inp.value.replace(".", ",");
+      });
+    });
+  };
+
+  btnPrevW.onclick = () => { wkStart = addDays(wkStart, -7); renderWeek(); };
+  btnNextW.onclick = () => { wkStart = addDays(wkStart, +7); renderWeek(); };
+
+  btnApplyEven.onclick = () => applyToFutureWeeks("even");
+  btnApplyOdd.onclick  = () => applyToFutureWeeks("odd");
+  btnApplyAll.onclick  = () => applyToFutureWeeks("all");
+
+  const readCurrentWeekInputs = () => {
+    const inputs = Array.from(formEl.querySelectorAll("input[data-iso]"));
+    const values = [];
+    for (const inp of inputs) {
+      const raw = String(inp.value || "").trim().replace(",", ".");
+      const hours = raw ? Number(raw) : 0;
+      const hoursRounded = Math.round(hours * 4) / 4;
+      values.push(Number.isFinite(hoursRounded) ? hoursRounded : 0);
+    }
+    while (values.length < 7) values.push(0);
+    return values.slice(0,7);
+  };
+
+  const writeWeekToRows = (wkStartDate, values7) => {
+    const rows = [];
+    for (let i=0;i<7;i++){
+      const iso = toISODate(addDays(wkStartDate, i));
+      const h = Number(values7[i] || 0);
+      if (h > 0) rows.push({ work_date: iso, werknemer_id: Number(empId), hours: h, type: "werk" });
+    }
+    return rows;
+  };
+
+  const applyToFutureWeeks = async (mode) => {
+    const values7 = readCurrentWeekInputs();
+    const today = new Date();
+    const todayWkStart = startOfISOWeek(today);
+    const viewEnd = addDays(new Date(rangeStart), RANGE_DAYS - 1);
+    let iter = addDays(wkStart, 7);
+
+    const allInsertRows = [];
+    const deleteRanges = [];
+
+    while (iter <= viewEnd) {
+      if (iter >= todayWkStart) {
+        const wkNr = weekNumberISO(iter);
+        const ok =
+          mode === "all" ||
+          (mode === "even" && wkNr % 2 === 0) ||
+          (mode === "odd"  && wkNr % 2 === 1);
+
+        if (ok) {
+          const startISO = toISODate(iter);
+          const endISO = toISODate(addDays(iter, 6));
+          deleteRanges.push({ startISO, endISO });
+          allInsertRows.push(...writeWeekToRows(iter, values7));
+        }
+      }
+      iter = addDays(iter, 7);
+    }
+
+    if (!deleteRanges.length) { alert("Geen toekomstige weken in bereik om door te voeren."); return; }
+
+    for (const r of deleteRanges) {
+      const del = await sb
+        .from("capacity_entries")
+        .delete()
+        .eq("werknemer_id", Number(empId))
+        .eq("type", "werk")
+        .gte("work_date", r.startISO)
+        .lte("work_date", r.endISO);
+
+      if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+    }
+
+    if (allInsertRows.length) {
+      const ins = await sb.from("capacity_entries").insert(allInsertRows);
+      if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+    }
+
+    modal.close();
+    loadAndRender();
+  };
+
+  btnSave.onclick = async () => {
+    const days = buildWeekDays();
+    const startISO = toISODate(days[0]);
+    const endISO   = toISODate(days[6]);
+
+    const inputs = Array.from(formEl.querySelectorAll("input[data-iso]"));
+    const rows = [];
+
+    for (const inp of inputs) {
+      const iso = String(inp.dataset.iso || "");
+      const raw = String(inp.value || "").trim().replace(",", ".");
+      const h = raw ? Number(raw) : 0;
+      if (!iso) continue;
+      if (h > 0) rows.push({ work_date: iso, werknemer_id: Number(empId), hours: h, type: "werk" });
+    }
+
+    const del = await sb
+      .from("capacity_entries")
+      .delete()
+      .eq("werknemer_id", Number(empId))
+      .eq("type", "werk")
+      .gte("work_date", startISO)
+      .lte("work_date", endISO);
+
+    if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+
+    if (rows.length) {
+      const ins = await sb.from("capacity_entries").insert(rows);
+      if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+    }
+
+    modal.close();
+    loadAndRender();
+  };
+
+  renderWeek();
+  modal.wrap.classList.add("show");
+  return;
+}
 
     // click op medewerkernaam (capaciteit) => popup week-invoer
     const empTd = ev.target.closest("td.cap-emp-click");
