@@ -3764,6 +3764,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
           if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
           if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
           if (tip) td.dataset.tip = tip;
+          td.removeAttribute("title"); // ✅ voorkomt browser/oud fallback tooltip
         }
 
         // cel-kleur
