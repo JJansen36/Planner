@@ -3341,10 +3341,10 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     // markers samen op 1 regel
     html += `<div class="marker-row">`;
     html += isDelivery
-      ? `<div class="marker delivery">lever</div>`
+      ? `<div class="marker delivery"></div>`
       : `<div class="marker delivery placeholder">lever</div>`;
     html += isMarker
-      ? `<div class="marker deadline" title="${iso}">oplever</div>`
+      ? `<div class="marker deadline" title="${iso}"></div>`
       : `<div class="marker deadline placeholder">oplever</div>`;
 
     html += `</div>`;
