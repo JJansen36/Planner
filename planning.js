@@ -1527,8 +1527,8 @@ for (const a of (pAssigns || [])) {
     for(const p of projecten || []){
       const pid = p?.[projIdKey];
       const nr  = p?.[projNrKey] ?? "";
-const isDebugProj = String(nr).includes(DEBUG_OFFNR);
-if (isDebugProj) dbgSectionKeysForProject(String(pid));
+      const isDebugProj = String(nr).includes(DEBUG_OFFNR);
+      if (isDebugProj) dbgSectionKeysForProject(String(pid));
 
 
       const nm  = p?.[projNameKey] ?? "";
@@ -3343,8 +3343,9 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
       ? `<div class="marker delivery">lever</div>`
       : `<div class="marker delivery placeholder">lever</div>`;
     html += isMarker
-      ? `<div class="marker deadline">oplever</div>`
+      ? `<div class="marker deadline" title="${iso}">oplever</div>`
       : `<div class="marker deadline placeholder">oplever</div>`;
+
     html += `</div>`;
 
 
