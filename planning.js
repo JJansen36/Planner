@@ -1535,7 +1535,8 @@ for (const a of (pAssigns || [])) {
       const kl = String(p?.deliveryname || p?.[klantKey] || "").trim();
       const complRaw = p?.[completionKey] ?? "";
       const complTxt = formatDateNL(complRaw);
-      const complISO = asISODate(complRaw);
+      const complISO0 = asISODate(complRaw);
+      const complISO  = complISO0 ? toISODate(addDays(parseISODate(complISO0), -1)) : "";
       const deliveryRaw = p?.[deliveryKey] ?? "";
       const deliveryISO = asISODate(deliveryRaw);
 
