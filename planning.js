@@ -820,7 +820,7 @@ async function openInhuurModalAtWeek(wkStart){
       if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
     }
 
-    modal.close();
+    //modal.close();
     loadAndRender(); // ✅ refresh zodat rij alleen verschijnt als in view
   };
 
@@ -2360,7 +2360,7 @@ if (capCell) {
       if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
     }
 
-    modal.close();
+    //modal.close();
     loadAndRender();
   };
 
@@ -2595,7 +2595,7 @@ if (capCell) {
           if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
         }
 
-        modal.close();
+        //modal.close();
         loadAndRender();
       };
 
@@ -2640,7 +2640,7 @@ if (capCell) {
           if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
         }
 
-        modal.close();
+        //modal.close();
         loadAndRender();
       };
 
