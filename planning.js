@@ -126,44 +126,50 @@ document.addEventListener("keydown", (e) => {
     caps: new Set(),
   };
 
-  function captureOpenState(){
-    const st = { projects: new Set(), sections: new Set(), orders: new Set() };
+function captureOpenState(){
+  const st = {
+    projects: new Set(),
+    sections: new Set(),
+    orders: new Set(),
+    caps: new Set(),        // ✅ deze miste
+  };
 
-    // capaciteit (betrouwbaar: kijk naar het symbool)
-    gridEl?.querySelectorAll('.cap-expander[data-cap]').forEach(b=>{
-      if (b.textContent === "▼") {
-        const key = String(b.dataset.cap || "");
-        if (key) st.caps.add(key);
-      }
-    });
+  // capaciteit (betrouwbaar: kijk naar het symbool)
+  gridEl?.querySelectorAll('.cap-expander[data-cap]').forEach(b=>{
+    if (b.textContent === "▼") {
+      const key = String(b.dataset.cap || "");
+      if (key) st.caps.add(key);
+    }
+  });
 
-    // projecten (betrouwbaar: kijk naar het symbool)
-    gridEl?.querySelectorAll('.expander[data-proj]').forEach(b=>{
-      if (b.textContent === "▼") {
-        const pid = String(b.dataset.proj || "");
-        if (pid) st.projects.add(pid);
-      }
-    });
+  // projecten (betrouwbaar: kijk naar het symbool)
+  gridEl?.querySelectorAll('.expander[data-proj]').forEach(b=>{
+    if (b.textContent === "▼") {
+      const pid = String(b.dataset.proj || "");
+      if (pid) st.projects.add(pid);
+    }
+  });
 
-    // secties
-    gridEl?.querySelectorAll('.expander-sec').forEach(b=>{
-      if (b.textContent === "▼") {
-        const sid = String(b.dataset.sect || "");
-        if (sid) st.sections.add(sid);
-      }
-    });
+  // secties
+  gridEl?.querySelectorAll('.expander-sec').forEach(b=>{
+    if (b.textContent === "▼") {
+      const sid = String(b.dataset.sect || "");
+      if (sid) st.sections.add(sid);
+    }
+  });
 
-    // orders
-    gridEl?.querySelectorAll('.expander-order').forEach(b=>{
-      if (b.textContent === "▼") {
-        const sid = String(b.dataset.sect || "");
-        const bn  = String(b.dataset.orderbn || "");
-        if (sid && bn) st.orders.add(`${sid}||${bn}`);
-      }
-    });
+  // orders
+  gridEl?.querySelectorAll('.expander-order').forEach(b=>{
+    if (b.textContent === "▼") {
+      const sid = String(b.dataset.sect || "");
+      const bn  = String(b.dataset.orderbn || "");
+      if (sid && bn) st.orders.add(`${sid}||${bn}`);
+    }
+  });
 
-    openState = st;
-  }
+  openState = st;
+}
+
 
 
 function restoreOpenState(){
