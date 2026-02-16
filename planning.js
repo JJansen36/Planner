@@ -788,41 +788,51 @@ async function openInhuurModalAtWeek(wkStart){
     await renderWeek();
   };
 
-  modal.wrap.querySelector("#imSave").onclick = async () => {
-    const iid = String(selEl.value || "");
-    if (!iid) { alert("Kies een ingehuurde kracht."); return; }
+    modal.wrap.querySelector("#imSave").onclick = async () => {
+    const btn = modal.wrap.querySelector("#imSave");
+    btn.disabled = true;
+    btn.textContent = "Opslaan…";
 
-    const days = buildWeekDays();
-    const startISO = toISODate(days[0]);
-    const endISO = toISODate(days[6]);
+    try {
+      const iid = String(selEl.value || "");
+      if (!iid) { alert("Kies een ingehuurde kracht."); return; }
 
-    // delete week
-    const del = await sb
-      .from(INHUUR_ENTRIES_TABLE)
-      .delete()
-      .eq("inhuur_id", iid)
-      .gte("work_date", startISO)
-      .lte("work_date", endISO);
+      const days = buildWeekDays();
+      const startISO = toISODate(days[0]);
+      const endISO   = toISODate(days[6]);
 
-    if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
+      const del = await sb
+        .from(INHUUR_ENTRIES_TABLE)
+        .delete()
+        .eq("inhuur_id", iid)
+        .gte("work_date", startISO)
+        .lte("work_date", endISO);
 
-    // insert new
-    const rows = [];
-    modal.wrap.querySelectorAll("#imForm input[data-iso]").forEach(inp => {
-      const iso = String(inp.dataset.iso || "");
-      const raw = String(inp.value || "").trim().replace(",", ".");
-      const h = raw ? Number(raw) : 0;
-      if (iso && h > 0) rows.push({ inhuur_id: iid, work_date: iso, hours: h });
-    });
+      if (del.error) throw new Error("Verwijderen: " + del.error.message);
 
-    if (rows.length) {
-      const ins = await sb.from(INHUUR_ENTRIES_TABLE).insert(rows);
-      if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
+      const rows = [];
+      modal.wrap.querySelectorAll("#imForm input[data-iso]").forEach(inp => {
+        const iso = String(inp.dataset.iso || "");
+        const raw = String(inp.value || "").trim().replace(",", ".");
+        const h = raw ? Number(raw) : 0;
+        if (iso && h > 0) rows.push({ inhuur_id: iid, work_date: iso, hours: h });
+      });
+
+      if (rows.length) {
+        const ins = await sb.from(INHUUR_ENTRIES_TABLE).insert(rows);
+        if (ins.error) throw new Error("Opslaan: " + ins.error.message);
+      }
+
+      await loadAndRender();   // ✅ dit maakt het direct zichtbaar
+    } catch (e) {
+      console.warn("Inhuur save error:", e);
+      alert(String(e.message || e));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Opslaan";
     }
-
-    //modal.close();
-    loadAndRender(); // ✅ refresh zodat rij alleen verschijnt als in view
   };
+
 
   modal.wrap.classList.add("show");
 }
@@ -1059,8 +1069,6 @@ async function openInhuurModalAtWeek(wkStart){
         }
 
 
-
-console.log("[sectie-save] project dummy montage count BEFORE:", dbg.count);
 
  async function consumeProjectConceptMontage(projectId, dateISO, consumeCount){
   try{
@@ -2789,7 +2797,7 @@ const countM = rowM.querySelector(".concept-count");
 
     
     modal.close();
-    loadAndRender();
+    await loadAndRender();
   };
 
   return;
