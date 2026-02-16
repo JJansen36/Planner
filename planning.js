@@ -829,7 +829,8 @@ async function openInhuurModalAtWeek(wkStart){
         if (ins.error) throw new Error("Opslaan: " + ins.error.message);
       }
 
-      await loadAndRender();   // ✅ dit maakt het direct zichtbaar
+      await loadAndRender();   // ✅ dit maakt het direct zichtbaar.
+      modal.close();           // ✅ sluit modal automatisch
     } catch (e) {
       console.warn("Inhuur save error:", e);
       alert(String(e.message || e));
