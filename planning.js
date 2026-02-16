@@ -392,6 +392,16 @@ async function fillOrderTypeFilterUI(){
     if (!statusEl.parentElement) host.appendChild(statusEl);
     if (!gridEl.parentElement) host.appendChild(gridEl);
   }
+function ensureHoverTip(){
+  let tip = document.getElementById("hoverTip");
+  if (tip) return tip;
+
+  tip = document.createElement("div");
+  tip.id = "hoverTip";
+  tip.style.display = "none";
+  document.body.appendChild(tip);
+  return tip;
+}
 
   const RANGE_DAYS = 56; // 8 weken zoals je PDF-screens
   let rangeStart = startOfISOWeek(new Date()); // maandag
@@ -3210,10 +3220,52 @@ loadAndRender();
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
 
+function bindHoverTips(){
+  const tip = ensureHoverTip();
+
+  const show = (text, x, y) => {
+    tip.textContent = text;
+    tip.style.left = (x + 12) + "px";
+    tip.style.top  = (y + 12) + "px";
+    tip.style.display = "block";
+  };
+
+  const hide = () => { tip.style.display = "none"; };
+
+  // eerst eventuele oude listeners verwijderen (simpel: vlag)
+  if (gridEl._hoverTipsBound) return;
+  gridEl._hoverTipsBound = true;
+
+  gridEl.addEventListener("pointerover", (e) => {
+    const td = e.target.closest("td.section-click");
+    if (!td) return;
+
+    const t = String(td.dataset.tip || "").trim();
+    if (!t) return;
+
+    show(t, e.clientX, e.clientY);
+  }, true);
+
+  gridEl.addEventListener("pointermove", (e) => {
+    if (tip.style.display === "block") {
+      tip.style.left = (e.clientX + 12) + "px";
+      tip.style.top  = (e.clientY + 12) + "px";
+    }
+  }, true);
+
+  gridEl.addEventListener("pointerout", (e) => {
+    if (e.target.closest("td.section-click")) hide();
+  }, true);
+
+  // safety: bij scroll/escape ook weg
+  window.addEventListener("scroll", hide, true);
+  document.addEventListener("keydown", (ev)=>{ if(ev.key === "Escape") hide(); });
+}
 
     bindExpandersAndClicks();
     applyZebraVisible();
     wireDragDrop(gridEl);
+    bindHoverTips(); 
     restoreOpenState();
 
   }
