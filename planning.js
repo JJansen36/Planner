@@ -1699,12 +1699,10 @@ for (const dd of dates) {
 
         const para = String(s?.[sectParaKey] ?? "").trim();   // bv "02."
         const sn0  = s?.[sectNameKey] || "sectie";
-        const sn   = para ? `${para} ${sn0}` : sn0;
-
-
+        const paraHtml = para ? `<span class="secNo">${escapeHtml(para)}</span>` : "";
         leftS.innerHTML = `
           <button class="expander expander-sec" data-sect="${escapeAttr(sid)}" aria-label="toggle sectie">▶</button>
-          <span class="sectext sectname" data-sect="${escapeAttr(sid)}">↳ ${escapeHtml(sn)}</span>
+          <span class="sectext sectname" data-sect="${escapeAttr(sid)}">↳ ${paraHtml}${escapeHtml(sn0)}</span>
         `;
 
 
