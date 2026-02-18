@@ -1166,6 +1166,7 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
     const sectIdKey   = pickKey(secties[0], ["id","section_id"]);
     const sectProjKey = pickKey(secties[0], ["project_id","projectid","project","project_ref"]);
     const sectNameKey = pickKey(secties[0], ["name","naam","section_name","sectionname","titel","title","omschrijving","description"]);
+    const sectParaKey = pickKey(secties[0], ["paragraph","paragraaf","sectienr","sectie_nr"]);
 
 
     console.log("secties keys:", Object.keys(secties?.[0] || {}));
@@ -1696,7 +1697,10 @@ for (const dd of dates) {
         const sid = sidRaw ? (sectLookup.get(String(sidRaw)) || String(sidRaw)) : null;
 
 
-        const sn = s?.[sectNameKey] || "sectie";
+        const para = String(s?.[sectParaKey] ?? "").trim();   // bv "02."
+        const sn0  = s?.[sectNameKey] || "sectie";
+        const sn   = para ? `${para} ${sn0}` : sn0;
+
 
         leftS.innerHTML = `
           <button class="expander expander-sec" data-sect="${escapeAttr(sid)}" aria-label="toggle sectie">▶</button>
