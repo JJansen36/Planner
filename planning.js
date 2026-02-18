@@ -1135,6 +1135,19 @@ async function openInhuurModalAtWeek(wkStart){
   }
 }
 
+function parseSectionNo(v){
+  // accepteert bv: "01.", "01", " 02 ", "M05.", "m07", "MW01", etc.
+  const s = String(v ?? "").trim().toUpperCase();
+
+  // pak eerste match: optioneel 'M', dan 1-3 cijfers
+  const m = s.match(/^(M)?\s*0*([0-9]{1,3})/);
+  if (!m) return null;
+
+  return {
+    isMeerwerk: !!m[1],
+    num: Number(m[2] || 0)
+  };
+}
 
 
 
@@ -1678,8 +1691,34 @@ for (const dd of dates) {
 
 
   // section rows (hidden by default)
-      const secList = (sectiesByProject.get(pid) || []).slice()
-        .sort((a,b)=>String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||"")));
+    const secList = (sectiesByProject.get(pid) || []).slice()
+      .sort((a,b)=>{
+        // haal paragraph / sectienr op (wat jij gebruikt)
+        const pa = parseSectionNo(a?.[sectParaKey] ?? a?.paragraph ?? "");
+        const pb = parseSectionNo(b?.[sectParaKey] ?? b?.paragraph ?? "");
+
+        // 1) secties zonder nummer helemaal onderaan binnen hun groep
+        const hasA = !!pa, hasB = !!pb;
+        if (hasA && !hasB) return -1;
+        if (!hasA && hasB) return  1;
+
+        // als beiden geen nummer: val terug op naam
+        if (!hasA && !hasB){
+          return String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||""));
+        }
+
+        // 2) normaal eerst, meerwerk onderaan
+        if (pa.isMeerwerk !== pb.isMeerwerk){
+          return pa.isMeerwerk ? 1 : -1; // meerwerk = later
+        }
+
+        // 3) nummer oplopend
+        if (pa.num !== pb.num) return pa.num - pb.num;
+
+        // 4) tie-breaker: naam
+        return String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||""));
+      });
+
 
       for (const s of secList) {
         const secRow = document.createElement("tr");
