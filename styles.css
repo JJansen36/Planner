@@ -1286,3 +1286,13 @@ td.hourscol *{
 td.hourscol{
   border-left: 1px solid #cbd5e1 !important;
 }
+
+/* finale montage-kleur override (voorkomt resterend paars uit oudere regels/cache) */
+.planner-table td.plan-cell.bar-mont .bar,
+.planner-table .plan-stack .bar.bar-mont,
+.planner-table td.cap-cell.cap-assigned-mont,
+.planner-table tr.planned-mont td.sum-cell.has-val{
+  background: #fde68a !important;
+  background-image: none !important;
+  color:#111827 !important;
+}
