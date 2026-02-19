@@ -41,7 +41,7 @@
   let ordersBySection = new Map();
   let __wasDragging = false;
   // ===== Extra kolom: uren (uit Supabase) vs gepland =====
-  let hoursColOpen = true; // alleen handmatig via pijltje boven de orders
+  let hoursColOpen = false; // alleen handmatig via pijltje boven de orders
 
 
 
