@@ -282,7 +282,7 @@ function buildPlannedSetsByDay(planningItems){
     if (!d || !wid) continue;
 
     const bucket =
-      (kind === "pro" || kind === "productie") ? "pro" :
+      (kind === "pro" || kind === "productie" || kind === "werk") ? "pro" :
       (kind === "mo"  || kind === "montage")   ? "mo"  :
       (kind === "cnc")                         ? "cnc" :
       (kind === "reis")                        ? "reis":
@@ -1546,7 +1546,7 @@ for (const a of (pAssigns || [])) {
 
     // extra kolom met uren (uit Supabase | gepland)
     const colHours = document.createElement("col");
-    colHours.style.width = hoursColOpen ? "96px" : "0px";
+    colHours.style.width = hoursColOpen ? "120px" : "0px";
     colgroup.appendChild(colHours);
 
     for(let i=0;i<dates.length;i++){
@@ -1577,7 +1577,7 @@ for (const a of (pAssigns || [])) {
     ));
 
 // uren-kolom header blijft leeg (maar kolom bestaat wel)
-trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+trMonth.appendChild(hdrCell("", `hdr-cell hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
 
 
 
@@ -1597,7 +1597,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left
     const trWeek = document.createElement("tr");
     trWeek.className = "hdr hdr-week";
     trWeek.appendChild(hdrCell("", "rowhdr sticky-left sticky-top2"));
-    trWeek.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trWeek.appendChild(hdrCell("", `hdr-cell hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
 
     let j=0;
     while(j < dates.length){
@@ -1614,7 +1614,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left
     const trDay = document.createElement("tr");
     trDay.className = "hdr hdr-day";
     trDay.appendChild(hdrCell("", "rowhdr sticky-left sticky-top3"));
-    trDay.appendChild(hdrCell("",  `hdr-cell rowhdr hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trDay.appendChild(hdrCell("",  `hdr-cell hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
       const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
@@ -1690,21 +1690,31 @@ for (const s of secsForProj) {
   req.reis += Number(s?.uren_reis ?? 0);
 }
 
-// ===== planned uren uit project_assignments (incl dummy) =====
+// ===== planned uren voor projectregel =====
+// Optellen zoals zichtbaar in de groene sectie-blokken:
+// per sectie en dag productie/CNC/montage/reis meenemen.
 const pf = (settings.planFactor ?? 1);
 const pl = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-const pMap = projectAssignMap.get(String(pid));   // ✅ 1x, vóór gebruik
-if (pMap) {
+for (const s of secsForProj) {
+  const sidRaw = s?.[sectIdKey]
+    ? String(s[sectIdKey])
+    : (s?.section_id ? String(s.section_id) : null);
+  if (!sidRaw) continue;
+
+  const sidC = sectLookup.get(String(sidRaw)) || String(sidRaw);
+  const dmSec = assignMap.get(sidC);
+  if (!dmSec) continue;
+
   for (const dd of dates) {
     const iso = toISODate(dd);
-    const e = pMap.get(iso);
+    const e = dmSec.get(iso);
     if (!e) continue;
 
     const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0);
-    const cncCnt  = (e.cnc?.size || 0)      + (e.dummyCnc  || 0);
-    const montCnt = (e.montage?.size || 0)  + (e.dummyMont || 0);
-    const reisCnt = (e.reis?.size || 0)     + (e.dummyReis || 0);
+    const cncCnt  = (e.cnc?.size || 0)       + (e.dummyCnc  || 0);
+    const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0);
+    const reisCnt = (e.reis?.size || 0)      + (e.dummyReis || 0);
 
     pl.prod += prodCnt * HOURS_PER_PERSON_DAY * pf;
     pl.cnc  += cncCnt  * HOURS_PER_PERSON_DAY * pf;
@@ -1713,14 +1723,7 @@ if (pMap) {
   }
 }
 
-hoursTd.innerHTML = `
-  <div class="mini-hours">
-    <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${escapeHtml(fmt0(req.prod))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.prod))}</span></div>
-    <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${escapeHtml(fmt0(req.cnc))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.cnc))}</span></div>
-    <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${escapeHtml(fmt0(req.mont))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.mont))}</span></div>
-    <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${escapeHtml(fmt0(req.reis))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.reis))}</span></div>
-  </div>
-`;
+hoursTd.innerHTML = miniHoursHtml(req, pl);
 
  
   // tel ingeplande mensen per dag op over alle secties van dit project
@@ -1815,6 +1818,9 @@ for (const dd of dates) {
         // 4) tie-breaker: naam
         return String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||""));
       });
+
+    const secIdsForProject = secList.map(s => String(s?.[sectIdKey] ?? s?.section_id ?? "")).filter(Boolean);
+
 
 
       for (const s of secList) {
@@ -1946,7 +1952,7 @@ for (const dd of dates) {
       hoursTdO.innerHTML = "";
       orderRow.appendChild(hoursTdO);
 
-      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
+      appendOrderDayCells(orderRow, dates, oh.leverISO, secIdsForProject, assignMap);
       tbody.appendChild(orderRow);
       lastRowOfProject = orderRow;
 
@@ -1983,7 +1989,7 @@ for (const dd of dates) {
 
 
       const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
-      appendOrderDayCells(lineRow, dates, leverLineISO, pid, projectAssignMap);
+      appendOrderDayCells(lineRow, dates, leverLineISO, [String(sid)], assignMap);
 
       tbody.appendChild(lineRow);
       lastRowOfProject = lineRow;
@@ -2121,6 +2127,14 @@ for (const dd of dates) {
   `;
 
   trTotal.appendChild(tdTotalLeft);
+
+  // uren-kolom placeholder (totaal capaciteit)
+  const hoursTdTotal = document.createElement("td");
+  hoursTdTotal.className = "cell hourscol sticky-left2";
+  hoursTdTotal.style.left = "380px";
+  if (!hoursColOpen) hoursTdTotal.style.display = "none";
+  hoursTdTotal.innerHTML = "";
+  trTotal.appendChild(hoursTdTotal);
 
   // totalen per dag (som van alle medewerkers)
   for (const d of dates){
@@ -4198,20 +4212,37 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     }
 
 
-function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
+function appendOrderDayCells(tr, dates, leverISO, sectionIds, assignMap){
   const isTop = tr.classList.contains("order-topline");
   const isBottom = tr.classList.contains("order-bottomline");
 
-  // keys op basis van project_assignments (voor start/eind van een run)
+  const sectionList = (sectionIds || []).map(x => String(x));
+
+  function getSectionPlanned(iso){
+    let prod = 0, mont = 0, dummyProd = false, dummyMont = false;
+
+    for (const sid of sectionList){
+      const e = assignMap?.get(String(sid))?.get(iso);
+      if (!e) continue;
+
+      prod += (e.productie?.size || 0) + (e.dummyProd || 0);
+      mont += (e.montage?.size || 0)  + (e.dummyMont || 0);
+
+      if ((e.dummyProd || 0) > 0) dummyProd = true;
+      if ((e.dummyMont || 0) > 0) dummyMont = true;
+    }
+
+    return { prod, mont, dummyProd, dummyMont };
+  }
+
+  // keys op basis van section_assignments (som van meegegeven secties)
   const keys = dates.map(d => {
     const iso = toISODate(d);
-    const e = projectAssignMap?.get(String(pid))?.get(iso);
-    const prod = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
-    const mont = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
+    const sums = getSectionPlanned(iso);
 
-    if (prod > 0 && mont > 0) return "both";
-    if (prod > 0) return "prod";
-    if (mont > 0) return "mont";
+    if (sums.prod > 0 && sums.mont > 0) return "both";
+    if (sums.prod > 0) return "prod";
+    if (sums.mont > 0) return "mont";
     return "";
   });
 
@@ -4223,9 +4254,9 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
     const prevKey = (i>0) ? keys[i-1] : "";
     const nextKey = (i<keys.length-1) ? keys[i+1] : "";
 
-    const e = projectAssignMap?.get(String(pid))?.get(iso);
-    const dummyProd = !!(e && (e.dummyProd || 0) > 0);
-    const dummyMont = !!(e && (e.dummyMont || 0) > 0);
+    const sums = getSectionPlanned(iso);
+    const dummyProd = !!sums.dummyProd;
+    const dummyMont = !!sums.dummyMont;
 
     const td = document.createElement("td");
     td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
@@ -4252,8 +4283,8 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
       const startCls = isStart ? " bar-start" : "";
       const endCls   = isEnd   ? " bar-end"   : "";
 
-      const prodCnt = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
-      const montCnt = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
+      const prodCnt = sums.prod;
+      const montCnt = sums.mont;
 
       if (key === "both") {
         html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodCnt || "&nbsp;"}</div>`;
@@ -4411,12 +4442,24 @@ function fmt0(n){
 function miniHoursHtml(req, pl){
   // req/pl zijn getallen
   const f = (n) => escapeHtml(formatHoursCell(Number(n || 0)));
+
+  // Overschrijding = geplande waarde (rechter kolom) hoger dan bronwaarde (linker kolom)
+  const over = {
+    prod: Number(pl.prod || 0) > Number(req.prod || 0),
+    cnc: Number(pl.cnc || 0) > Number(req.cnc || 0),
+    mont: Number(pl.mont || 0) > Number(req.mont || 0),
+    reis: Number(pl.reis || 0) > Number(req.reis || 0),
+  };
+
+  const clsPl = (isOver) => isOver ? "mh-v2 mh-over" : "mh-v2";
+  const stylePl = (isOver) => isOver ? ' style="color:#b42318;font-weight:700;"' : "";
+
   return `
     <div class="mini-hours">
-      <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${f(req.prod)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.prod)}</span></div>
-      <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${f(req.cnc)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.cnc)}</span></div>
-      <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${f(req.mont)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.mont)}</span></div>
-      <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${f(req.reis)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.reis)}</span></div>
+      <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${f(req.prod)}</span><span class="mh-sep">|</span><span class="${clsPl(over.prod)}"${stylePl(over.prod)}>${f(pl.prod)}</span></div>
+      <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${f(req.cnc)}</span><span class="mh-sep">|</span><span class="${clsPl(over.cnc)}"${stylePl(over.cnc)}>${f(pl.cnc)}</span></div>
+      <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${f(req.mont)}</span><span class="mh-sep">|</span><span class="${clsPl(over.mont)}"${stylePl(over.mont)}>${f(pl.mont)}</span></div>
+      <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${f(req.reis)}</span><span class="mh-sep">|</span><span class="${clsPl(over.reis)}"${stylePl(over.reis)}>${f(pl.reis)}</span></div>
     </div>
   `;
 }
