@@ -421,7 +421,7 @@ a{ color:inherit; text-decoration:none; }
 .sticky-left2{
   position:sticky;
   left:var(--left-w);
-  z-index:39;
+  z-index:65;
   background:#fff;
   box-shadow:1px 0 0 var(--grid-line);
 }
@@ -448,7 +448,7 @@ a{ color:inherit; text-decoration:none; }
 
 /* linker header-cellen boven alles */
 .hdr-cell.sticky-left{ z-index:80; background:var(--hdr-bg); }
-.hdr-cell.sticky-left2{ z-index:79; background:var(--hdr-bg); }
+.hdr-cell.sticky-left2{ z-index:81; background:var(--hdr-bg); }
 td.rowhdr.sticky-left{ z-index:50; }
 
 /* =========================
@@ -1199,7 +1199,20 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 
 
 .hourscol { border-left: 2px solid #111 !important; }
-.mini-hours { font-size: 11px; line-height: 1.2; padding: 4px 6px; }
+.mini-hours {
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 4px;
+}
+.mh-row{
+  display:grid;
+  grid-template-columns: 36px 1fr 8px 1fr;
+  align-items:center;
+  column-gap:2px;
+}
+.mh-l{ text-align:left; color:#6b7280; }
+.mh-v, .mh-v2{ text-align:right; }
+.mh-sep{ text-align:center; color:#94a3b8; }
 
 .rowhdr-flex{
   display:flex;
@@ -1235,6 +1248,7 @@ td.hourscol{
   background: #fff !important;
   overflow: visible !important;
   white-space: normal !important;
+  text-align: left !important;
 }
 
 td.hourscol *{
