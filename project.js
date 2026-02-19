@@ -4,6 +4,7 @@ import { DB } from "./config.js";
 import { el, escapeHtml, fmtDate, setStatus, valFrom, sumNums } from "./utils.js";
 
 const sb = makeSupabaseClient();
+let sectionPlanningReadonly = false;
 
 document.addEventListener("DOMContentLoaded", init);
 
