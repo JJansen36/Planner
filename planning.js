@@ -1672,6 +1672,9 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hours
       hoursTd.style.left = "380px";
       if (!hoursColOpen) hoursTd.style.display = "none";
       projRow.appendChild(hoursTd);
+      hoursTd.textContent = "TEST";
+      console.log("HOURS TD project", pid, hoursTd);
+
 
       // ===== uren (bron) | gepland =====
       const req = { prod: 0, cnc: 0, mont: 0, reis: 0 };
