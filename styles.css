@@ -1223,24 +1223,19 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
   left: var(--left-w) !important;
 }
 .mini-hours {
-  position: relative;
-  z-index: 2;
   font-size: 11px;
   line-height: 1.2;
   padding: 2px 4px;
-  font-variant-numeric: tabular-nums;
 }
 .mh-row{
   display:grid;
-  width:100%;
-
-  grid-template-columns: 42px minmax(24px, 1fr) 10px minmax(24px, 1fr);
+  grid-template-columns: 36px 1fr 8px 1fr;
   align-items:center;
-  column-gap:3px;
+  column-gap:2px;
 }
-.mh-l{ text-align:left; color:#6b7280; white-space:nowrap; }
-.mh-v, .mh-v2{ text-align:right; white-space:nowrap; }
-.mh-sep{ text-align:center; color:#94a3b8; display:block; width:100%; }
+.mh-l{ text-align:left; color:#6b7280; }
+.mh-v, .mh-v2{ text-align:right; }
+.mh-sep{ text-align:center; color:#94a3b8; }
 
 .rowhdr-flex{
   display:flex;
@@ -1265,8 +1260,8 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 /* uren-kolom styling (respecteert JS toggle display none) */
 td.hourscol{
   display: table-cell;
-  min-width: 120px !important;
-  width: 120px !important;
+  min-width: 96px !important;
+  width: 96px !important;
   height: auto !important;
   line-height: 1.25 !important;
   vertical-align: top !important;
