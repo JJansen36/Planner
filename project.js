@@ -4,6 +4,7 @@ import { DB } from "./config.js";
 import { el, escapeHtml, fmtDate, setStatus, valFrom, sumNums } from "./utils.js";
 
 const sb = makeSupabaseClient();
+let sectionPlanningReadonly = false;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -84,6 +85,7 @@ async function loadProject(id){
   }
 
   const sections = b.data || [];
+  const includePlanningCol = pickIncludePlanningCol(sections);
 
     
 
@@ -150,7 +152,9 @@ async function loadProject(id){
   // Render sections table
   el("secMeta").textContent = `${sections.length} secties`;
 
-  el("secHead").innerHTML = DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("") + `<th style="width:70px"></th>`;
+  el("secHead").innerHTML = DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("")
+    + `<th style="width:170px">In planning</th>`
+    + `<th style="width:70px"></th>`;
 
   el("secBody").innerHTML = sections.map((s, idx)=>{
     const cols = DB.sectionRowCols.map(c=>{
@@ -197,6 +201,7 @@ const detailHours = DB.sectionDetailCols
 
 // ===== Orders HTML voor deze sectie (accordion per bestel_nummer) =====
 const sid = String(s?.[DB.sectionPkCol] ?? "");
+const includeInPlanning = getIncludePlanningValue(s, includePlanningCol);
 const ords = ordersBySection.get(sid) || [];
 
 const ordersHtml = `
@@ -208,10 +213,16 @@ const ordersHtml = `
     return `
       <tr class="accordion-row" data-i="${idx}">
         ${cols}
+        <td>
+          <label class="row" style="gap:8px; justify-content:flex-start" title="Sectie opnemen in planning">
+            <input type="checkbox" class="js-include-planning" data-sid="${escapeHtml(sid)}" ${includeInPlanning ? "checked" : ""}>
+            <span class="muted" style="font-size:12px">Opnemen</span>
+          </label>
+        </td>
         <td style="text-align:right"><span class="pill">▾</span></td>
       </tr>
       <tr class="section-details" data-i="${idx}" style="display:none">
-        <td colspan="${DB.sectionRowCols.length + 1}">
+        <td colspan="${DB.sectionRowCols.length + 2}">
           <div class="inner">
             <div class="inner">
               <div class="muted" style="font-weight:800; margin-bottom:8px">Sectie details</div>
@@ -244,6 +255,33 @@ const ordersHtml = `
       const open = detailRow.style.display !== "none";
       detailRow.style.display = open ? "none" : "table-row";
       tr.querySelector(".pill").textContent = open ? "▾" : "▴";
+    });
+  });
+
+  [...el("secBody").querySelectorAll(".js-include-planning")].forEach(cb => {
+    cb.addEventListener("click", (e) => e.stopPropagation());
+    cb.addEventListener("change", async (e) => {
+      e.stopPropagation();
+      if (sectionPlanningReadonly) {
+        cb.checked = !cb.checked;
+        return;
+      }
+
+      const sectionId = cb.getAttribute("data-sid");
+      const checked = cb.checked;
+
+      cb.disabled = true;
+      const saveResult = await saveIncludeInPlanning(sectionId, checked, includePlanningCol);
+      cb.disabled = sectionPlanningReadonly;
+
+      if (!saveResult.ok) {
+        cb.checked = !checked;
+      }
+
+      if (saveResult.forbidden) {
+        sectionPlanningReadonly = true;
+        disableIncludePlanningCheckboxes();
+      }
     });
   });
 
@@ -294,6 +332,61 @@ el("secBody").addEventListener("click", (e) => {
 
   setStatus(el("status"), "");
   el("cardMain").style.display = "block";
+}
+
+
+function disableIncludePlanningCheckboxes(){
+  [...el("secBody")?.querySelectorAll(".js-include-planning") || []].forEach(cb => {
+    cb.disabled = true;
+    cb.title = "Geen schrijfrechten om secties te wijzigen";
+  });
+}
+
+function pickIncludePlanningCol(rows){
+  const candidates = DB.sectionIncludeInPlanningCols || ["in_planning"];
+  const first = rows?.[0] ? Object.keys(rows[0]) : [];
+  const found = candidates.find(col => first.includes(col));
+  return found || candidates[0] || "in_planning";
+}
+
+function getIncludePlanningValue(section, col){
+  const raw = section?.[col];
+  if (raw === null || raw === undefined) return true;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw !== 0;
+  if (typeof raw === "string") {
+    const v = raw.trim().toLowerCase();
+    return !["0", "false", "nee", "no", "off"].includes(v);
+  }
+  return Boolean(raw);
+}
+
+async function saveIncludeInPlanning(sectionId, includeInPlanning, includePlanningCol){
+  if (!sectionId) return { ok: false, forbidden: false };
+  const tSec  = DB.tables.sections;
+  const payload = { [includePlanningCol]: includeInPlanning };
+
+  const res = await sb
+    .from(tSec)
+    .update(payload)
+    .eq(DB.sectionPkCol, sectionId);
+
+  if (res.error) {
+    const msg = String(res.error.message || "Onbekende fout");
+    const forbidden = String(res.error.code || "") === "42501" || msg.toLowerCase().includes("permission denied");
+    console.warn("Sectie planning-toggle opslaan mislukt:", msg);
+    setStatus(
+      el("status"),
+      forbidden
+        ? "Je hebt geen schrijfrechten op secties. Vraag een admin om UPDATE policy op tabel 'secties'."
+        : `Opslaan mislukt: ${msg}`,
+      "error"
+    );
+    return { ok: false, forbidden };
+  }
+
+  setStatus(el("status"), "Sectie bijgewerkt.");
+  return { ok: true, forbidden: false };
 }
 
 function renderBlock(targetId, fields, primaryObj, fallbackObj){

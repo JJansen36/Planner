@@ -33,6 +33,10 @@ export const DB = {
   // FK kolom in secties -> projecten.project_id
   sectionProjectFk: "project_id",
 
+  // Boolean veld op sectie om te bepalen of deze in planning zichtbaar is
+  // Eerste bestaande kolom in deze lijst wordt gebruikt.
+  sectionIncludeInPlanningCols: ["in_planning", "include_in_planning", "show_in_planning", "planning_visible"],
+
   // Project "header" titel: <OFFFERNO> - <name_kl> - <projectname>
   // Dit zijn kolommen in projecten en klanten:
   projectNoCol: "offerno",
