@@ -1212,12 +1212,27 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 }
 
 
+/* === FORCE show hours column content === */
 td.hourscol{
   display: table-cell !important;
   min-width: 96px !important;
   width: 96px !important;
   padding: 6px 8px !important;
   font-size: 12px !important;
-  color: #111 !important;
+  line-height: 1.25 !important;
+  color: #0f172a !important;
   background: #fff !important;
+  overflow: visible !important;
+  white-space: normal !important;
+}
+
+td.hourscol *{
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+td.hourscol{
+  border-left: 1px solid #cbd5e1 !important;
 }

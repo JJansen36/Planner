@@ -1672,7 +1672,10 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hours
       hoursTd.style.left = "380px";
       if (!hoursColOpen) hoursTd.style.display = "none";
       projRow.appendChild(hoursTd);
-      hoursTd.textContent = "TEST";
+
+      hoursTd.textContent = "TEST 123";
+
+
       console.log("HOURS TD project", pid, hoursTd);
 
 
@@ -3646,7 +3649,7 @@ function bindHoverTips(){
       const hoursTd = document.createElement("td");
       hoursTd.className = "cell hourscol sticky-left2";
       hoursTd.style.left = "380px";
-      if (!hoursColOpen) hoursTd.style.display = "none";
+      //if (!hoursColOpen) hoursTd.style.display = "none";
       hoursTd.innerHTML = "";
       tr.appendChild(hoursTd);
 
