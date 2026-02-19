@@ -1577,7 +1577,7 @@ for (const a of (pAssigns || [])) {
     ));
 
 // uren-kolom header blijft leeg (maar kolom bestaat wel)
-trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+trMonth.appendChild(hdrCell("", `hdr-cell hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
 
 
 
@@ -1597,7 +1597,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left
     const trWeek = document.createElement("tr");
     trWeek.className = "hdr hdr-week";
     trWeek.appendChild(hdrCell("", "rowhdr sticky-left sticky-top2"));
-    trWeek.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trWeek.appendChild(hdrCell("", `hdr-cell hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
 
     let j=0;
     while(j < dates.length){
@@ -1614,7 +1614,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left
     const trDay = document.createElement("tr");
     trDay.className = "hdr hdr-day";
     trDay.appendChild(hdrCell("", "rowhdr sticky-left sticky-top3"));
-    trDay.appendChild(hdrCell("",  `hdr-cell rowhdr hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trDay.appendChild(hdrCell("",  `hdr-cell hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
       const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
