@@ -1671,6 +1671,35 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hours
       hoursTd.className = "cell hourscol sticky-left2";
       hoursTd.style.left = "380px";
       if (!hoursColOpen) hoursTd.style.display = "none";
+      projRow.appendChild(hoursTd);
+
+      // ===== uren (bron) | gepland =====
+      const req = { prod: 0, cnc: 0, mont: 0, reis: 0 };
+      const pl  = { prod: 0, cnc: 0, mont: 0, reis: 0 };
+
+      const pMap2 = projectAssignMap.get(String(pid));
+      if (pMap2) {
+        for (const d2 of dates) {
+          const iso2 = toISODate(d2);
+          const e2 = pMap2.get(iso2);
+          if (!e2) continue;
+
+          pl.prod += (e2.productie?.size || 0) + (e2.dummyProd || 0);
+          pl.cnc  += (e2.cnc?.size || 0)      + (e2.dummyCnc  || 0);
+          pl.mont += (e2.montage?.size || 0)  + (e2.dummyMont || 0);
+          pl.reis += (e2.reis?.size || 0)     + (e2.dummyReis || 0);
+        }
+      }
+
+      hoursTd.innerHTML = `
+        <div class="mini-hours">
+          <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${fmt0(req.prod)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.prod)}</span></div>
+          <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${fmt0(req.cnc)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.cnc)}</span></div>
+          <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${fmt0(req.mont)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.mont)}</span></div>
+          <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${fmt0(req.reis)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.reis)}</span></div>
+        </div>
+      `;
+
 
       // ===== uren (bron) + gepland: defaults zodat render nooit crasht =====
       const reqProd = 0, reqCnc = 0, reqMont = 0, reqReis = 0;
