@@ -1574,7 +1574,8 @@ for (const a of (pAssigns || [])) {
     ));
 
 // uren-kolom header blijft leeg (maar kolom bestaat wel)
-trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+
 
 
 
@@ -1593,7 +1594,8 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hours
     const trWeek = document.createElement("tr");
     trWeek.className = "hdr hdr-week";
     trWeek.appendChild(hdrCell("", "rowhdr sticky-left sticky-top2"));
-    trWeek.appendChild(hdrCell("", `rowhdr sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trWeek.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+
     let j=0;
     while(j < dates.length){
       const wk = weekNumberISO(dates[j]);
@@ -1609,7 +1611,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hours
     const trDay = document.createElement("tr");
     trDay.className = "hdr hdr-day";
     trDay.appendChild(hdrCell("", "rowhdr sticky-left sticky-top3"));
-    trDay.appendChild(hdrCell("", `rowhdr sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trDay.appendChild(hdrCell("",  `hdr-cell rowhdr hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
       const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
@@ -1667,45 +1669,56 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hours
       projRow.appendChild(left);
 
       
-      const hoursTd = document.createElement("td");
-      hoursTd.className = "cell hourscol sticky-left2";
-      hoursTd.style.left = "380px";
-      if (!hoursColOpen) hoursTd.style.display = "none";
-      projRow.appendChild(hoursTd);
+// uren-kolom cel (project)
+const hoursTd = document.createElement("td");
+hoursTd.className = "cell hourscol sticky-left2";
+hoursTd.style.left = "380px";
+if (!hoursColOpen) hoursTd.style.display = "none";
+projRow.appendChild(hoursTd);
 
-      hoursTd.textContent = "TEST 123";
+// ===== required (bron) uren uit secties optellen =====
+const secsForProj = (sectiesByProject.get(pid) || []);
 
+const req = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-      console.log("HOURS TD project", pid, hoursTd);
+for (const s of secsForProj) {
+  req.prod += Number(s?.uren_prod ?? 0);
+  req.cnc  += Number(s?.uren_cnc ?? s?.uren_cnc_prod ?? 0);
+  req.mont += Number(s?.uren_montage ?? s?.uren_mont ?? 0);
+  req.reis += Number(s?.uren_reis ?? 0);
+}
 
+// ===== planned uren uit project_assignments (incl dummy) =====
+const pf = (settings.planFactor ?? 1);
+const pl = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-      // ===== uren (bron) | gepland =====
-      const req = { prod: 0, cnc: 0, mont: 0, reis: 0 };
-      const pl  = { prod: 0, cnc: 0, mont: 0, reis: 0 };
+const pMap2 = projectAssignMap.get(String(pid));
+if (pMap) {
+  for (const dd of dates) {
+    const iso = toISODate(dd);
+    const e = pMap.get(iso);
+    if (!e) continue;
 
-      const pMap2 = projectAssignMap.get(String(pid));
-      if (pMap2) {
-        for (const d2 of dates) {
-          const iso2 = toISODate(d2);
-          const e2 = pMap2.get(iso2);
-          if (!e2) continue;
+    const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0);
+    const cncCnt  = (e.cnc?.size || 0)      + (e.dummyCnc  || 0);
+    const montCnt = (e.montage?.size || 0)  + (e.dummyMont || 0);
+    const reisCnt = (e.reis?.size || 0)     + (e.dummyReis || 0);
 
-          pl.prod += (e2.productie?.size || 0) + (e2.dummyProd || 0);
-          pl.cnc  += (e2.cnc?.size || 0)      + (e2.dummyCnc  || 0);
-          pl.mont += (e2.montage?.size || 0)  + (e2.dummyMont || 0);
-          pl.reis += (e2.reis?.size || 0)     + (e2.dummyReis || 0);
-        }
-      }
+    pl.prod += prodCnt * HOURS_PER_PERSON_DAY * pf;
+    pl.cnc  += cncCnt  * HOURS_PER_PERSON_DAY * pf;
+    pl.mont += montCnt * HOURS_PER_PERSON_DAY * pf;
+    pl.reis += reisCnt * HOURS_PER_PERSON_DAY * pf;
+  }
+}
 
-      hoursTd.innerHTML = `
-        <div class="mini-hours">
-          <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${fmt0(req.prod)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.prod)}</span></div>
-          <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${fmt0(req.cnc)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.cnc)}</span></div>
-          <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${fmt0(req.mont)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.mont)}</span></div>
-          <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${fmt0(req.reis)}</span><span class="mh-sep">|</span><span class="mh-v2">${fmt0(pl.reis)}</span></div>
-        </div>
-      `;
-
+hoursTd.innerHTML = `
+  <div class="mini-hours">
+    <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${escapeHtml(fmt0(req.prod))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.prod))}</span></div>
+    <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${escapeHtml(fmt0(req.cnc))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.cnc))}</span></div>
+    <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${escapeHtml(fmt0(req.mont))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.mont))}</span></div>
+    <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${escapeHtml(fmt0(req.reis))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.reis))}</span></div>
+  </div>
+`;
 
       // ===== uren (bron) + gepland: defaults zodat render nooit crasht =====
       const reqProd = 0, reqCnc = 0, reqMont = 0, reqReis = 0;
@@ -4271,7 +4284,9 @@ async function dbgProjectDummyMontageCount(projectId, dateISO){
     .select("id, werknemer_id, work_type")
     .eq("project_id", String(projectId))
     .eq("work_date", String(dateISO))
-    .eq("werknemer_id", Number(DUMMY_EMP_ID)); // concept op project
+    .eq("werknemer_id", DUMMY_EMP_ID)
+
+
 
   if (error) {
     console.error("DBG project_assignments select error:", error.message);
