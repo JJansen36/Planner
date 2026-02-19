@@ -2122,6 +2122,14 @@ for (const dd of dates) {
 
   trTotal.appendChild(tdTotalLeft);
 
+  // uren-kolom placeholder (totaal capaciteit)
+  const hoursTdTotal = document.createElement("td");
+  hoursTdTotal.className = "cell hourscol sticky-left2";
+  hoursTdTotal.style.left = "380px";
+  if (!hoursColOpen) hoursTdTotal.style.display = "none";
+  hoursTdTotal.innerHTML = "";
+  trTotal.appendChild(hoursTdTotal);
+
   // totalen per dag (som van alle medewerkers)
   for (const d of dates){
     const iso = toISODate(d);
