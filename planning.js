@@ -1546,7 +1546,7 @@ for (const a of (pAssigns || [])) {
 
     // extra kolom met uren (uit Supabase | gepland)
     const colHours = document.createElement("col");
-    colHours.style.width = hoursColOpen ? "96px" : "0px";
+    colHours.style.width = hoursColOpen ? "120px" : "0px";
     colgroup.appendChild(colHours);
 
     for(let i=0;i<dates.length;i++){
