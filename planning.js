@@ -1238,25 +1238,7 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
       orderHeadersBySection.set(sid, headers);
     }
 
-
-
-    for (const r of (orders || [])) {
-      const rawSid = r.section_id;
-      if (!rawSid) continue;
-
-      // belangrijk: zelfde "canonical" sid gebruiken als rest van planner
-      const sid = sectLookup.get(String(rawSid)) || String(rawSid);
-
-      if (!ordersBySection.has(sid)) ordersBySection.set(sid, new Map());
-      const by = ordersBySection.get(sid);
-
-      const bn = String(r.bestel_nummer || "").trim() || "Onbekend";
-      if (!by.has(bn)) by.set(bn, []);
-      by.get(bn).push(r);
-    }
-
-
-    // snelle lookup: sectionId -> sectie object
+   // snelle lookup: sectionId -> sectie object
     const sectById = new Map();
     for (const s of secties || []) {
       const sid = s?.[sectIdKey]
@@ -1719,11 +1701,7 @@ hoursTd.innerHTML = `
   </div>
 `;
 
-      projRow.appendChild(hoursTd);
-
-    
-
-      
+ 
   // tel ingeplande mensen per dag op over alle secties van dit project
   const projAssignByDay = {};
   const secs = sectiesByProject.get(pid) || [];
@@ -1913,7 +1891,7 @@ for (const dd of dates) {
       hoursTdO.innerHTML = "";
       orderRow.appendChild(hoursTdO);
 
-            appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
+      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
       tbody.appendChild(orderRow);
       lastRowOfProject = orderRow;
 
@@ -3596,32 +3574,62 @@ function bindHoverTips(){
     td.textContent = text;
     return td;
   }
-  function spacerRow(cols){
-    const tr = document.createElement("tr");
-    tr.className = "spacer";
-    const td = document.createElement("td");
-    td.className = "rowhdr sticky-left";
-    td.textContent = "";
-    tr.appendChild(td);
-    const td2 = document.createElement("td");
-    td2.colSpan = cols;
-    td2.className = "cell spacer-cell";
-    tr.appendChild(td2);
-    return tr;
-  }
-  function sectionHeaderRow(title, cols, compact=false){
-    const tr = document.createElement("tr");
-    tr.className = compact ? "row block-title compact" : "row block-title";
-    const td = document.createElement("td");
-    td.className = "rowhdr sticky-left block-hdr";
-    td.innerHTML = `<span class="block-title-text">${escapeHtml(title)}</span>`;
-    tr.appendChild(td);
-    const fill = document.createElement("td");
-    fill.colSpan = cols;
-    fill.className = "cell block-fill";
-    tr.appendChild(fill);
-    return tr;
-  }
+
+
+function spacerRow(cols){
+  const tr = document.createElement("tr");
+  tr.className = "spacer";
+
+  const tdLeft = document.createElement("td");
+  tdLeft.className = "rowhdr sticky-left";
+  tdLeft.textContent = "";
+  tr.appendChild(tdLeft);
+
+  // ✅ uren-kolom placeholder
+  const tdHours = document.createElement("td");
+  tdHours.className = "cell hourscol sticky-left2";
+  tdHours.style.left = "380px";
+  if (!hoursColOpen) tdHours.style.display = "none";
+  tdHours.innerHTML = "";
+  tr.appendChild(tdHours);
+
+  // ✅ dagen vullen
+  const td2 = document.createElement("td");
+  td2.colSpan = cols;                // <-- alleen dagen
+  td2.className = "cell spacer-cell";
+  tr.appendChild(td2);
+
+  return tr;
+}
+
+
+function sectionHeaderRow(title, cols, compact=false){
+  const tr = document.createElement("tr");
+  tr.className = compact ? "row block-title compact" : "row block-title";
+
+  const td = document.createElement("td");
+  td.className = "rowhdr sticky-left block-hdr";
+  td.innerHTML = `<span class="block-title-text">${escapeHtml(title)}</span>`;
+  tr.appendChild(td);
+
+  // ✅ uren-kolom placeholder
+  const tdHours = document.createElement("td");
+  tdHours.className = "cell hourscol sticky-left2";
+  tdHours.style.left = "380px";
+  if (!hoursColOpen) tdHours.style.display = "none";
+  tdHours.innerHTML = "";
+  tr.appendChild(tdHours);
+
+  // ✅ dagen fill
+  const fill = document.createElement("td");
+  fill.colSpan = cols;               // <-- alleen dagen
+  fill.className = "cell block-fill";
+  tr.appendChild(fill);
+
+  return tr;
+}
+
+
     function labelRow(label, dates, byDay, kind = "") {
       const tr = document.createElement("tr");
       tr.className = `sum-row ${kind ? "planned-row " + kind : ""}`.trim();
@@ -3632,7 +3640,7 @@ function bindHoverTips(){
       const hoursTd = document.createElement("td");
       hoursTd.className = "cell hourscol sticky-left2";
       hoursTd.style.left = "380px";
-      //if (!hoursColOpen) hoursTd.style.display = "none";
+      if (!hoursColOpen) hoursTd.style.display = "none";
       hoursTd.innerHTML = "";
       tr.appendChild(hoursTd);
 
@@ -3656,25 +3664,29 @@ function bindHoverTips(){
       return tr;
     }
 
-  function infoRow(text, cols){
-    const tr = document.createElement("tr");
-    tr.className = "info-row";
-    tr.appendChild(leftRowHdrCell(text, "sticky-left info-left"));
-    const hoursTd = document.createElement("td");
-    hoursTd.className = "cell hourscol sticky-left2";
-    hoursTd.style.left = "380px";
-    if (!hoursColOpen) hoursTd.style.display = "none";
-    hoursTd.innerHTML = "";
-    tr.appendChild(hoursTd);
+function infoRow(text, cols){
+  const tr = document.createElement("tr");
+  tr.className = "info-row";
 
+  tr.appendChild(leftRowHdrCell(text, "sticky-left info-left"));
 
-    const td = document.createElement("td");
-    td.colSpan = cols;
-    td.className = "cell info-cell";
-    td.textContent = "";
-    tr.appendChild(td);
-    return tr;
-  }
+  // ✅ uren-kolom placeholder
+  const hoursTd = document.createElement("td");
+  hoursTd.className = "cell hourscol sticky-left2";
+  hoursTd.style.left = "380px";
+  if (!hoursColOpen) hoursTd.style.display = "none";
+  hoursTd.innerHTML = "";
+  tr.appendChild(hoursTd);
+
+  // ✅ dagen fill
+  const td = document.createElement("td");
+  td.colSpan = cols;
+  td.className = "cell info-cell";
+  td.textContent = "";
+  tr.appendChild(td);
+
+  return tr;
+}
 
   function balanceRow(label, dates, byDay){
     const tr = document.createElement("tr");
@@ -4173,25 +4185,18 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
 
     let html = `<div class="plan-stack">`;
 
-    // lever marker (zoals nu)
+    // lever marker
     if (leverISO && iso === leverISO) {
       html += `<div class="bar bar-order">lever</div>`;
     }
 
-    // montage/productie balkjes (projectniveau) — alleen aan begin van een run tekst
+    // projectniveau balkjes: toon aantallen, met start/einde afronding
     if (key) {
       const isStart = key !== prevKey;
       const isEnd   = key !== nextKey;
       const startCls = isStart ? " bar-start" : "";
       const endCls   = isEnd   ? " bar-end"   : "";
 
-    if (key) {
-      const isStart = key !== prevKey;
-      const isEnd   = key !== nextKey;
-      const startCls = isStart ? " bar-start" : "";
-      const endCls   = isEnd   ? " bar-end"   : "";
-
-      // tel per dag (project_assignments)
       const prodCnt = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
       const montCnt = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
 
@@ -4205,13 +4210,12 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
       }
     }
 
-    }
-
     html += `</div>`;
     td.innerHTML = html;
     tr.appendChild(td);
   }
 }
+
 
 async function removeOneProjectDummyMontage(projectId, dateISO) {
   // 1 dummy regel verwijderen (als die bestaat)
