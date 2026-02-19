@@ -90,7 +90,7 @@ async function loadProject(id){
     
 
   // Orders (bestellingen) voor alle secties van dit project
-  const sectionIds = sections
+  const sectionIds = sortedSections
     .map(s => s?.[DB.sectionPkCol])
     .filter(Boolean);
 
@@ -140,23 +140,23 @@ async function loadProject(id){
   // Totals: use project totals if present, else compute from sections
   // Kolomnamen van uren kunnen per omgeving verschillen; we volgen config.js
   const computed = {
-    total_wvb: sumNums(sections, "uren_wvb"),
-    total_prod: sumNums(sections, "uren_prod"),
-    total_mont: sumNums(sections, "uren_montage") || sumNums(sections, "uren_mont"),
-    total_reis: sumNums(sections, "uren_reis"),
+    total_wvb: sumNums(sortedSections, "uren_wvb"),
+    total_prod: sumNums(sortedSections, "uren_prod"),
+    total_mont: sumNums(sortedSections, "uren_montage") || sumNums(sortedSections, "uren_mont"),
+    total_reis: sumNums(sortedSections, "uren_reis"),
   };
 
   const totalsObj = { ...computed, ...project }; // project overrides computed if filled
   renderBlock("blkTotals", DB.projectBlocks.totals, totalsObj, totalsObj);
 
   // Render sections table
-  el("secMeta").textContent = `${sections.length} secties`;
+  el("secMeta").textContent = `${sortedSections.length} secties`;
 
   el("secHead").innerHTML = DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("")
     + `<th style="width:170px">In planning</th>`
     + `<th style="width:70px"></th>`;
 
-  el("secBody").innerHTML = sections.map((s, idx)=>{
+  el("secBody").innerHTML = sortedSections.map((s, idx)=>{
     const cols = DB.sectionRowCols.map(c=>{
       const v = Array.isArray(c.col)
         ? c.col.map(k => valFrom(s, k)).find(x => x !== null && x !== undefined && x !== "")
