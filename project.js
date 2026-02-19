@@ -262,25 +262,15 @@ const ordersHtml = `
     cb.addEventListener("click", (e) => e.stopPropagation());
     cb.addEventListener("change", async (e) => {
       e.stopPropagation();
-      if (sectionPlanningReadonly) {
-        cb.checked = !cb.checked;
-        return;
-      }
-
       const sectionId = cb.getAttribute("data-sid");
       const checked = cb.checked;
 
       cb.disabled = true;
-      const saveResult = await saveIncludeInPlanning(sectionId, checked, includePlanningCol);
-      cb.disabled = sectionPlanningReadonly;
+      const ok = await saveIncludeInPlanning(sectionId, checked, includePlanningCol);
+      cb.disabled = false;
 
-      if (!saveResult.ok) {
+      if (!ok) {
         cb.checked = !checked;
-      }
-
-      if (saveResult.forbidden) {
-        sectionPlanningReadonly = true;
-        disableIncludePlanningCheckboxes();
       }
     });
   });
@@ -334,14 +324,6 @@ el("secBody").addEventListener("click", (e) => {
   el("cardMain").style.display = "block";
 }
 
-
-function disableIncludePlanningCheckboxes(){
-  [...el("secBody")?.querySelectorAll(".js-include-planning") || []].forEach(cb => {
-    cb.disabled = true;
-    cb.title = "Geen schrijfrechten om secties te wijzigen";
-  });
-}
-
 function pickIncludePlanningCol(rows){
   const candidates = DB.sectionIncludeInPlanningCols || ["in_planning"];
   const first = rows?.[0] ? Object.keys(rows[0]) : [];
@@ -362,7 +344,7 @@ function getIncludePlanningValue(section, col){
 }
 
 async function saveIncludeInPlanning(sectionId, includeInPlanning, includePlanningCol){
-  if (!sectionId) return { ok: false, forbidden: false };
+  if (!sectionId) return false;
   const tSec  = DB.tables.sections;
   const payload = { [includePlanningCol]: includeInPlanning };
 
@@ -372,21 +354,13 @@ async function saveIncludeInPlanning(sectionId, includeInPlanning, includePlanni
     .eq(DB.sectionPkCol, sectionId);
 
   if (res.error) {
-    const msg = String(res.error.message || "Onbekende fout");
-    const forbidden = String(res.error.code || "") === "42501" || msg.toLowerCase().includes("permission denied");
-    console.warn("Sectie planning-toggle opslaan mislukt:", msg);
-    setStatus(
-      el("status"),
-      forbidden
-        ? "Je hebt geen schrijfrechten op secties. Vraag een admin om UPDATE policy op tabel 'secties'."
-        : `Opslaan mislukt: ${msg}`,
-      "error"
-    );
-    return { ok: false, forbidden };
+    console.warn("Sectie planning-toggle opslaan mislukt:", res.error.message);
+    setStatus(el("status"), `Opslaan mislukt: ${res.error.message}`, "error");
+    return false;
   }
 
   setStatus(el("status"), "Sectie bijgewerkt.");
-  return { ok: true, forbidden: false };
+  return true;
 }
 
 function renderBlock(targetId, fields, primaryObj, fallbackObj){
