@@ -1723,14 +1723,7 @@ for (const s of secsForProj) {
   }
 }
 
-hoursTd.innerHTML = `
-  <div class="mini-hours">
-    <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${escapeHtml(fmt0(req.prod))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.prod))}</span></div>
-    <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${escapeHtml(fmt0(req.cnc))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.cnc))}</span></div>
-    <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${escapeHtml(fmt0(req.mont))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.mont))}</span></div>
-    <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${escapeHtml(fmt0(req.reis))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.reis))}</span></div>
-  </div>
-`;
+hoursTd.innerHTML = miniHoursHtml(req, pl);
 
  
   // tel ingeplande mensen per dag op over alle secties van dit project
@@ -4449,12 +4442,31 @@ function fmt0(n){
 function miniHoursHtml(req, pl){
   // req/pl zijn getallen
   const f = (n) => escapeHtml(formatHoursCell(Number(n || 0)));
+
+  const limits = {
+    // Productie gebruikt productie + cnc uit bronuren
+    prod: Number(req.prod || 0) + Number(req.cnc || 0),
+    cnc: Number(req.cnc || 0),
+    // Montage gebruikt montage + reis uit bronuren
+    mont: Number(req.mont || 0) + Number(req.reis || 0),
+    reis: Number(req.reis || 0),
+  };
+
+  const over = {
+    prod: Number(pl.prod || 0) > limits.prod,
+    cnc: Number(pl.cnc || 0) > limits.cnc,
+    mont: Number(pl.mont || 0) > limits.mont,
+    reis: Number(pl.reis || 0) > limits.reis,
+  };
+
+  const clsPl = (isOver) => isOver ? "mh-v2 mh-over" : "mh-v2";
+
   return `
     <div class="mini-hours">
-      <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${f(req.prod)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.prod)}</span></div>
-      <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${f(req.cnc)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.cnc)}</span></div>
-      <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${f(req.mont)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.mont)}</span></div>
-      <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${f(req.reis)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.reis)}</span></div>
+      <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${f(req.prod)}</span><span class="mh-sep">|</span><span class="${clsPl(over.prod)}">${f(pl.prod)}</span></div>
+      <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${f(req.cnc)}</span><span class="mh-sep">|</span><span class="${clsPl(over.cnc)}">${f(pl.cnc)}</span></div>
+      <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${f(req.mont)}</span><span class="mh-sep">|</span><span class="${clsPl(over.mont)}">${f(pl.mont)}</span></div>
+      <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${f(req.reis)}</span><span class="mh-sep">|</span><span class="${clsPl(over.reis)}">${f(pl.reis)}</span></div>
     </div>
   `;
 }
