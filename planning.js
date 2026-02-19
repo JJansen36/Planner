@@ -1690,21 +1690,31 @@ for (const s of secsForProj) {
   req.reis += Number(s?.uren_reis ?? 0);
 }
 
-// ===== planned uren uit project_assignments (incl dummy) =====
+// ===== planned uren voor projectregel =====
+// Optellen zoals zichtbaar in de groene sectie-blokken:
+// per sectie en dag productie/CNC/montage/reis meenemen.
 const pf = (settings.planFactor ?? 1);
 const pl = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-const pMap = projectAssignMap.get(String(pid));   // ✅ 1x, vóór gebruik
-if (pMap) {
+for (const s of secsForProj) {
+  const sidRaw = s?.[sectIdKey]
+    ? String(s[sectIdKey])
+    : (s?.section_id ? String(s.section_id) : null);
+  if (!sidRaw) continue;
+
+  const sidC = sectLookup.get(String(sidRaw)) || String(sidRaw);
+  const dmSec = assignMap.get(sidC);
+  if (!dmSec) continue;
+
   for (const dd of dates) {
     const iso = toISODate(dd);
-    const e = pMap.get(iso);
+    const e = dmSec.get(iso);
     if (!e) continue;
 
     const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0);
-    const cncCnt  = (e.cnc?.size || 0)      + (e.dummyCnc  || 0);
-    const montCnt = (e.montage?.size || 0)  + (e.dummyMont || 0);
-    const reisCnt = (e.reis?.size || 0)     + (e.dummyReis || 0);
+    const cncCnt  = (e.cnc?.size || 0)       + (e.dummyCnc  || 0);
+    const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0);
+    const reisCnt = (e.reis?.size || 0)      + (e.dummyReis || 0);
 
     pl.prod += prodCnt * HOURS_PER_PERSON_DAY * pf;
     pl.cnc  += cncCnt  * HOURS_PER_PERSON_DAY * pf;
