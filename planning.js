@@ -272,7 +272,6 @@ const defaultSettings = {
   }
 
 function buildPlannedSetsByDay(planningItems){
-  // output: { "YYYY-MM-DD": { pro:Set, mo:Set, dummyPro:number, dummyMo:number }, ... }
   const out = Object.create(null);
 
   for (const it of (planningItems || [])) {
@@ -280,29 +279,33 @@ function buildPlannedSetsByDay(planningItems){
     const wid = String(it.werknemer_id ?? "").trim();
     const kind = String(it.work_type || it.kind || it.type || "").toLowerCase().trim();
 
-
     if (!d || !wid) continue;
 
     const bucket =
-      kind === "pro" || kind === "productie" ? "pro" :
-      kind === "mo"  || kind === "montage"  ? "mo"  :
+      (kind === "pro" || kind === "productie") ? "pro" :
+      (kind === "mo"  || kind === "montage")   ? "mo"  :
+      (kind === "cnc")                         ? "cnc" :
+      (kind === "reis")                        ? "reis":
       null;
 
     if (!bucket) continue;
 
-    if (!out[d]) out[d] = { pro: new Set(), mo: new Set(), dummyPro: 0, dummyMo: 0 };
+    if (!out[d]) out[d] = {
+      pro: new Set(), mo: new Set(), cnc: new Set(), reis: new Set(),
+      dummyPro: 0, dummyMo: 0, dummyCnc: 0, dummyReis: 0
+    };
 
     const isProjectDummy = (String(wid) === String(DUMMY_EMP_ID));
     const isSectionDummy = (String(wid) === String(DUMMY_SEC_ID));
 
-
-
-if (isProjectDummy || isSectionDummy) {
-  if (bucket === "pro") out[d].dummyPro += 1;
-  if (bucket === "mo")  out[d].dummyMo  += 1;
-} else {
-  out[d][bucket].add(String(wid));
-}
+    if (isProjectDummy || isSectionDummy) {
+      if (bucket === "pro")  out[d].dummyPro += 1;
+      if (bucket === "mo")   out[d].dummyMo  += 1;
+      if (bucket === "cnc")  out[d].dummyCnc += 1;
+      if (bucket === "reis") out[d].dummyReis+= 1;
+    } else {
+      out[d][bucket].add(String(wid));
+    }
   }
 
   return out;
@@ -1422,6 +1425,24 @@ for (const a of (pAssigns || [])) {
 
 }
 
+(function quickDebug(){
+  const anyPid = (projecten?.[0]?.[projIdKey]) ? String(projecten[0][projIdKey]) : null;
+  const anyDate = dates?.[0] ? toISODate(dates[0]) : null;
+  if(!anyPid || !anyDate) return;
+
+  const pe = projectAssignMap.get(anyPid)?.get(anyDate);
+  console.log("[DBG] sample project_assign day", { anyPid, anyDate, pe });
+
+  const anySec = (sectiesByProject.get(anyPid) || [])[0];
+  if(anySec){
+    const raw = anySec?.[sectIdKey] ? String(anySec[sectIdKey]) : String(anySec?.section_id||"");
+    const sidC = sectLookup.get(raw) || raw;
+    const se = assignMap.get(sidC)?.get(anyDate);
+    console.log("[DBG] sample section_assign day", { raw, sidC, anyDate, se });
+  }
+})();
+
+
     // capacity: per werknemer per dag  (KEYS ALS STRING!)
     const capByEmp = new Map(); // empIdStr -> dateISO -> sumHours
     for (const r of cap || []) {
@@ -1828,7 +1849,7 @@ for (const dd of dates) {
       hoursTdS.className = "cell hourscol sticky-left2";
       hoursTdS.style.left = "380px";
       if (!hoursColOpen) hoursTdS.style.display = "none";
-      
+
       // ===== Sectie uren: required (bron) vs gepland (section_assignments) =====
       const reqS = {
         prod: Number(s?.uren_prod ?? 0),
@@ -1840,7 +1861,9 @@ for (const dd of dates) {
       const pfS = (settings.planFactor ?? 1);
       const plS = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-      const dmSec = assignMap.get(String(sid));
+      const sidC = sectLookup.get(String(sid)) || String(sid);
+      const dmSec = assignMap.get(sidC);
+
       if (dmSec) {
         for (const dd of dates) {
           const iso = toISODate(dd);
@@ -2667,7 +2690,7 @@ if (capCell) {
         if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
 
         // bestaande waarden ophalen uit capByEmp map
-        const empMap = capByEmp.get(Number(empId)) || capByEmp.get(empId) || new Map();
+        const empMap = capByEmp.get(String(empId).trim()) || new Map();
 
         formEl.innerHTML = `
           <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
