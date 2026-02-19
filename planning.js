@@ -4440,15 +4440,22 @@ function fmt0(n){
 }
 
 function miniHoursHtml(req, pl){
-  // req/pl zijn getallen
-  const f = (n) => escapeHtml(formatHoursCell(Number(n || 0)));
+  const toNum = (v) => {
+    if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+    const s = String(v ?? "").trim();
+    if (!s) return 0;
+    const n = Number(s.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const f = (n) => escapeHtml(formatHoursCell(toNum(n)));
 
   // Overschrijding = geplande waarde (rechter kolom) hoger dan bronwaarde (linker kolom)
   const over = {
-    prod: Number(pl.prod || 0) > Number(req.prod || 0),
-    cnc: Number(pl.cnc || 0) > Number(req.cnc || 0),
-    mont: Number(pl.mont || 0) > Number(req.mont || 0),
-    reis: Number(pl.reis || 0) > Number(req.reis || 0),
+    prod: toNum(pl.prod) > toNum(req.prod),
+    cnc: toNum(pl.cnc) > toNum(req.cnc),
+    mont: toNum(pl.mont) > toNum(req.mont),
+    reis: toNum(pl.reis) > toNum(req.reis),
   };
 
   const clsPl = (isOver) => isOver ? "mh-v2 mh-over" : "mh-v2";
