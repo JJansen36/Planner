@@ -715,7 +715,7 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 }
 
 /* zebra overlay op kalendercellen, niet weekend */
-.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
+.planner-table tbody tr.zebra > td.cell:not(.wknd):not(.hourscol)::after{
   content:"";
   position:absolute;
   inset:0;
@@ -1271,6 +1271,8 @@ td.hourscol *{
   line-height: 1.25 !important;
   visibility: visible !important;
   opacity: 1 !important;
+  position: relative;
+  z-index: 2;
 }
 
 td.hourscol{
