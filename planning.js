@@ -282,7 +282,7 @@ function buildPlannedSetsByDay(planningItems){
     if (!d || !wid) continue;
 
     const bucket =
-      (kind === "pro" || kind === "productie") ? "pro" :
+      (kind === "pro" || kind === "productie" || kind === "werk") ? "pro" :
       (kind === "mo"  || kind === "montage")   ? "mo"  :
       (kind === "cnc")                         ? "cnc" :
       (kind === "reis")                        ? "reis":
