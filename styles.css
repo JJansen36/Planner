@@ -1215,21 +1215,18 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
   left: var(--left-w) !important;
 }
 .mini-hours {
-  position: relative;
-  z-index: 2;
   font-size: 11px;
   line-height: 1.2;
   padding: 2px 4px;
-  font-variant-numeric: tabular-nums;
 }
 .mh-row{
   display:grid;
-  grid-template-columns: 38px minmax(28px, 1fr) 8px minmax(28px, 1fr);
+  grid-template-columns: 36px 1fr 8px 1fr;
   align-items:center;
-  column-gap:3px;
+  column-gap:2px;
 }
-.mh-l{ text-align:left; color:#6b7280; white-space:nowrap; }
-.mh-v, .mh-v2{ text-align:right; white-space:nowrap; }
+.mh-l{ text-align:left; color:#6b7280; }
+.mh-v, .mh-v2{ text-align:right; }
 .mh-sep{ text-align:center; color:#94a3b8; }
 
 .rowhdr-flex{
