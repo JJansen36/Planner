@@ -1663,6 +1663,25 @@ for (const a of (pAssigns || [])) {
       hoursTd.style.left = "380px";
       if (!hoursColOpen) hoursTd.style.display = "none";
 
+      // ===== uren (bron) + gepland: defaults zodat render nooit crasht =====
+      const reqProd = 0, reqCnc = 0, reqMont = 0, reqReis = 0;
+
+      // geplande aantallen uit projectAssignMap (sets met medewerkers) per dag optellen
+      let plProd = 0, plCnc = 0, plMont = 0, plReis = 0;
+      const pMap = projectAssignMap.get(String(pid));
+      if (pMap) {
+        for (const d of dates) {
+          const iso = toISODate(d);
+          const e = pMap.get(iso);
+          if (!e) continue;
+          plProd += (e.productie?.size || 0);
+          plCnc  += (e.cnc?.size || 0);
+          plMont += (e.montage?.size || 0);
+          plReis += (e.reis?.size || 0);
+        }
+      }
+
+
       // hier vul je jouw 4 regels: Prod / CNC / Mont / Reis (bron | gepland)
       // let op: reqProd/reqCnc/reqMont/reqReis en plProd/plCnc/plMont/plReis moeten eerder berekend zijn
       hoursTd.innerHTML = `
