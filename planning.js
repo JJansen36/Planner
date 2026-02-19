@@ -2283,6 +2283,12 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
 
     table.appendChild(tbody);
 
+    if (!hoursColOpen) {
+      table.querySelectorAll("th.hourscol, td.hourscol").forEach((cell) => {
+        cell.style.display = "table-cell";
+        cell.classList.add("hourscol-collapsed");
+      });
+    }
 
     // =========================
     // EXPANDERS BINDEN (na render)
