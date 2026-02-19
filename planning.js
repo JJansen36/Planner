@@ -1719,17 +1719,6 @@ hoursTd.innerHTML = `
   </div>
 `;
 
-
-      // hier vul je jouw 4 regels: Prod / CNC / Mont / Reis (bron | gepland)
-      // let op: reqProd/reqCnc/reqMont/reqReis en plProd/plCnc/plMont/plReis moeten eerder berekend zijn
-      hoursTd.innerHTML = `
-        <div class="mini-hours">
-          <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${escapeHtml(fmt0(reqProd))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plProd))}</span></div>
-          <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${escapeHtml(fmt0(reqCnc))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plCnc))}</span></div>
-          <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${escapeHtml(fmt0(reqMont))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plMont))}</span></div>
-          <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${escapeHtml(fmt0(reqReis))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plReis))}</span></div>
-        </div>
-      `;
       projRow.appendChild(hoursTd);
 
     
