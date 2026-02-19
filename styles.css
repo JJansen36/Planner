@@ -741,6 +741,14 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
   content:none !important;
 }
 
+/* zwarte scheidingslijnen altijd boven zebra houden */
+.planner-table tbody tr.project-topline.zebra > td::after,
+.planner-table tbody tr.project-bottomline.zebra > td::after,
+.planner-table tbody tr.order-topline.zebra > td::after,
+.planner-table tbody tr.order-bottomline.zebra > td::after{
+  content:none !important;
+}
+
 .planner-table tbody tr.cap-total-row.zebra > td::after,
 .planner-table tbody tr.cap-emp-row.zebra > td::after,
 .planner-table tbody tr.sum-row.zebra > td::after,
