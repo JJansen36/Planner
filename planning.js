@@ -1536,17 +1536,23 @@ for (const a of (pAssigns || [])) {
     // build table
     const table = document.createElement("table");
     table.className = "planner-table";
-    // fixed column widths so header == body
     const colgroup = document.createElement("colgroup");
     const colLeft = document.createElement("col");
     colLeft.style.width = "380px";
     colgroup.appendChild(colLeft);
+
+    // extra kolom met uren (uit Supabase | gepland)
+    const colHours = document.createElement("col");
+    colHours.style.width = hoursColOpen ? "96px" : "0px";
+    colgroup.appendChild(colHours);
+
     for(let i=0;i<dates.length;i++){
       const c = document.createElement("col");
       c.style.width = "32px";
       colgroup.appendChild(c);
     }
     table.appendChild(colgroup);
+
 
 
     // THEAD (3 rijen: maand / week / dag)
@@ -1558,6 +1564,11 @@ for (const a of (pAssigns || [])) {
     const trMonth = document.createElement("tr");
     trMonth.className = "hdr hdr-month";
     trMonth.appendChild(hdrCell("Planning", "rowhdr sticky-left sticky-top"));
+    trMonth.appendChild(hdrCell(
+      `<button class="hourscol-toggle" id="btnHoursCol" type="button" title="Urenkolom tonen/verbergen">${hoursColOpen ? "◀" : "▶"}</button>`,
+      `rowhdr sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()
+    ));
+
     let i = 0;
     while(i < dates.length){
       const m = dates[i].getMonth();
@@ -1573,6 +1584,7 @@ for (const a of (pAssigns || [])) {
     const trWeek = document.createElement("tr");
     trWeek.className = "hdr hdr-week";
     trWeek.appendChild(hdrCell("", "rowhdr sticky-left sticky-top2"));
+    trWeek.appendChild(hdrCell("", `rowhdr sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     let j=0;
     while(j < dates.length){
       const wk = weekNumberISO(dates[j]);
@@ -1588,6 +1600,7 @@ for (const a of (pAssigns || [])) {
     const trDay = document.createElement("tr");
     trDay.className = "hdr hdr-day";
     trDay.appendChild(hdrCell("", "rowhdr sticky-left sticky-top3"));
+    trDay.appendChild(hdrCell("", `rowhdr sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
       const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
@@ -1645,6 +1658,22 @@ for (const a of (pAssigns || [])) {
       projRow.appendChild(left);
 
       
+      const hoursTd = document.createElement("td");
+      hoursTd.className = "cell hourscol sticky-left2";
+      hoursTd.style.left = "380px";
+      if (!hoursColOpen) hoursTd.style.display = "none";
+
+      // hier vul je jouw 4 regels: Prod / CNC / Mont / Reis (bron | gepland)
+      // let op: reqProd/reqCnc/reqMont/reqReis en plProd/plCnc/plMont/plReis moeten eerder berekend zijn
+      hoursTd.innerHTML = `
+        <div class="mini-hours">
+          <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${escapeHtml(fmt0(reqProd))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plProd))}</span></div>
+          <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${escapeHtml(fmt0(reqCnc))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plCnc))}</span></div>
+          <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${escapeHtml(fmt0(reqMont))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plMont))}</span></div>
+          <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${escapeHtml(fmt0(reqReis))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(plReis))}</span></div>
+        </div>
+      `;
+      projRow.appendChild(hoursTd);
 
     
 
@@ -1770,6 +1799,15 @@ for (const dd of dates) {
 
         secRow.appendChild(leftS);
 
+      // ===== lege uren-kolom cel (sectie) =====
+      const hoursTdS = document.createElement("td");
+      hoursTdS.className = "cell hourscol sticky-left2";
+      hoursTdS.style.left = "380px";
+      if (!hoursColOpen) hoursTdS.style.display = "none";
+      hoursTdS.innerHTML = "";
+      secRow.appendChild(hoursTdS);
+
+
         const labels = buildDayLabelsForSection(sid, workMap, dates);
         
         // badge = aantal ingeplande collega's per type (productie / montage)
@@ -1821,7 +1859,15 @@ for (const dd of dates) {
         `<span class="sectext"> ↳ Bestelling ${escapeHtml(oh.bn)}</span>`;
 
       orderRow.appendChild(tdLeft);
-      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
+      // ===== lege uren-kolom cel (order header) =====
+      const hoursTdO = document.createElement("td");
+      hoursTdO.className = "cell hourscol sticky-left2";
+      hoursTdO.style.left = "380px";
+      if (!hoursColOpen) hoursTdO.style.display = "none";
+      hoursTdO.innerHTML = "";
+      orderRow.appendChild(hoursTdO);
+
+            appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
       tbody.appendChild(orderRow);
       lastRowOfProject = orderRow;
 
@@ -1847,6 +1893,15 @@ for (const dd of dates) {
         `<span class="sectext">  ↳ ${escapeHtml(it.aantal ?? 1)} — ${escapeHtml(it.omschrijving || "")}</span>`;
 
       lineRow.appendChild(tdL);
+
+      // ===== lege uren-kolom cel (order line) =====
+      const hoursTdL = document.createElement("td");
+      hoursTdL.className = "cell hourscol sticky-left2";
+      hoursTdL.style.left = "380px";
+      if (!hoursColOpen) hoursTdL.style.display = "none";
+      hoursTdL.innerHTML = "";
+      lineRow.appendChild(hoursTdL);
+
 
       const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
       appendOrderDayCells(lineRow, dates, leverLineISO, pid, projectAssignMap);
@@ -1936,6 +1991,15 @@ for (const dd of dates) {
       leftM.innerHTML = `<span class="sectext">↳ Montage</span>`;
       montRow.appendChild(leftM);
 
+      // ===== lege uren-kolom cel (montage samenvatting) =====
+      const hoursTdM = document.createElement("td");
+      hoursTdM.className = "cell hourscol sticky-left2";
+      hoursTdM.style.left = "380px";
+      if (!hoursColOpen) hoursTdM.style.display = "none";
+      hoursTdM.innerHTML = "";
+      montRow.appendChild(hoursTdM);
+
+
       appendProjectMontageSummaryDayCells(montRow, dates, projMontByDay, String(pid));
 
 
@@ -2010,6 +2074,15 @@ for (const dd of dates) {
       leftEmp.dataset.empName = String(empName ?? "");
       tr.appendChild(leftEmp);
 
+      // ===== lege uren-kolom cel (capaciteit medewerker) =====
+      const hoursTdCap = document.createElement("td");
+      hoursTdCap.className = "cell hourscol sticky-left2";
+      hoursTdCap.style.left = "380px";
+      if (!hoursColOpen) hoursTdCap.style.display = "none";
+      hoursTdCap.innerHTML = "";
+      tr.appendChild(hoursTdCap);
+
+
       const empIdStr = String(empId ?? "").trim();
 
       for (const d of dates) {
@@ -2034,7 +2107,6 @@ for (const dd of dates) {
 
         td.textContent = fmt0(h);
         tr.appendChild(td);
-
       }
 
       tbody.appendChild(tr);
@@ -2061,6 +2133,15 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
   leftI.className = "rowhdr sticky-left cap-name";
   leftI.innerHTML = `🧑‍🔧 ${escapeHtml(name)}`;
   trI.appendChild(leftI);
+
+  // ===== lege uren-kolom cel (inhuur capaciteit) =====
+  const hoursTdInhuur = document.createElement("td");
+  hoursTdInhuur.className = "cell hourscol sticky-left2";
+  hoursTdInhuur.style.left = "380px";
+  if (!hoursColOpen) hoursTdInhuur.style.display = "none";
+  hoursTdInhuur.innerHTML = "";
+  trI.appendChild(hoursTdInhuur);
+
 
   for (const d of dates) {
     const iso = toISODate(d);
@@ -3489,6 +3570,15 @@ function bindHoverTips(){
 
       tr.appendChild(leftRowHdrCell(label, "sticky-left sum-label"));
 
+      // uren-kolom placeholder
+      const hoursTd = document.createElement("td");
+      hoursTd.className = "cell hourscol sticky-left2";
+      hoursTd.style.left = "380px";
+      if (!hoursColOpen) hoursTd.style.display = "none";
+      hoursTd.innerHTML = "";
+      tr.appendChild(hoursTd);
+
+
       for (const d of dates) {
         const iso = toISODate(d);
         const h = Number(byDay?.[iso] || 0);
@@ -3512,6 +3602,14 @@ function bindHoverTips(){
     const tr = document.createElement("tr");
     tr.className = "info-row";
     tr.appendChild(leftRowHdrCell(text, "sticky-left info-left"));
+    const hoursTd = document.createElement("td");
+    hoursTd.className = "cell hourscol sticky-left2";
+    hoursTd.style.left = "380px";
+    if (!hoursColOpen) hoursTd.style.display = "none";
+    hoursTd.innerHTML = "";
+    tr.appendChild(hoursTd);
+
+
     const td = document.createElement("td");
     td.colSpan = cols;
     td.className = "cell info-cell";
@@ -3524,6 +3622,15 @@ function bindHoverTips(){
     const tr = document.createElement("tr");
     tr.className = "balance-row";
     tr.appendChild(leftRowHdrCell(label, "sticky-left balance-label"));
+
+    // uren-kolom placeholder
+    const hoursTd = document.createElement("td");
+    hoursTd.className = "cell hourscol sticky-left2";
+    hoursTd.style.left = "380px";
+    if (!hoursColOpen) hoursTd.style.display = "none";
+    hoursTd.innerHTML = "";
+    tr.appendChild(hoursTd);
+
 
     for(const d of dates){
       const iso = toISODate(d);
