@@ -3433,11 +3433,11 @@ loadAndRender();
       btnHoursCol.onclick = (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        captureOpenState();
         hoursColOpen = !hoursColOpen;
         loadAndRender();
       };
     }
+
 
 
 function bindHoverTips(){
