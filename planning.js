@@ -1828,8 +1828,40 @@ for (const dd of dates) {
       hoursTdS.className = "cell hourscol sticky-left2";
       hoursTdS.style.left = "380px";
       if (!hoursColOpen) hoursTdS.style.display = "none";
-      hoursTdS.innerHTML = "";
+      
+      // ===== Sectie uren: required (bron) vs gepland (section_assignments) =====
+      const reqS = {
+        prod: Number(s?.uren_prod ?? 0),
+        cnc:  Number(s?.uren_cnc ?? s?.uren_cnc_prod ?? 0),
+        mont: Number(s?.uren_montage ?? s?.uren_mont ?? 0),
+        reis: Number(s?.uren_reis ?? 0),
+      };
+
+      const pfS = (settings.planFactor ?? 1);
+      const plS = { prod: 0, cnc: 0, mont: 0, reis: 0 };
+
+      const dmSec = assignMap.get(String(sid));
+      if (dmSec) {
+        for (const dd of dates) {
+          const iso = toISODate(dd);
+          const e = dmSec.get(iso);
+          if (!e) continue;
+
+          const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0);
+          const cncCnt  = (e.cnc?.size || 0)       + (e.dummyCnc  || 0);
+          const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0);
+          const reisCnt = (e.reis?.size || 0)      + (e.dummyReis || 0);
+
+          plS.prod += prodCnt * HOURS_PER_PERSON_DAY * pfS;
+          plS.cnc  += cncCnt  * HOURS_PER_PERSON_DAY * pfS;
+          plS.mont += montCnt * HOURS_PER_PERSON_DAY * pfS;
+          plS.reis += reisCnt * HOURS_PER_PERSON_DAY * pfS;
+        }
+      }
+
+      hoursTdS.innerHTML = miniHoursHtml(reqS, plS);
       secRow.appendChild(hoursTdS);
+
 
 
         const labels = buildDayLabelsForSection(sid, workMap, dates);
@@ -4351,6 +4383,19 @@ function renderOrdersAccordion(byBN){
 function fmt0(n){
   const v = Number(n || 0);
   return (Math.abs(v) < 0.0001) ? "" : formatHoursCell(v);
+}
+
+function miniHoursHtml(req, pl){
+  // req/pl zijn getallen
+  const f = (n) => escapeHtml(formatHoursCell(Number(n || 0)));
+  return `
+    <div class="mini-hours">
+      <div class="mh-row"><span class="mh-l">Prod.</span><span class="mh-v">${f(req.prod)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.prod)}</span></div>
+      <div class="mh-row"><span class="mh-l">CNC</span><span class="mh-v">${f(req.cnc)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.cnc)}</span></div>
+      <div class="mh-row"><span class="mh-l">Mont.</span><span class="mh-v">${f(req.mont)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.mont)}</span></div>
+      <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${f(req.reis)}</span><span class="mh-sep">|</span><span class="mh-v2">${f(pl.reis)}</span></div>
+    </div>
+  `;
 }
 
 
