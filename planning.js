@@ -1569,6 +1569,7 @@ for (const a of (pAssigns || [])) {
       `rowhdr sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()
     ));
 
+
     let i = 0;
     while(i < dates.length){
       const m = dates[i].getMonth();
@@ -3383,6 +3384,18 @@ loadAndRender();
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
+
+    const btnHoursCol = gridEl.querySelector("#btnHoursCol");
+    if (btnHoursCol) {
+      btnHoursCol.onclick = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        captureOpenState();
+        hoursColOpen = !hoursColOpen;
+        loadAndRender();
+      };
+    }
+
 
 function bindHoverTips(){
   const tip = ensureHoverTip();
