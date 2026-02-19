@@ -282,7 +282,7 @@ function buildPlannedSetsByDay(planningItems){
     if (!d || !wid) continue;
 
     const bucket =
-      (kind === "pro" || kind === "productie") ? "pro" :
+      (kind === "pro" || kind === "productie" || kind === "werk") ? "pro" :
       (kind === "mo"  || kind === "montage")   ? "mo"  :
       (kind === "cnc")                         ? "cnc" :
       (kind === "reis")                        ? "reis":
@@ -1546,7 +1546,7 @@ for (const a of (pAssigns || [])) {
 
     // extra kolom met uren (uit Supabase | gepland)
     const colHours = document.createElement("col");
-    colHours.style.width = hoursColOpen ? "96px" : "0px";
+    colHours.style.width = hoursColOpen ? "120px" : "0px";
     colgroup.appendChild(colHours);
 
     for(let i=0;i<dates.length;i++){
@@ -1577,7 +1577,7 @@ for (const a of (pAssigns || [])) {
     ));
 
 // uren-kolom header blijft leeg (maar kolom bestaat wel)
-trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+trMonth.appendChild(hdrCell("", `hdr-cell hourscol sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
 
 
 
@@ -1597,7 +1597,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left
     const trWeek = document.createElement("tr");
     trWeek.className = "hdr hdr-week";
     trWeek.appendChild(hdrCell("", "rowhdr sticky-left sticky-top2"));
-    trWeek.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trWeek.appendChild(hdrCell("", `hdr-cell hourscol sticky-top2 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
 
     let j=0;
     while(j < dates.length){
@@ -1614,7 +1614,7 @@ trMonth.appendChild(hdrCell("", `hdr-cell rowhdr hourscol sticky-top sticky-left
     const trDay = document.createElement("tr");
     trDay.className = "hdr hdr-day";
     trDay.appendChild(hdrCell("", "rowhdr sticky-left sticky-top3"));
-    trDay.appendChild(hdrCell("",  `hdr-cell rowhdr hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+    trDay.appendChild(hdrCell("",  `hdr-cell hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
       const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
@@ -1816,6 +1816,9 @@ for (const dd of dates) {
         return String(a?.[sectNameKey]||"").localeCompare(String(b?.[sectNameKey]||""));
       });
 
+    const secIdsForProject = secList.map(s => String(s?.[sectIdKey] ?? s?.section_id ?? "")).filter(Boolean);
+
+
 
       for (const s of secList) {
         const secRow = document.createElement("tr");
@@ -1946,7 +1949,7 @@ for (const dd of dates) {
       hoursTdO.innerHTML = "";
       orderRow.appendChild(hoursTdO);
 
-      appendOrderDayCells(orderRow, dates, oh.leverISO, pid, projectAssignMap);
+      appendOrderDayCells(orderRow, dates, oh.leverISO, secIdsForProject, assignMap);
       tbody.appendChild(orderRow);
       lastRowOfProject = orderRow;
 
@@ -1983,7 +1986,7 @@ for (const dd of dates) {
 
 
       const leverLineISO = it.leverdatum ? asISODate(it.leverdatum) : oh.leverISO;
-      appendOrderDayCells(lineRow, dates, leverLineISO, pid, projectAssignMap);
+      appendOrderDayCells(lineRow, dates, leverLineISO, [String(sid)], assignMap);
 
       tbody.appendChild(lineRow);
       lastRowOfProject = lineRow;
@@ -2121,6 +2124,14 @@ for (const dd of dates) {
   `;
 
   trTotal.appendChild(tdTotalLeft);
+
+  // uren-kolom placeholder (totaal capaciteit)
+  const hoursTdTotal = document.createElement("td");
+  hoursTdTotal.className = "cell hourscol sticky-left2";
+  hoursTdTotal.style.left = "380px";
+  if (!hoursColOpen) hoursTdTotal.style.display = "none";
+  hoursTdTotal.innerHTML = "";
+  trTotal.appendChild(hoursTdTotal);
 
   // totalen per dag (som van alle medewerkers)
   for (const d of dates){
@@ -4198,20 +4209,37 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     }
 
 
-function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
+function appendOrderDayCells(tr, dates, leverISO, sectionIds, assignMap){
   const isTop = tr.classList.contains("order-topline");
   const isBottom = tr.classList.contains("order-bottomline");
 
-  // keys op basis van project_assignments (voor start/eind van een run)
+  const sectionList = (sectionIds || []).map(x => String(x));
+
+  function getSectionPlanned(iso){
+    let prod = 0, mont = 0, dummyProd = false, dummyMont = false;
+
+    for (const sid of sectionList){
+      const e = assignMap?.get(String(sid))?.get(iso);
+      if (!e) continue;
+
+      prod += (e.productie?.size || 0) + (e.dummyProd || 0);
+      mont += (e.montage?.size || 0)  + (e.dummyMont || 0);
+
+      if ((e.dummyProd || 0) > 0) dummyProd = true;
+      if ((e.dummyMont || 0) > 0) dummyMont = true;
+    }
+
+    return { prod, mont, dummyProd, dummyMont };
+  }
+
+  // keys op basis van section_assignments (som van meegegeven secties)
   const keys = dates.map(d => {
     const iso = toISODate(d);
-    const e = projectAssignMap?.get(String(pid))?.get(iso);
-    const prod = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
-    const mont = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
+    const sums = getSectionPlanned(iso);
 
-    if (prod > 0 && mont > 0) return "both";
-    if (prod > 0) return "prod";
-    if (mont > 0) return "mont";
+    if (sums.prod > 0 && sums.mont > 0) return "both";
+    if (sums.prod > 0) return "prod";
+    if (sums.mont > 0) return "mont";
     return "";
   });
 
@@ -4223,9 +4251,9 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
     const prevKey = (i>0) ? keys[i-1] : "";
     const nextKey = (i<keys.length-1) ? keys[i+1] : "";
 
-    const e = projectAssignMap?.get(String(pid))?.get(iso);
-    const dummyProd = !!(e && (e.dummyProd || 0) > 0);
-    const dummyMont = !!(e && (e.dummyMont || 0) > 0);
+    const sums = getSectionPlanned(iso);
+    const dummyProd = !!sums.dummyProd;
+    const dummyMont = !!sums.dummyMont;
 
     const td = document.createElement("td");
     td.className = `cell plan-cell ${isWeekend(d) ? "wknd" : ""}`.trim();
@@ -4252,8 +4280,8 @@ function appendOrderDayCells(tr, dates, leverISO, pid, projectAssignMap){
       const startCls = isStart ? " bar-start" : "";
       const endCls   = isEnd   ? " bar-end"   : "";
 
-      const prodCnt = e ? (e.productie.size + (e.dummyProd || 0)) : 0;
-      const montCnt = e ? (e.montage.size  + (e.dummyMont || 0)) : 0;
+      const prodCnt = sums.prod;
+      const montCnt = sums.mont;
 
       if (key === "both") {
         html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${prodCnt || "&nbsp;"}</div>`;
