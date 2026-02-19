@@ -1077,22 +1077,22 @@ td.section-click{
     90deg,
     rgba(34,197,94,.22) 0%,
     rgba(34,197,94,.22) 50%,
-    #fde68a 50%,
-    #fde68a 100%
+    rgba(250,204,21,.28) 50%,
+    rgba(250,204,21,.28) 100%
   );
 }
 
 
 
 .planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.30) !important; }
-.planner-table td.cap-cell.cap-assigned-mont { background: #fde68a !important; }
+.planner-table td.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18) !important; }
 .planner-table td.cap-cell.cap-assigned-both {
   background: linear-gradient(
     90deg,
     rgba(34,197,94,.30) 0%,
     rgba(34,197,94,.30) 50%,
-    #fde68a 50%,
-    #fde68a 100%
+    rgba(236,72,153,.20) 50%,
+    rgba(236,72,153,.20) 100%
   ) !important;
 }
 
@@ -1106,8 +1106,8 @@ td.section-click{
 .planner-table tr.planned-prod td.sum-cell.has-val:not(.wknd){
   background: rgba(34,197,94,.18) !important;   /* groen */
 }
-.planner-table tr.planned-mont td.sum-cell.has-val{
-  background: #fde68a !important;  /* geel */
+.planner-table tr.planned-mont td.sum-cell.has-val:not(.wknd){
+  background: rgba(250,204,21,.28) !important;  /* geel */
 }
 
 /* Weekend-kolom doortrekken in capaciteitblok (incl. saldo) */
@@ -1223,24 +1223,19 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
   left: var(--left-w) !important;
 }
 .mini-hours {
-  position: relative;
-  z-index: 2;
   font-size: 11px;
   line-height: 1.2;
   padding: 2px 4px;
-  font-variant-numeric: tabular-nums;
 }
 .mh-row{
   display:grid;
-  width:100%;
-
-  grid-template-columns: 42px minmax(24px, 1fr) 10px minmax(24px, 1fr);
+  grid-template-columns: 36px 1fr 8px 1fr;
   align-items:center;
-  column-gap:3px;
+  column-gap:2px;
 }
-.mh-l{ text-align:left; color:#6b7280; white-space:nowrap; }
-.mh-v, .mh-v2{ text-align:right; white-space:nowrap; }
-.mh-sep{ text-align:center; color:#94a3b8; display:block; width:100%; }
+.mh-l{ text-align:left; color:#6b7280; }
+.mh-v, .mh-v2{ text-align:right; }
+.mh-sep{ text-align:center; color:#94a3b8; }
 
 .rowhdr-flex{
   display:flex;
@@ -1265,8 +1260,8 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 /* uren-kolom styling (respecteert JS toggle display none) */
 td.hourscol{
   display: table-cell;
-  min-width: 120px !important;
-  width: 120px !important;
+  min-width: 96px !important;
+  width: 96px !important;
   height: auto !important;
   line-height: 1.25 !important;
   vertical-align: top !important;
