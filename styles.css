@@ -418,6 +418,14 @@ a{ color:inherit; text-decoration:none; }
   box-shadow:1px 0 0 var(--grid-line);
 }
 
+.sticky-left2{
+  position:sticky;
+  left:var(--left-w);
+  z-index:65;
+  background:#fff;
+  box-shadow:1px 0 0 var(--grid-line);
+}
+
 /* 3 header rijen */
 .sticky-top{
   position:sticky;
@@ -440,6 +448,7 @@ a{ color:inherit; text-decoration:none; }
 
 /* linker header-cellen boven alles */
 .hdr-cell.sticky-left{ z-index:80; background:var(--hdr-bg); }
+.hdr-cell.sticky-left2{ z-index:81; background:var(--hdr-bg); }
 td.rowhdr.sticky-left{ z-index:50; }
 
 /* =========================
@@ -504,7 +513,7 @@ td.details-fill{ text-align:left !important; vertical-align:top; padding:0 !impo
 }
 .bar-prep .bar{ background:#c7e0ff; }
 .bar-prod .bar{ background:#b7f0c2; }
-.bar-mont .bar{ background:#f6c1f3; }
+.bar-mont .bar{ background:#fde68a; }
 .bar-delivery .bar{ background:#ffd7b5; }
 .bar-generic .bar{ background:#e5e7eb; }
 
@@ -591,7 +600,7 @@ td.details-fill{ text-align:left !important; vertical-align:top; padding:0 !impo
 
 /* kleuren via TD class (werkt met jouw JS) */
 td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
-td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
+td.plan-cell.bar-mont .bar{ background:#fde68a !important; }
 td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
 td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
 
@@ -698,7 +707,7 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 /* =========================
    ZEBRA (clean, predictable)
 ========================= */
-.planner-table td.cell{ position:relative; }
+.planner-table td.cell:not(.sticky-left2){ position:relative; }
 
 /* linkerkolom zebra */
 .planner-table tbody tr.zebra > td.rowhdr{
@@ -706,7 +715,7 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 }
 
 /* zebra overlay op kalendercellen, niet weekend */
-.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
+.planner-table tbody tr.zebra > td.cell:not(.wknd):not(.hourscol)::after{
   content:"";
   position:absolute;
   inset:0;
@@ -729,6 +738,14 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 .planner-table tbody tr.cap-emp-row.zebra > td::after,
 .planner-table tbody tr.sum-row.zebra > td::after,
 .planner-table tbody tr.balance-row.zebra > td::after{
+  content:none !important;
+}
+
+/* zwarte scheidingslijnen altijd boven zebra houden */
+.planner-table tbody tr.project-topline.zebra > td::after,
+.planner-table tbody tr.project-bottomline.zebra > td::after,
+.planner-table tbody tr.order-topline.zebra > td::after,
+.planner-table tbody tr.order-bottomline.zebra > td::after{
   content:none !important;
 }
 
@@ -839,7 +856,7 @@ td.section-click{
 
 /* als prod+mont op dezelfde dag staan: kleur op de bar zelf (niet via td) */
 .plan-stack .bar.bar-prod{ background:#b7f0c2 !important; }
-.plan-stack .bar.bar-mont{ background:#f6c1f3 !important; }
+.plan-stack .bar.bar-mont{ background:#fde68a !important; }
 .plan-stack .bar.bar-prep{ background:#c7e0ff !important; }
 .plan-stack .bar.bar-generic{ background:#e5e7eb !important; }
 
@@ -1051,7 +1068,7 @@ td.section-click{
 }
 
 .cap-cell.cap-assigned-mont{
-  background: #f6c1f3;  /* roze/paarsig */
+  background: #fde68a;  /* geel */
 }
 
 /* Beide types op 1 dag (komt zelden voor, maar kan) */
@@ -1060,16 +1077,24 @@ td.section-click{
     90deg,
     rgba(34,197,94,.22) 0%,
     rgba(34,197,94,.22) 50%,
-    rgba(236,72,153,.18) 50%,
-    rgba(236,72,153,.18) 100%
+    #fde68a 50%,
+    #fde68a 100%
   );
 }
 
 
 
-.planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18) !important; }
-.planner-table td.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18) !important; }
-.planner-table td.cap-cell.cap-assigned-both { background: rgba(59,130,246,.18) !important; }
+.planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.30) !important; }
+.planner-table td.cap-cell.cap-assigned-mont { background: #fde68a !important; }
+.planner-table td.cap-cell.cap-assigned-both {
+  background: linear-gradient(
+    90deg,
+    rgba(34,197,94,.30) 0%,
+    rgba(34,197,94,.30) 50%,
+    #fde68a 50%,
+    #fde68a 100%
+  ) !important;
+}
 
 
 /* Gepland productie / montage: NIET standaard geel */
@@ -1081,8 +1106,8 @@ td.section-click{
 .planner-table tr.planned-prod td.sum-cell.has-val:not(.wknd){
   background: rgba(34,197,94,.18) !important;   /* groen */
 }
-.planner-table tr.planned-mont td.sum-cell.has-val:not(.wknd){
-  background: rgba(236,72,153,.18) !important;  /* paars */
+.planner-table tr.planned-mont td.sum-cell.has-val{
+  background: #fde68a !important;  /* geel */
 }
 
 /* Weekend-kolom doortrekken in capaciteitblok (incl. saldo) */
@@ -1190,7 +1215,32 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 
 
 .hourscol { border-left: 2px solid #111 !important; }
-.mini-hours { font-size: 11px; line-height: 1.2; padding: 4px 6px; }
+
+/* forceer sticky gedrag voor urenkolom; anders overschrijft td.cell position:relative dit */
+.planner-table th.hourscol.sticky-left2,
+.planner-table td.hourscol.sticky-left2{
+  position: sticky !important;
+  left: var(--left-w) !important;
+}
+.mini-hours {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
+}
+.mh-row{
+  display:grid;
+  width:100%;
+
+  grid-template-columns: 42px minmax(24px, 1fr) 10px minmax(24px, 1fr);
+  align-items:center;
+  column-gap:3px;
+}
+.mh-l{ text-align:left; color:#6b7280; white-space:nowrap; }
+.mh-v, .mh-v2{ text-align:right; white-space:nowrap; }
+.mh-sep{ text-align:center; color:#94a3b8; display:block; width:100%; }
 
 .rowhdr-flex{
   display:flex;
@@ -1212,18 +1262,21 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 }
 
 
-/* === FORCE show hours column content === */
+/* uren-kolom styling (respecteert JS toggle display none) */
 td.hourscol{
-  display: table-cell !important;
-  min-width: 96px !important;
-  width: 96px !important;
+  display: table-cell;
+  min-width: 120px !important;
+  width: 120px !important;
+  height: auto !important;
+  line-height: 1.25 !important;
+  vertical-align: top !important;
   padding: 6px 8px !important;
   font-size: 12px !important;
-  line-height: 1.25 !important;
   color: #0f172a !important;
   background: #fff !important;
   overflow: visible !important;
   white-space: normal !important;
+  text-align: left !important;
 }
 
 td.hourscol *{
@@ -1231,8 +1284,20 @@ td.hourscol *{
   line-height: 1.25 !important;
   visibility: visible !important;
   opacity: 1 !important;
+  position: relative;
+  z-index: 2;
 }
 
 td.hourscol{
   border-left: 1px solid #cbd5e1 !important;
+}
+
+/* finale montage-kleur override (voorkomt resterend paars uit oudere regels/cache) */
+.planner-table td.plan-cell.bar-mont .bar,
+.planner-table .plan-stack .bar.bar-mont,
+.planner-table td.cap-cell.cap-assigned-mont,
+.planner-table tr.planned-mont td.sum-cell.has-val{
+  background: #fde68a !important;
+  background-image: none !important;
+  color:#111827 !important;
 }
