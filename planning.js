@@ -1563,11 +1563,19 @@ for (const a of (pAssigns || [])) {
     // Row: months
     const trMonth = document.createElement("tr");
     trMonth.className = "hdr hdr-month";
-    trMonth.appendChild(hdrCell("Planning", "rowhdr sticky-left sticky-top"));
     trMonth.appendChild(hdrCell(
-      `<button class="hourscol-toggle" id="btnHoursCol" type="button" title="Urenkolom tonen/verbergen">${hoursColOpen ? "◀" : "▶"}</button>`,
-      `rowhdr sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()
+      `<div class="rowhdr-flex">
+        <span>Planning</span>
+        <button class="hourscol-toggle" id="btnHoursCol" type="button" title="Urenkolom tonen/verbergen">
+          ${hoursColOpen ? "◀" : "▶"}
+        </button>
+      </div>`,
+      "hdr-cell rowhdr sticky-left sticky-top"
     ));
+
+// uren-kolom header blijft leeg (maar kolom bestaat wel)
+trMonth.appendChild(hdrCell("", `hdr-cell rowhdr sticky-top sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
+
 
 
     let i = 0;

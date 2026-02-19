@@ -1191,3 +1191,22 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 
 .hourscol { border-left: 2px solid #111 !important; }
 .mini-hours { font-size: 11px; line-height: 1.2; padding: 4px 6px; }
+
+.rowhdr-flex{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.hourscol-toggle{
+  width:28px;
+  height:26px;
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:6px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
