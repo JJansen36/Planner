@@ -1241,9 +1241,9 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 }
 
 
-/* === FORCE show hours column content === */
+/* uren-kolom styling (respecteert JS toggle display none) */
 td.hourscol{
-  display: table-cell !important;
+  display: table-cell;
   min-width: 96px !important;
   width: 96px !important;
   height: auto !important;
