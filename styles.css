@@ -418,6 +418,14 @@ a{ color:inherit; text-decoration:none; }
   box-shadow:1px 0 0 var(--grid-line);
 }
 
+.sticky-left2{
+  position:sticky;
+  left:var(--left-w);
+  z-index:65;
+  background:#fff;
+  box-shadow:1px 0 0 var(--grid-line);
+}
+
 /* 3 header rijen */
 .sticky-top{
   position:sticky;
@@ -440,6 +448,7 @@ a{ color:inherit; text-decoration:none; }
 
 /* linker header-cellen boven alles */
 .hdr-cell.sticky-left{ z-index:80; background:var(--hdr-bg); }
+.hdr-cell.sticky-left2{ z-index:81; background:var(--hdr-bg); }
 td.rowhdr.sticky-left{ z-index:50; }
 
 /* =========================
@@ -698,7 +707,7 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 /* =========================
    ZEBRA (clean, predictable)
 ========================= */
-.planner-table td.cell{ position:relative; }
+.planner-table td.cell:not(.sticky-left2){ position:relative; }
 
 /* linkerkolom zebra */
 .planner-table tbody tr.zebra > td.rowhdr{
@@ -706,7 +715,7 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 }
 
 /* zebra overlay op kalendercellen, niet weekend */
-.planner-table tbody tr.zebra > td.cell:not(.wknd)::after{
+.planner-table tbody tr.zebra > td.cell:not(.wknd):not(.hourscol)::after{
   content:"";
   position:absolute;
   inset:0;
@@ -1067,9 +1076,17 @@ td.section-click{
 
 
 
-.planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.18) !important; }
+.planner-table td.cap-cell.cap-assigned-prod { background: rgba(34,197,94,.30) !important; }
 .planner-table td.cap-cell.cap-assigned-mont { background: rgba(236,72,153,.18) !important; }
-.planner-table td.cap-cell.cap-assigned-both { background: rgba(59,130,246,.18) !important; }
+.planner-table td.cap-cell.cap-assigned-both {
+  background: linear-gradient(
+    90deg,
+    rgba(34,197,94,.30) 0%,
+    rgba(34,197,94,.30) 50%,
+    rgba(236,72,153,.20) 50%,
+    rgba(236,72,153,.20) 100%
+  ) !important;
+}
 
 
 /* Gepland productie / montage: NIET standaard geel */
@@ -1190,7 +1207,30 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 
 
 .hourscol { border-left: 2px solid #111 !important; }
-.mini-hours { font-size: 11px; line-height: 1.2; padding: 4px 6px; }
+
+/* forceer sticky gedrag voor urenkolom; anders overschrijft td.cell position:relative dit */
+.planner-table th.hourscol.sticky-left2,
+.planner-table td.hourscol.sticky-left2{
+  position: sticky !important;
+  left: var(--left-w) !important;
+}
+.mini-hours {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
+}
+.mh-row{
+  display:grid;
+  grid-template-columns: 38px minmax(28px, 1fr) 8px minmax(28px, 1fr);
+  align-items:center;
+  column-gap:3px;
+}
+.mh-l{ text-align:left; color:#6b7280; white-space:nowrap; }
+.mh-v, .mh-v2{ text-align:right; white-space:nowrap; }
+.mh-sep{ text-align:center; color:#94a3b8; }
 
 .rowhdr-flex{
   display:flex;
@@ -1212,18 +1252,21 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 }
 
 
-/* === FORCE show hours column content === */
+/* uren-kolom styling (respecteert JS toggle display none) */
 td.hourscol{
-  display: table-cell !important;
+  display: table-cell;
   min-width: 96px !important;
   width: 96px !important;
+  height: auto !important;
+  line-height: 1.25 !important;
+  vertical-align: top !important;
   padding: 6px 8px !important;
   font-size: 12px !important;
-  line-height: 1.25 !important;
   color: #0f172a !important;
   background: #fff !important;
   overflow: visible !important;
   white-space: normal !important;
+  text-align: left !important;
 }
 
 td.hourscol *{
@@ -1231,6 +1274,8 @@ td.hourscol *{
   line-height: 1.25 !important;
   visibility: visible !important;
   opacity: 1 !important;
+  position: relative;
+  z-index: 2;
 }
 
 td.hourscol{
