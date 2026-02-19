@@ -513,7 +513,7 @@ td.details-fill{ text-align:left !important; vertical-align:top; padding:0 !impo
 }
 .bar-prep .bar{ background:#c7e0ff; }
 .bar-prod .bar{ background:#b7f0c2; }
-.bar-mont .bar{ background:#f6c1f3; }
+.bar-mont .bar{ background:#fde68a; }
 .bar-delivery .bar{ background:#ffd7b5; }
 .bar-generic .bar{ background:#e5e7eb; }
 
@@ -600,7 +600,7 @@ td.details-fill{ text-align:left !important; vertical-align:top; padding:0 !impo
 
 /* kleuren via TD class (werkt met jouw JS) */
 td.plan-cell.bar-prod .bar{ background:#b7f0c2 !important; }
-td.plan-cell.bar-mont .bar{ background:#f6c1f3 !important; }
+td.plan-cell.bar-mont .bar{ background:#fde68a !important; }
 td.plan-cell.bar-prep .bar{ background:#c7e0ff !important; }
 td.plan-cell.bar-generic .bar{ background:#e5e7eb !important; }
 
@@ -856,7 +856,7 @@ td.section-click{
 
 /* als prod+mont op dezelfde dag staan: kleur op de bar zelf (niet via td) */
 .plan-stack .bar.bar-prod{ background:#b7f0c2 !important; }
-.plan-stack .bar.bar-mont{ background:#f6c1f3 !important; }
+.plan-stack .bar.bar-mont{ background:#fde68a !important; }
 .plan-stack .bar.bar-prep{ background:#c7e0ff !important; }
 .plan-stack .bar.bar-generic{ background:#e5e7eb !important; }
 
@@ -1068,7 +1068,7 @@ td.section-click{
 }
 
 .cap-cell.cap-assigned-mont{
-  background: #f6c1f3;  /* roze/paarsig */
+  background: #fde68a;  /* geel */
 }
 
 /* Beide types op 1 dag (komt zelden voor, maar kan) */
@@ -1077,8 +1077,8 @@ td.section-click{
     90deg,
     rgba(34,197,94,.22) 0%,
     rgba(34,197,94,.22) 50%,
-    rgba(236,72,153,.18) 50%,
-    rgba(236,72,153,.18) 100%
+    rgba(250,204,21,.28) 50%,
+    rgba(250,204,21,.28) 100%
   );
 }
 
@@ -1107,7 +1107,7 @@ td.section-click{
   background: rgba(34,197,94,.18) !important;   /* groen */
 }
 .planner-table tr.planned-mont td.sum-cell.has-val:not(.wknd){
-  background: rgba(236,72,153,.18) !important;  /* paars */
+  background: rgba(250,204,21,.28) !important;  /* geel */
 }
 
 /* Weekend-kolom doortrekken in capaciteitblok (incl. saldo) */
