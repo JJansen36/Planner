@@ -707,7 +707,7 @@ td.cap-emp-click:hover{ text-decoration:underline; background:#f8fafc; }
 /* =========================
    ZEBRA (clean, predictable)
 ========================= */
-.planner-table td.cell{ position:relative; }
+.planner-table td.cell:not(.sticky-left2){ position:relative; }
 
 /* linkerkolom zebra */
 .planner-table tbody tr.zebra > td.rowhdr{
@@ -1199,6 +1199,13 @@ td.inhuur-cell-click:hover { outline: 1px solid rgba(0,0,0,.15); }
 
 
 .hourscol { border-left: 2px solid #111 !important; }
+
+/* forceer sticky gedrag voor urenkolom; anders overschrijft td.cell position:relative dit */
+.planner-table th.hourscol.sticky-left2,
+.planner-table td.hourscol.sticky-left2{
+  position: sticky !important;
+  left: var(--left-w) !important;
+}
 .mini-hours {
   font-size: 11px;
   line-height: 1.2;
