@@ -3457,6 +3457,7 @@ loadAndRender();
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
+    applyMiniHoursOverrunColors(gridEl);
 
     const btnHoursCol = gridEl.querySelector("#btnHoursCol");
     if (btnHoursCol) {
@@ -4471,6 +4472,33 @@ function miniHoursHtml(req, pl){
   `;
 }
 
+
+
+function applyMiniHoursOverrunColors(root){
+  const parse = (v) => {
+    const s = String(v ?? "").trim();
+    if (!s) return 0;
+    const n = Number(s.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  (root || document).querySelectorAll(".mini-hours .mh-row").forEach((row) => {
+    const leftEl = row.querySelector(".mh-v");
+    const rightEl = row.querySelector(".mh-v2");
+    if (!leftEl || !rightEl) return;
+
+    const isOver = parse(rightEl.textContent) > parse(leftEl.textContent);
+    rightEl.classList.toggle("mh-over", isOver);
+
+    if (isOver) {
+      rightEl.style.setProperty("color", "#b42318", "important");
+      rightEl.style.setProperty("font-weight", "700", "important");
+    } else {
+      rightEl.style.removeProperty("color");
+      rightEl.style.removeProperty("font-weight");
+    }
+  });
+}
 
 // ======================
 // DRAG & DROP (planned days)
