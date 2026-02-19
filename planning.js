@@ -1680,7 +1680,6 @@ projRow.appendChild(hoursTd);
 const secsForProj = (sectiesByProject.get(pid) || []);
 
 const req = { prod: 0, cnc: 0, mont: 0, reis: 0 };
-
 for (const s of secsForProj) {
   req.prod += Number(s?.uren_prod ?? 0);
   req.cnc  += Number(s?.uren_cnc ?? s?.uren_cnc_prod ?? 0);
@@ -1692,7 +1691,7 @@ for (const s of secsForProj) {
 const pf = (settings.planFactor ?? 1);
 const pl = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-const pMap2 = projectAssignMap.get(String(pid));
+const pMap = projectAssignMap.get(String(pid));   // ✅ 1x, vóór gebruik
 if (pMap) {
   for (const dd of dates) {
     const iso = toISODate(dd);
@@ -1719,24 +1718,6 @@ hoursTd.innerHTML = `
     <div class="mh-row"><span class="mh-l">Reis</span><span class="mh-v">${escapeHtml(fmt0(req.reis))}</span><span class="mh-sep">|</span><span class="mh-v2">${escapeHtml(fmt0(pl.reis))}</span></div>
   </div>
 `;
-
-      // ===== uren (bron) + gepland: defaults zodat render nooit crasht =====
-      const reqProd = 0, reqCnc = 0, reqMont = 0, reqReis = 0;
-
-      // geplande aantallen uit projectAssignMap (sets met medewerkers) per dag optellen
-      let plProd = 0, plCnc = 0, plMont = 0, plReis = 0;
-      const pMap = projectAssignMap.get(String(pid));
-      if (pMap) {
-        for (const d of dates) {
-          const iso = toISODate(d);
-          const e = pMap.get(iso);
-          if (!e) continue;
-          plProd += (e.productie?.size || 0);
-          plCnc  += (e.cnc?.size || 0);
-          plMont += (e.montage?.size || 0);
-          plReis += (e.reis?.size || 0);
-        }
-      }
 
 
       // hier vul je jouw 4 regels: Prod / CNC / Mont / Reis (bron | gepland)
