@@ -74,14 +74,9 @@ async function loadProject(id){
   }
 
   // Secties
-  const b = await sb
-    .from(tSec)
-    .select("*")
-    .eq(DB.sectionProjectFk, id)
-    .order(DB.sectionPkCol, { ascending: true });
-
-  if(b.error){
-    setStatus(el("status"), b.error.message, "error");
+  const secRes = await loadSectionsForProject(id, tSec);
+  if(secRes.error){
+    setStatus(el("status"), secRes.error.message, "error");
     return;
   }
 
