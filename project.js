@@ -83,7 +83,7 @@ async function loadProject(id){
     return;
   }
 
-  const sections = b.data || [];
+  const sections = sortSections(b.data || []);
 
     
 
@@ -436,6 +436,67 @@ function renderOrdersAccordionHtml(rows){
       </div>
     `;
   }
+
+function sortSections(rows){
+  return [...(rows || [])].sort((a,b)=>{
+    const ka = sectionSortKey(a);
+    const kb = sectionSortKey(b);
+
+    // 1) normale secties eerst, M-secties onderaan
+    if (ka.group !== kb.group) return ka.group - kb.group;
+
+    // 2) binnen groep: numeriek op nummer (01,02,10...)
+    if (ka.num !== kb.num) return ka.num - kb.num;
+
+    // 3) fallback: string compare
+    return ka.raw.localeCompare(kb.raw, "nl", { numeric:true });
+  });
+}
+
+function sectionSortKey(section){
+  // probeer de meest waarschijnlijke kolommen waar jouw "01." / "M05." in staat
+  const candidates = [
+    "paragraaf",
+    "paragraph",
+    "sectionno",
+    "sectienr",
+    "sectie",
+    "code",
+    "section_code",
+    DB.sectionNoCol,            // als je dit in config hebt
+  ].filter(Boolean);
+
+  let raw = "";
+  for (const k of candidates){
+    const v = section?.[k];
+    if (v !== null && v !== undefined && String(v).trim() !== ""){
+      raw = String(v).trim();
+      break;
+    }
+  }
+
+  // als we niets vonden: pak eventueel de eerste kolom uit DB.sectionRowCols
+  if (!raw && DB?.sectionRowCols?.length){
+    const firstCol = DB.sectionRowCols[0]?.col;
+    const v = Array.isArray(firstCol)
+      ? firstCol.map(k => section?.[k]).find(x => x !== null && x !== undefined && String(x).trim() !== "")
+      : section?.[firstCol];
+    raw = String(v ?? "").trim();
+  }
+
+  const s = raw.toUpperCase().replace(/\s+/g,""); // "M05." -> "M05."
+  const isM = s.startsWith("M");
+
+  // haal cijfers uit "01." / "M05." / "13" etc
+  const digits = (isM ? s.slice(1) : s).match(/\d+/);
+  const num = digits ? parseInt(digits[0], 10) : Number.MAX_SAFE_INTEGER;
+
+  return {
+    raw: s,
+    group: isM ? 1 : 0,   // 0 = normaal, 1 = M onderaan
+    num,
+  };
+}
 
   html += `</div>`;
   return html;
