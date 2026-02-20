@@ -45,6 +45,24 @@
 
 
 
+
+function getIncludePlanningColumn(rows){
+  const candidates = ["in_planning", "include_in_planning", "show_in_planning", "planning_visible"];
+  const keys = rows?.[0] ? Object.keys(rows[0]) : [];
+  return candidates.find(c => keys.includes(c)) || candidates[0];
+}
+
+function sectionIsIncludedInPlanning(section, col){
+  const raw = section?.[col];
+  if (raw === null || raw === undefined) return true;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw !== 0;
+  if (typeof raw === "string") {
+    const v = raw.trim().toLowerCase();
+    return !["0", "false", "nee", "no", "off"].includes(v);
+  }
+  return Boolean(raw);
+}
   // ======================
 // UNDO (Ctrl+Z) voor drag & drop
 // ======================
@@ -897,8 +915,11 @@ async function openInhuurModalAtWeek(wkStart){
 
     if (sErr) { statusEl.textContent = "Fout secties: " + sErr.message; return; }
 
-    // 2b) section_orders voor alle secties in dit project (✅ nieuw)
-    const sectionIds = (secties || [])
+    const includePlanningCol = getIncludePlanningColumn(secties || []);
+    const visibleSecties = (secties || []).filter(s => sectionIsIncludedInPlanning(s, includePlanningCol));
+
+    // 2b) section_orders voor alle zichtbare secties in dit project
+    const sectionIds = visibleSecties
       .map(s => String(s.id ?? s.section_id ?? ""))   // pak id/section_id (wat er is)
       .filter(Boolean);
 
@@ -1036,7 +1057,7 @@ async function openInhuurModalAtWeek(wkStart){
       start,
       days: RANGE_DAYS,
       projecten,
-      secties,
+      secties: visibleSecties,
       work,
       cap,
       werknemers,
