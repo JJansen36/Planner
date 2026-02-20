@@ -32,6 +32,43 @@ async function loadProject(id){
   const tCust = DB.tables.customers;
   const tSec  = DB.tables.sections;
 
+  const loadSectionsForProject = async (projectId) => {
+    const fkCandidates = [...new Set([
+      DB.sectionProjectFk,
+      "project_id",
+      "projectid",
+      "project",
+      "project_ref",
+    ].filter(Boolean))];
+
+    const orderCandidates = [...new Set([
+      DB.sectionPkCol,
+      "section_id",
+      "id",
+    ].filter(Boolean))];
+
+    let firstNoError = null;
+
+    for (const fk of fkCandidates) {
+      for (const orderCol of orderCandidates) {
+        let q = sb
+          .from(tSec)
+          .select("*")
+          .eq(fk, projectId);
+
+        if (orderCol) q = q.order(orderCol, { ascending: true });
+
+        const res = await q;
+        if (res.error) continue;
+
+        if (!firstNoError) firstNoError = res;
+        if ((res.data || []).length) return res;
+      }
+    }
+
+    return firstNoError || { data: [], error: null };
+  };
+
   // Project + klant (join als FK bekend is)
   const joinName = "klant";
   let project = null;
