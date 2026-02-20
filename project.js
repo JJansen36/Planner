@@ -32,6 +32,43 @@ async function loadProject(id){
   const tCust = DB.tables.customers;
   const tSec  = DB.tables.sections;
 
+  const loadSectionsForProject = async (projectId) => {
+    const fkCandidates = [...new Set([
+      DB.sectionProjectFk,
+      "project_id",
+      "projectid",
+      "project",
+      "project_ref",
+    ].filter(Boolean))];
+
+    const orderCandidates = [...new Set([
+      DB.sectionPkCol,
+      "section_id",
+      "id",
+    ].filter(Boolean))];
+
+    let firstNoError = null;
+
+    for (const fk of fkCandidates) {
+      for (const orderCol of orderCandidates) {
+        let q = sb
+          .from(tSec)
+          .select("*")
+          .eq(fk, projectId);
+
+        if (orderCol) q = q.order(orderCol, { ascending: true });
+
+        const res = await q;
+        if (res.error) continue;
+
+        if (!firstNoError) firstNoError = res;
+        if ((res.data || []).length) return res;
+      }
+    }
+
+    return firstNoError || { data: [], error: null };
+  };
+
   // Project + klant (join als FK bekend is)
   const joinName = "klant";
   let project = null;
@@ -74,40 +111,13 @@ async function loadProject(id){
   }
 
   // Secties
-  const fkCandidates = [...new Set([
-    DB.sectionProjectFk,
-    "project_id",
-    "projectid",
-    "project",
-    "project_ref",
-  ].filter(Boolean))];
-
-  let sections = [];
-  let secErr = null;
-
-  for (const fk of fkCandidates) {
-    const secTry = await sb
-      .from(tSec)
-      .select("*")
-      .eq(fk, id)
-      .order(DB.sectionPkCol, { ascending: true });
-
-    if (secTry.error) {
-      secErr = secTry.error;
-      continue;
-    }
-
-    sections = secTry.data || [];
-    secErr = null;
-    break;
-  }
-
-  if (secErr) {
-    setStatus(el("status"), secErr.message, "error");
+  const secRes = await loadSectionsForProject(id, tSec);
+  if(secRes.error){
+    setStatus(el("status"), secRes.error.message, "error");
     return;
   }
 
-  sortedSections = sortSectionsForDisplay(sections);
+  const sections = b.data || [];
   const includePlanningCol = pickIncludePlanningCol(sections);
 
     
@@ -285,25 +295,15 @@ const ordersHtml = `
     cb.addEventListener("click", (e) => e.stopPropagation());
     cb.addEventListener("change", async (e) => {
       e.stopPropagation();
-      if (sectionPlanningReadonly) {
-        cb.checked = !cb.checked;
-        return;
-      }
-
       const sectionId = cb.getAttribute("data-sid");
       const checked = cb.checked;
 
       cb.disabled = true;
-      const saveResult = await saveIncludeInPlanning(sectionId, checked, includePlanningCol);
-      cb.disabled = sectionPlanningReadonly;
+      const ok = await saveIncludeInPlanning(sectionId, checked, includePlanningCol);
+      cb.disabled = false;
 
-      if (!saveResult.ok) {
+      if (!ok) {
         cb.checked = !checked;
-      }
-
-      if (saveResult.forbidden) {
-        sectionPlanningReadonly = true;
-        disableIncludePlanningCheckboxes();
       }
     });
   });
@@ -357,17 +357,6 @@ el("secBody").addEventListener("click", (e) => {
   el("cardMain").style.display = "block";
 }
 
-
-
-
-
-function disableIncludePlanningCheckboxes(){
-  [...el("secBody")?.querySelectorAll(".js-include-planning") || []].forEach(cb => {
-    cb.disabled = true;
-    cb.title = "Geen schrijfrechten om secties te wijzigen";
-  });
-}
-
 function pickIncludePlanningCol(rows){
   const candidates = DB.sectionIncludeInPlanningCols || ["in_planning"];
   const first = rows?.[0] ? Object.keys(rows[0]) : [];
@@ -388,7 +377,7 @@ function getIncludePlanningValue(section, col){
 }
 
 async function saveIncludeInPlanning(sectionId, includeInPlanning, includePlanningCol){
-  if (!sectionId) return { ok: false, forbidden: false };
+  if (!sectionId) return false;
   const tSec  = DB.tables.sections;
   const payload = { [includePlanningCol]: includeInPlanning };
 
@@ -398,61 +387,13 @@ async function saveIncludeInPlanning(sectionId, includeInPlanning, includePlanni
     .eq(DB.sectionPkCol, sectionId);
 
   if (res.error) {
-    const msg = String(res.error.message || "Onbekende fout");
-    const details = [res.error.code, res.error.details, res.error.hint, msg]
-      .filter(Boolean)
-      .join(" | ")
-      .toLowerCase();
-    const forbidden = Number(res.status) === 403
-      || String(res.error.code || "") === "42501"
-      || details.includes("permission denied")
-      || details.includes("insufficient privilege")
-      || details.includes("not allowed");
-
-    console.warn("Sectie planning-toggle opslaan mislukt:", res.error);
-    setStatus(
-      el("status"),
-      forbidden
-        ? "Geen schrijfrechten op 'secties' (Supabase 403). Laat een admin GRANT UPDATE + RLS policy instellen."
-        : `Opslaan mislukt: ${msg}`,
-      "error"
-    );
-    return { ok: false, forbidden };
+    console.warn("Sectie planning-toggle opslaan mislukt:", res.error.message);
+    setStatus(el("status"), `Opslaan mislukt: ${res.error.message}`, "error");
+    return false;
   }
 
   setStatus(el("status"), "Sectie bijgewerkt.");
-  return { ok: true, forbidden: false };
-}
-
-
-function getSectionParagraphCode(section){
-  return String(
-    valFrom(section, ["paragraaf", "paragraph", "para", "sectienr", "section_no", "sectionnr"])
-    ?? ""
-  ).trim();
-}
-
-function sectionSortKey(section){
-  const raw = getSectionParagraphCode(section).toUpperCase();
-  const m = raw.match(/^([A-Z]?)(\d+)/);
-  if (m) {
-    const prefix = m[1] || "";
-    const num = Number(m[2] || 0);
-    const grp = prefix === "M" ? 1 : 0; // zonder M eerst, M daarna
-    return { grp, num, raw };
-  }
-  // onbekende codes achteraan
-  return { grp: 2, num: Number.MAX_SAFE_INTEGER, raw };
-}
-
-function sortSectionsForDisplay(rows){
-  return (rows || []).slice().sort((a, b) => {
-    const ka = sectionSortKey(a);
-    const kb = sectionSortKey(b);
-    if (ka.grp !== kb.grp) return ka.grp - kb.grp;
-    if (ka.num !== kb.num) return ka.num - kb.num;
-    return ka.raw.localeCompare(kb.raw, "nl", { numeric: true, sensitivity: "base" });
-  });
+  return true;
 }
 
 function renderBlock(targetId, fields, primaryObj, fallbackObj){
