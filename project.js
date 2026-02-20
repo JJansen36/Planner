@@ -26,6 +26,7 @@ async function init(){
 async function loadProject(id){
   setStatus(el("status"), "Project laden...");
   el("cardMain").style.display = "none";
+  let sortedSections = [];
 
   const tProj = DB.tables.projects;
   const tCust = DB.tables.customers;
