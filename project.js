@@ -4,7 +4,6 @@ import { DB } from "./config.js";
 import { el, escapeHtml, fmtDate, setStatus, valFrom, sumNums } from "./utils.js";
 
 const sb = makeSupabaseClient();
-let sectionPlanningReadonly = false;
 
 document.addEventListener("DOMContentLoaded", init);
 
@@ -26,48 +25,10 @@ async function init(){
 async function loadProject(id){
   setStatus(el("status"), "Project laden...");
   el("cardMain").style.display = "none";
-  let sortedSections = [];
 
   const tProj = DB.tables.projects;
   const tCust = DB.tables.customers;
   const tSec  = DB.tables.sections;
-
-  const loadSectionsForProject = async (projectId) => {
-    const fkCandidates = [...new Set([
-      DB.sectionProjectFk,
-      "project_id",
-      "projectid",
-      "project",
-      "project_ref",
-    ].filter(Boolean))];
-
-    const orderCandidates = [...new Set([
-      DB.sectionPkCol,
-      "section_id",
-      "id",
-    ].filter(Boolean))];
-
-    let firstNoError = null;
-
-    for (const fk of fkCandidates) {
-      for (const orderCol of orderCandidates) {
-        let q = sb
-          .from(tSec)
-          .select("*")
-          .eq(fk, projectId);
-
-        if (orderCol) q = q.order(orderCol, { ascending: true });
-
-        const res = await q;
-        if (res.error) continue;
-
-        if (!firstNoError) firstNoError = res;
-        if ((res.data || []).length) return res;
-      }
-    }
-
-    return firstNoError || { data: [], error: null };
-  };
 
   // Project + klant (join als FK bekend is)
   const joinName = "klant";
@@ -111,19 +72,23 @@ async function loadProject(id){
   }
 
   // Secties
-  const secRes = await loadSectionsForProject(id, tSec);
-  if(secRes.error){
-    setStatus(el("status"), secRes.error.message, "error");
+  const b = await sb
+    .from(tSec)
+    .select("*")
+    .eq(DB.sectionProjectFk, id)
+    .order(DB.sectionPkCol, { ascending: true });
+
+  if(b.error){
+    setStatus(el("status"), b.error.message, "error");
     return;
   }
 
   const sections = b.data || [];
-  const includePlanningCol = pickIncludePlanningCol(sections);
 
     
 
   // Orders (bestellingen) voor alle secties van dit project
-  const sectionIds = sortedSections
+  const sectionIds = sections
     .map(s => s?.[DB.sectionPkCol])
     .filter(Boolean);
 
@@ -173,23 +138,21 @@ async function loadProject(id){
   // Totals: use project totals if present, else compute from sections
   // Kolomnamen van uren kunnen per omgeving verschillen; we volgen config.js
   const computed = {
-    total_wvb: sumNums(sortedSections, "uren_wvb"),
-    total_prod: sumNums(sortedSections, "uren_prod"),
-    total_mont: sumNums(sortedSections, "uren_montage") || sumNums(sortedSections, "uren_mont"),
-    total_reis: sumNums(sortedSections, "uren_reis"),
+    total_wvb: sumNums(sections, "uren_wvb"),
+    total_prod: sumNums(sections, "uren_prod"),
+    total_mont: sumNums(sections, "uren_montage") || sumNums(sections, "uren_mont"),
+    total_reis: sumNums(sections, "uren_reis"),
   };
 
   const totalsObj = { ...computed, ...project }; // project overrides computed if filled
   renderBlock("blkTotals", DB.projectBlocks.totals, totalsObj, totalsObj);
 
   // Render sections table
-  el("secMeta").textContent = `${sortedSections.length} secties`;
+  el("secMeta").textContent = `${sections.length} secties`;
 
-  el("secHead").innerHTML = DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("")
-    + `<th style="width:170px">In planning</th>`
-    + `<th style="width:70px"></th>`;
+  el("secHead").innerHTML = DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("") + `<th style="width:70px"></th>`;
 
-  el("secBody").innerHTML = sortedSections.map((s, idx)=>{
+  el("secBody").innerHTML = sections.map((s, idx)=>{
     const cols = DB.sectionRowCols.map(c=>{
       const v = Array.isArray(c.col)
         ? c.col.map(k => valFrom(s, k)).find(x => x !== null && x !== undefined && x !== "")
@@ -234,7 +197,6 @@ const detailHours = DB.sectionDetailCols
 
 // ===== Orders HTML voor deze sectie (accordion per bestel_nummer) =====
 const sid = String(s?.[DB.sectionPkCol] ?? "");
-const includeInPlanning = getIncludePlanningValue(s, includePlanningCol);
 const ords = ordersBySection.get(sid) || [];
 
 const ordersHtml = `
@@ -246,16 +208,10 @@ const ordersHtml = `
     return `
       <tr class="accordion-row" data-i="${idx}">
         ${cols}
-        <td>
-          <label class="row" style="gap:8px; justify-content:flex-start" title="Sectie opnemen in planning">
-            <input type="checkbox" class="js-include-planning" data-sid="${escapeHtml(sid)}" ${includeInPlanning ? "checked" : ""}>
-            <span class="muted" style="font-size:12px">Opnemen</span>
-          </label>
-        </td>
         <td style="text-align:right"><span class="pill">▾</span></td>
       </tr>
       <tr class="section-details" data-i="${idx}" style="display:none">
-        <td colspan="${DB.sectionRowCols.length + 2}">
+        <td colspan="${DB.sectionRowCols.length + 1}">
           <div class="inner">
             <div class="inner">
               <div class="muted" style="font-weight:800; margin-bottom:8px">Sectie details</div>
@@ -288,23 +244,6 @@ const ordersHtml = `
       const open = detailRow.style.display !== "none";
       detailRow.style.display = open ? "none" : "table-row";
       tr.querySelector(".pill").textContent = open ? "▾" : "▴";
-    });
-  });
-
-  [...el("secBody").querySelectorAll(".js-include-planning")].forEach(cb => {
-    cb.addEventListener("click", (e) => e.stopPropagation());
-    cb.addEventListener("change", async (e) => {
-      e.stopPropagation();
-      const sectionId = cb.getAttribute("data-sid");
-      const checked = cb.checked;
-
-      cb.disabled = true;
-      const ok = await saveIncludeInPlanning(sectionId, checked, includePlanningCol);
-      cb.disabled = false;
-
-      if (!ok) {
-        cb.checked = !checked;
-      }
     });
   });
 
@@ -355,45 +294,6 @@ el("secBody").addEventListener("click", (e) => {
 
   setStatus(el("status"), "");
   el("cardMain").style.display = "block";
-}
-
-function pickIncludePlanningCol(rows){
-  const candidates = DB.sectionIncludeInPlanningCols || ["in_planning"];
-  const first = rows?.[0] ? Object.keys(rows[0]) : [];
-  const found = candidates.find(col => first.includes(col));
-  return found || candidates[0] || "in_planning";
-}
-
-function getIncludePlanningValue(section, col){
-  const raw = section?.[col];
-  if (raw === null || raw === undefined) return true;
-  if (typeof raw === "boolean") return raw;
-  if (typeof raw === "number") return raw !== 0;
-  if (typeof raw === "string") {
-    const v = raw.trim().toLowerCase();
-    return !["0", "false", "nee", "no", "off"].includes(v);
-  }
-  return Boolean(raw);
-}
-
-async function saveIncludeInPlanning(sectionId, includeInPlanning, includePlanningCol){
-  if (!sectionId) return false;
-  const tSec  = DB.tables.sections;
-  const payload = { [includePlanningCol]: includeInPlanning };
-
-  const res = await sb
-    .from(tSec)
-    .update(payload)
-    .eq(DB.sectionPkCol, sectionId);
-
-  if (res.error) {
-    console.warn("Sectie planning-toggle opslaan mislukt:", res.error.message);
-    setStatus(el("status"), `Opslaan mislukt: ${res.error.message}`, "error");
-    return false;
-  }
-
-  setStatus(el("status"), "Sectie bijgewerkt.");
-  return true;
 }
 
 function renderBlock(targetId, fields, primaryObj, fallbackObj){
