@@ -150,8 +150,11 @@ async function loadProject(id){
   // Render sections table
   el("secMeta").textContent = `${sections.length} secties`;
 
-  el("secHead").innerHTML = DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("") + `<th style="width:70px"></th>`;
-
+  el("secHead").innerHTML =
+    DB.sectionRowCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("")
+    + `<th style="width:170px">In planning</th>`
+    + `<th style="width:70px"></th>`;
+    
   el("secBody").innerHTML = sections.map((s, idx)=>{
     const cols = DB.sectionRowCols.map(c=>{
       const v = Array.isArray(c.col)
@@ -205,13 +208,22 @@ const ordersHtml = `
 `;
 
 
-    return `
-      <tr class="accordion-row" data-i="${idx}">
-        ${cols}
-        <td style="text-align:right"><span class="pill">▾</span></td>
-      </tr>
+const includeInPlanning = getIncludePlanningValue(s);
+return `
+  <tr class="accordion-row" data-i="${idx}">
+    ${cols}
+
+    <td>
+      <label class="row" style="gap:8px; justify-content:flex-start" title="Sectie opnemen in planning">
+        <input type="checkbox" class="js-include-planning" data-sid="${escapeHtml(sid)}" ${includeInPlanning ? "checked" : ""}>
+        <span class="muted" style="font-size:12px">Opnemen</span>
+      </label>
+    </td>
+
+    <td style="text-align:right"><span class="pill">▾</span></td>
+  </tr>
       <tr class="section-details" data-i="${idx}" style="display:none">
-        <td colspan="${DB.sectionRowCols.length + 1}">
+        <td colspan="${DB.sectionRowCols.length + 2}">
           <div class="inner">
             <div class="inner">
               <div class="muted" style="font-weight:800; margin-bottom:8px">Sectie details</div>
@@ -247,19 +259,38 @@ const ordersHtml = `
     });
   });
 
-// Orders accordion behavior (per bestelnummer)
-[...el("secBody").querySelectorAll("[data-order-toggle]")].forEach(btn=>{
-  btn.addEventListener("click", (e)=>{
-    e.stopPropagation();
+  // Checkbox: opnemen in planning
+  [...el("secBody").querySelectorAll(".js-include-planning")].forEach(cb => {
+    cb.addEventListener("click", (e) => e.stopPropagation()); // voorkomt sectie open/dicht
+    cb.addEventListener("change", async (e) => {
+      e.stopPropagation();
+      const sectionId = cb.getAttribute("data-sid");
+      const checked = cb.checked;
 
-    // werkt zowel met als zonder .order-card wrapper
-    const card = btn.closest(".order-card") || btn.parentElement;
-    const body = card ? card.querySelector(".order-body") : null;
-    const arrow = card ? card.querySelector(".order-arrow") : btn.querySelector(".order-arrow");
+      cb.disabled = true;
+      const ok = await saveIncludeInPlanning(sectionId, checked);
+      cb.disabled = false;
 
-    if (!body) return; // niets te togglen
+      if (!ok) cb.checked = !checked; // revert bij fout
+    });
+  });
+
+  // Bestellingen accordion (binnen sectie-details) - delegated
+  el("secBody").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-order-toggle]");
+    if (!btn) return;
+
+    e.stopPropagation(); // voorkomt togglen van sectie zelf
+
+    const card = btn.closest("[data-order-card]");
+    if (!card) return;
+
+    const body = card.querySelector(".order-body");
+    const arrow = card.querySelector(".order-arrow");
+    if (!body) return;
 
     const isOpen = !body.hasAttribute("hidden");
+
     if (isOpen) {
       body.setAttribute("hidden", "");
       btn.setAttribute("aria-expanded", "false");
@@ -270,7 +301,6 @@ const ordersHtml = `
       if (arrow) arrow.textContent = "▴";
     }
   });
-});
 
 
 
@@ -294,6 +324,37 @@ el("secBody").addEventListener("click", (e) => {
 
   setStatus(el("status"), "");
   el("cardMain").style.display = "block";
+}
+
+function getIncludePlanningValue(section){
+  const raw = section?.in_planning;
+  if (raw === null || raw === undefined) return true; // default: aan
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw !== 0;
+  if (typeof raw === "string") {
+    const v = raw.trim().toLowerCase();
+    return !["0","false","nee","no","off"].includes(v);
+  }
+  return Boolean(raw);
+}
+
+async function saveIncludeInPlanning(sectionId, includeInPlanning){
+  if (!sectionId) return false;
+  const tSec = DB.tables.sections;
+
+  const res = await sb
+    .from(tSec)
+    .update({ in_planning: includeInPlanning })
+    .eq(DB.sectionPkCol, sectionId);
+
+  if (res.error) {
+    console.warn("Sectie planning-toggle opslaan mislukt:", res.error.message);
+    setStatus(el("status"), `Opslaan mislukt: ${res.error.message}`, "error");
+    return false;
+  }
+
+  setStatus(el("status"), "Sectie bijgewerkt.");
+  return true;
 }
 
 function renderBlock(targetId, fields, primaryObj, fallbackObj){
@@ -345,6 +406,7 @@ function renderOrdersAccordionHtml(rows){
     const safeLd = escapeHtml(ldTxt);
 
     html += `
+      <div class="order-card" data-order-card>
         <button class="order-head" type="button" data-order-toggle="1" aria-expanded="false">
           <div class="order-head-left">
             <span class="pill pill-soft">${safeBn}</span>
@@ -356,9 +418,7 @@ function renderOrdersAccordionHtml(rows){
           </div>
         </button>
 
-
         <div class="order-body" hidden>
-
           ${items.map(it=>{
             const oms = escapeHtml(it.omschrijving || "");
             const aant = escapeHtml(it.aantal ?? "");
