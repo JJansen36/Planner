@@ -304,23 +304,6 @@ return `
 
 
 
-// Bestellingen accordion (binnen sectie-details) - delegated
-el("secBody").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-order-toggle]");
-  if (!btn) return;
-
-  e.stopPropagation(); // voorkomt togglen van sectie zelf
-  const card = btn.closest("[data-order-card]");
-  if (!card) return;
-
-  const body = card.querySelector(".order-body");
-  const arrow = card.querySelector(".order-arrow");
-  const open = body && body.style.display !== "none";
-
-  if (body) body.style.display = open ? "none" : "block";
-  if (arrow) arrow.textContent = open ? "▾" : "▴";
-});
-
 
   setStatus(el("status"), "");
   el("cardMain").style.display = "block";
@@ -437,6 +420,13 @@ function renderOrdersAccordionHtml(rows){
     `;
   }
 
+
+
+  html += `</div>`;
+  return html;
+}
+
+
 function sortSections(rows){
   return [...(rows || [])].sort((a,b)=>{
     const ka = sectionSortKey(a);
@@ -496,8 +486,4 @@ function sectionSortKey(section){
     group: isM ? 1 : 0,   // 0 = normaal, 1 = M onderaan
     num,
   };
-}
-
-  html += `</div>`;
-  return html;
 }
