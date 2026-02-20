@@ -1296,3 +1296,11 @@ td.hourscol{
   background-image: none !important;
   color:#111827 !important;
 }
+
+
+/* Projectpagina weer “normale” breedte, planning blijft full width */
+.page-project .container{
+  max-width: 1200px;   /* kies 1100/1200/1300 wat je fijn vindt */
+  margin: 0 auto;
+  padding: 0 16px;
+}
