@@ -1457,10 +1457,9 @@ for (const a of (pAssigns || [])) {
     if (isDummy) entry.dummyReis += 1;
     else entry.reis.add(emp);
   }
-  if (wt === "onderaanneming") {
-  if (isDummy) entry.dummySub += n;
-  // geen echte medewerkers-set nodig
-  }
+    if (wt === "onderaanneming") {
+      if (isDummy) entry.dummySub += 1;
+    }
 
 }
 
@@ -1566,11 +1565,9 @@ for (const a of (pAssigns || [])) {
       const iso = toISODate(d);
       const sets = plannedSetsByDay[iso] || { pro: new Set(), mo: new Set() };
 
-      // let op: plannedSetsByDay gebruikt keys "pro" en "mo"
-      assignByDay[iso] = {
-        prod: entry ? (entry.productie.size + (entry.dummyProd || 0)) : 0,
-        mont: entry ? (entry.montage.size + (entry.dummyMont || 0)) : 0,
-        subc: entry ? Number(entry.dummySub || 0) : 0
+      empAssignByDay[iso] = {
+        prod: new Set(Array.from(sets.pro || []).map(x => String(x).trim())),
+        mont: new Set(Array.from(sets.mo  || []).map(x => String(x).trim())),
       };
     }
 
