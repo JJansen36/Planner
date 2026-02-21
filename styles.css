@@ -1304,3 +1304,10 @@ td.hourscol{
   margin: 0 auto;
   padding: 0 16px;
 }
+
+.bar-subc{
+  border: 1px dashed #64748b;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+}

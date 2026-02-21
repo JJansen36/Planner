@@ -591,6 +591,12 @@ function asISODate(v){
               <div class="assign-col-title">Montage</div>
               <div id="amListMont" class="assign-list"></div>
             </div>
+
+            <div class="assign-col">
+              <div class="assign-col-title">Onderaanneming</div>
+              <div id="amListSubc" class="assign-list"></div>
+            </div>
+
           </div>
         </div>
         <div class="ft">
@@ -1343,8 +1349,11 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
       if (!assignMap.has(sid)) assignMap.set(sid, new Map());
       const dmA = assignMap.get(sid);
 
-      if (!dmA.has(d)) dmA.set(d, { productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(), dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0 });
-
+      if (!dmA.has(d)) dmA.set(d, {
+        productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
+        dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
+        dummySub: 0
+      });
       const entry = dmA.get(d);
 
       const isDummy = (emp === String(DUMMY_SEC_ID)); // ✅ sectie dummy alleen
@@ -1366,7 +1375,9 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
         if (isDummy) entry.dummyReis += 1;
         else entry.reis.add(emp);
       }
-
+      if (wt === "onderaanneming") {
+        if (isDummy) entry.dummySub += 1;
+      }
 
     }
 
@@ -1420,8 +1431,11 @@ for (const a of (pAssigns || [])) {
   if (!projectAssignMap.has(pid)) projectAssignMap.set(pid, new Map());
   const dmP = projectAssignMap.get(pid);
 
-  if (!dmP.has(d)) dmP.set(d, { productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(), dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0 });
-
+  if (!dmP.has(d)) dmP.set(d, {
+    productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
+    dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
+    dummySub: 0
+  });
   const entry = dmP.get(d);
 
   const isDummy = (emp === String(DUMMY_EMP_ID)); // ✅ project dummy alleen
@@ -1442,6 +1456,10 @@ for (const a of (pAssigns || [])) {
   if (wt === "reis") {
     if (isDummy) entry.dummyReis += 1;
     else entry.reis.add(emp);
+  }
+  if (wt === "onderaanneming") {
+  if (isDummy) entry.dummySub += n;
+  // geen echte medewerkers-set nodig
   }
 
 }
@@ -1549,9 +1567,10 @@ for (const a of (pAssigns || [])) {
       const sets = plannedSetsByDay[iso] || { pro: new Set(), mo: new Set() };
 
       // let op: plannedSetsByDay gebruikt keys "pro" en "mo"
-      empAssignByDay[iso] = {
-        prod: new Set(Array.from(sets.pro || []).map(x => String(x).trim())),
-        mont: new Set(Array.from(sets.mo || []).map(x => String(x).trim())),
+      assignByDay[iso] = {
+        prod: entry ? (entry.productie.size + (entry.dummyProd || 0)) : 0,
+        mont: entry ? (entry.montage.size + (entry.dummyMont || 0)) : 0,
+        subc: entry ? Number(entry.dummySub || 0) : 0
       };
     }
 
@@ -3043,6 +3062,32 @@ const countM = rowM.querySelector(".concept-count");
     listProd.innerHTML = `<div class="muted" style="padding:8px;">(n.v.t.)</div>`;
   };
 
+    // --- Onderaanneming (alleen teller, geen medewerkers) ---
+    if (listSubc) {
+      const rowS = document.createElement("div");
+      rowS.className = "assign-item";
+      rowS.style.display = "flex";
+      rowS.style.justifyContent = "space-between";
+      rowS.style.alignItems = "center";
+      rowS.innerHTML = `
+        <span>Concept</span>
+        <span style="display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn small subc-minus">−</button>
+          <span class="subc-count" style="min-width:18px; text-align:center;">${Number(selected.dummySub || 0)}</span>
+          <button type="button" class="btn small subc-plus">+</button>
+        </span>
+      `;
+
+      const minusS = rowS.querySelector(".subc-minus");
+      const plusS  = rowS.querySelector(".subc-plus");
+      const countS = rowS.querySelector(".subc-count");
+
+      plusS.onclick  = () => { selected.dummySub = Number(selected.dummySub || 0) + 1; countS.textContent = String(selected.dummySub); };
+      minusS.onclick = () => { selected.dummySub = Math.max(0, Number(selected.dummySub || 0) - 1); countS.textContent = String(selected.dummySub); };
+
+      listSubc.appendChild(rowS);
+    }
+
   renderBothLists();
 
   saveBtn.onclick = async () => {
@@ -3070,6 +3115,12 @@ const countM = rowM.querySelector(".concept-count");
     const dummyMontCount = Number(selected.dummyMont || 0);
     for (let i = 0; i < dummyMontCount; i++) {
       rows.push({ project_id: projectId, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
+    }
+
+    // ✅ Onderaanneming (dummy teller) opslaan als losse regels
+    const dummySubCount = Number(selected.dummySub || 0);
+    for (let i = 0; i < dummySubCount; i++) {
+      rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "onderaanneming" });
     }
 
     if (rows.length) {
@@ -3105,12 +3156,17 @@ const countM = rowM.querySelector(".concept-count");
       modal.wrap.classList.add("show");
 
       // current selection
-      const cur = assignMap.get(sid)?.get(dateISO) || { productie: new Set(), montage: new Set(), dummyProd: 0, dummyMont: 0 };
+      const cur = assignMap.get(sid)?.get(dateISO) || {
+        productie: new Set(), montage: new Set(),
+        dummyProd: 0, dummyMont: 0, dummySub: 0
+      };
+
       const selected = {
         productie: new Set(cur.productie),
         montage: new Set(cur.montage),
         dummyProd: Number(cur.dummyProd || 0),
         dummyMont: Number(cur.dummyMont || 0),
+        dummySub:  Number(cur.dummySub  || 0),
       };
 
       // ✅ snapshot: hoeveel montage stond er al op deze sectie (incl concept)
@@ -3120,12 +3176,14 @@ const countM = rowM.querySelector(".concept-count");
       const listProd = modal.wrap.querySelector("#amListProd");
       const listMont = modal.wrap.querySelector("#amListMont");
       const saveBtn = modal.wrap.querySelector("#amSave");
+      const listSubc = modal.wrap.querySelector("#amListSubc");
       if (subEl) subEl.textContent = `${dateISO} • ${sid}`;
 
 
       const renderBothLists = () => {
         listProd.innerHTML = "";
         listMont.innerHTML = "";
+        if (listSubc) listSubc.innerHTML = "";
 
         const busySet = busyByDay.get(dateISO) || new Set();
 
@@ -4064,6 +4122,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         const iso = toISODate(d);
         const prod = Number(assignCountByDay?.[iso]?.prod || 0);
         const mont = Number(assignCountByDay?.[iso]?.mont || 0);
+        const subc = Number(assignCountByDay?.[iso]?.subc || 0);
         const label = labels[i] || "";
 
         if (prod > 0 && mont > 0) return "both";
@@ -4121,7 +4180,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
         // alleen draggable maken als er écht iets gepland is op die dag
         td.dataset.ddKey = key || "";   // ✅ belangrijk voor Alt-blok-drag
-        const hasPlan = (prod > 0) || (mont > 0);
+        const hasPlan = (prod > 0) || (mont > 0) || (subc > 0);
         if (hasPlan) {
           td.setAttribute("draggable", "true");
           td.classList.add("dd-draggable");
@@ -4165,6 +4224,10 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
             html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${montTxt}</div>`;
           } else if (key.startsWith("lbl:")) {
             html += `<div class="bar${startCls}${endCls}">${escapeHtml(label)}</div>`;
+          }
+
+          if (subc > 0) {
+            html += `<div class="bar bar-subc">OA ${subc}</div>`;
           }
 
         }
