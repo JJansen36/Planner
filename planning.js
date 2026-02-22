@@ -4338,12 +4338,8 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
       td.removeAttribute("title");
     }
 
-    // cel-kleur (achtergrond van de cel), bars houden eigen kleur
     let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
-    if (key === "both") cls += " bar-both";
-    else if (key === "prod") cls += " bar-prod";
-    else if (key === "mont") cls += " bar-mont";
-    else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
+    // géén bar-prod/mont/both op de TD, alleen de bars zelf kleuren
     td.className = cls;
 
     // Drag&Drop metadata
