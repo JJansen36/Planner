@@ -3148,6 +3148,9 @@ const countM = rowM.querySelector(".concept-count");
       if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
     }
 
+    // ✅ onderaanneming-snelkeuze meteen updaten (cache weggooien voor dit project)
+    _subcSuggestCache.delete(String(projectId));
+
     
     modal.close();
     await loadAndRender();
