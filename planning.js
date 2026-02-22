@@ -1034,7 +1034,7 @@ async function openInhuurModalAtWeek(wkStart){
         // 6) section_assignments in range (collega's per sectie/dag + type)
     const { data: assigns, error: aErr } = await sb
       .from("section_assignments")
-      .select("section_id, work_date, werknemer_id, work_type")
+      .select("section_id, work_date, werknemer_id, work_type, note")
       .gte("work_date", startISO)
       .lte("work_date", endISO)
       .limit(200000);
@@ -1352,7 +1352,7 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
       if (!dmA.has(d)) dmA.set(d, {
         productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
         dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
-        dummySub: 0
+        dummySub: 0, subcName: ""
       });
       const entry = dmA.get(d);
 
@@ -1376,7 +1376,12 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
         else entry.reis.add(emp);
       }
       if (wt === "onderaanneming") {
-        if (isDummy) entry.dummySub += 1;
+        if (isDummy) {
+          entry.dummySub += 1;
+
+          const nm = String(a.note || "").trim();   // ✅ naam uit DB
+          if (nm) entry.subcName = nm;
+        }
       }
 
     }
@@ -3133,6 +3138,10 @@ const countM = rowM.querySelector(".concept-count");
         dummyProd: Number(cur.dummyProd || 0),
         dummyMont: Number(cur.dummyMont || 0),
         dummySub:  Number(cur.dummySub  || 0),
+
+        subcEnabled: (Number(cur.dummySub || 0) > 0),
+        subcName: String(cur.subcName || cur.note || "").trim(),
+
       };
 
       // ✅ snapshot: hoeveel montage stond er al op deze sectie (incl concept)
@@ -3289,30 +3298,52 @@ const countM = rowM.querySelector(".concept-count");
           listMont.appendChild(rowM);
         }
 
-        // ✅ PLAK HIER ONDERAANNEMING:
+        // --- Onderaanneming: naam + checkbox ---
         if (listSubc) {
-          const rowS = document.createElement("div");
-          rowS.className = "assign-item";
-          rowS.style.display = "flex";
-          rowS.style.justifyContent = "space-between";
-          rowS.style.alignItems = "center";
-          rowS.innerHTML = `
-            <span>Concept</span>
-            <span style="display:flex; gap:6px; align-items:center;">
-              <button type="button" class="btn small subc-minus">−</button>
-              <span class="subc-count" style="min-width:18px; text-align:center;">${Number(selected.dummySub || 0)}</span>
-              <button type="button" class="btn small subc-plus">+</button>
-            </span>
+          const curName = String(cur?.subcName || cur?.note || "").trim(); // fallback
+          const checked = Number(cur?.dummySub || 0) > 0;
+
+          const wrap = document.createElement("div");
+          wrap.className = "assign-item";
+          wrap.style.display = "grid";
+          wrap.style.gap = "10px";
+
+          wrap.innerHTML = `
+            <label class="assign-item" style="display:flex; gap:10px; align-items:center;">
+              <input type="checkbox" class="subc-check" ${checked ? "checked" : ""} />
+              <span>Ingepland</span>
+            </label>
+
+            <input class="input subc-name" type="text"
+              placeholder="Naam onderaannemer…"
+              value="${escapeAttr(curName)}"
+            />
+            <div class="muted" style="font-size:12px;">Deze naam komt in de planning te staan.</div>
           `;
 
-          const minusS = rowS.querySelector(".subc-minus");
-          const plusS  = rowS.querySelector(".subc-plus");
-          const countS = rowS.querySelector(".subc-count");
+          const chk = wrap.querySelector(".subc-check");
+          const inp = wrap.querySelector(".subc-name");
 
-          plusS.onclick  = () => { selected.dummySub = Number(selected.dummySub || 0) + 1; countS.textContent = String(selected.dummySub); };
-          minusS.onclick = () => { selected.dummySub = Math.max(0, Number(selected.dummySub || 0) - 1); countS.textContent = String(selected.dummySub); };
+          // disabled als niet ingepland
+          inp.disabled = !chk.checked;
 
-          listSubc.appendChild(rowS);
+          chk.onchange = () => {
+            inp.disabled = !chk.checked;
+            if (!chk.checked) inp.value = ""; // optional: leegmaken bij uitzetten
+          };
+
+          // opslaan in selected
+          selected.subcEnabled = chk.checked;
+          selected.subcName = String(inp.value || "").trim();
+
+          inp.addEventListener("input", () => {
+            selected.subcName = String(inp.value || "").trim();
+          });
+          chk.addEventListener("change", () => {
+            selected.subcEnabled = !!chk.checked;
+          });
+
+          listSubc.appendChild(wrap);
         }
 
       };
@@ -3368,9 +3399,16 @@ const countM = rowM.querySelector(".concept-count");
       for (let i = 0; i < dummyMontCount; i++) {
         rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "montage" });
       }
-      const dummySubCount = Number(selected.dummySub || 0);
-      for (let i = 0; i < dummySubCount; i++) {
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "onderaanneming" });
+      // ✅ Onderaanneming: checkbox (0/1) + naam opslaan in note
+      if (selected.subcEnabled) {
+        const nm = String(selected.subcName || "").trim();
+        rows.push({
+          section_id: sid,
+          work_date: dateISO,
+          werknemer_id: Number(DUMMY_SEC_ID),
+          work_type: "onderaanneming",
+          note: nm || null
+        });
       }
 
 
@@ -4226,8 +4264,9 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         }
 
         if (subc > 0) {
-            html += `<div class="bar bar-subc">OA ${subc}</div>`;
-          }
+          const nm = String(entry?.subcName || "").trim();
+          html += `<div class="bar bar-subc">${nm ? `OA ${escapeHtml(nm)}` : "OA"}</div>`;
+        }
 
         html += `</div>`;
         td.innerHTML = html;
