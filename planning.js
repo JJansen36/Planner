@@ -597,8 +597,14 @@ function asISODate(v){
                 <span>Onderaanneming</span>
                 <button class="btn small" id="amAddSubc" type="button">+</button>
               </div>
-              <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
-              <div id="amListSubc" class="assign-list"></div>
+                <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
+
+                <div class="hr"></div>
+                <div class="muted" style="margin:8px 0 6px;">Inhuur (uit capaciteit)</div>
+                <div id="amInhuurPick" class="assign-list" style="padding-bottom:8px;"></div>
+
+                <div class="hr"></div>
+                <div id="amListSubc" class="assign-list"></div>
             </div>
 
           </div>
@@ -1400,7 +1406,8 @@ function parseSectionNo(v){
       if (!dmA.has(d)) dmA.set(d, {
         productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
         dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
-        dummySub: 0, subcNames: []
+        dummySub: 0, subcNames: [],
+        inhuurIds: new Set()           // ✅ nieuw
       });
       const entry = dmA.get(d);
 
@@ -1430,6 +1437,12 @@ function parseSectionNo(v){
           entry.subcNames.push(nm); // mag leeg zijn
         }
       }
+      if (wt === "inhuur") {
+      if (isDummy) {
+        const iid = String(a.note || "").trim(); // we slaan inhuur_id op in note
+        if (iid) entry.inhuurIds.add(iid);
+      }
+    }
 
     }
 
@@ -3032,7 +3045,8 @@ if (ptd) {
     dummyProd: Number(cur.dummyProd || 0),
     dummyMont: Number(cur.dummyMont || 0),
 
-    subcNames: Array.isArray(cur.subcNames) ? [...cur.subcNames] : []
+    subcNames: Array.isArray(cur.subcNames) ? [...cur.subcNames] : [],
+    inhuurIds: new Set(cur.inhuurIds ? Array.from(cur.inhuurIds) : [])
   };
 
   const subEl   = modal.wrap.querySelector("#amSub");
@@ -3470,8 +3484,50 @@ if (listSubc) {
   // init
   renderSubcList();
   renderSubcPicker(); // async
+  renderInhuurPicker(); // ✅ nieuw
 }
 
+const renderInhuurPicker = () => {
+  const pickInhuur = modal.wrap.querySelector("#amInhuurPick");
+  if (!pickInhuur) return;
+
+  // niets bekend -> lege state
+  const src = (inhuurByEmp || new Map());
+
+  const rows = [];
+  for (const [iid, dm] of src) {
+    const id = String(iid);
+    const hours = Number(dm?.get(dateISO) || 0);
+    const name = inhuurById?.get(id)?.name || "Inhuur";
+
+    const checked = selected.inhuurIds.has(id);
+    const shouldShow = checked || hours > 0;     // ✅ alleen tonen als beschikbaar of al gekozen
+    if (!shouldShow) continue;
+
+    rows.push(`
+      <label class="assign-item" style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+        <span style="display:flex; gap:10px; align-items:center;">
+          <input type="checkbox" class="inhuur-pick" data-iid="${escapeAttr(id)}" ${checked ? "checked" : ""} />
+          <span>${escapeHtml(name)}</span>
+        </span>
+        <span class="muted">${hours > 0 ? (hours + "u") : ""}</span>
+      </label>
+    `);
+  }
+
+  pickInhuur.innerHTML = rows.length
+    ? rows.join("")
+    : `<div class="muted" style="padding:6px 2px;">Geen inhuur-uren beschikbaar op deze dag.</div>`;
+
+  pickInhuur.querySelectorAll("input.inhuur-pick").forEach(chk => {
+    chk.onchange = () => {
+      const iid = String(chk.dataset.iid || "").trim();
+      if (!iid) return;
+      if (chk.checked) selected.inhuurIds.add(iid);
+      else selected.inhuurIds.delete(iid);
+    };
+  });
+};
       };
       
       renderBothLists();
@@ -3533,6 +3589,17 @@ if (listSubc) {
           work_type: "onderaanneming",
           note: nm
         });
+
+        // ✅ Inhuur: per geselecteerde inhuur_id één regel opslaan
+        for (const iid of (selected.inhuurIds || [])) {
+          rows.push({
+            section_id: sid,
+            work_date: dateISO,
+            werknemer_id: Number(DUMMY_SEC_ID),
+            work_type: "inhuur",
+            note: String(iid)              // ✅ hierin staat inhuur_id
+          });
+        }
       }
 
 if (rows.length) {
