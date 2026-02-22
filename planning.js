@@ -4417,15 +4417,14 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
           const startClsS = isStartS ? " bar-start" : "";
           const endClsS   = isEndS   ? " bar-end"   : "";
 
-          // ✅ label op basis van de run-key (niet per dag opnieuw)
-          let txt = "&nbsp;";
-          if (isStartS) {
-            const runNames = keyS.split(" | ").map(s => s.trim()).filter(Boolean);
-            txt = (runNames.length === 1) ? `OA ${runNames[0]}` : `OA ${runNames.length}`;
-          }
-
-          html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
+        // ✅ label op basis van de run-key (niet per dag opnieuw)
+        let txt = "\u00A0"; // echte NBSP, zodat er niets zichtbaar is maar de balk hoogte blijft
+        if (isStartS) {
+          const runNames = keyS.split(" | ").map(s => s.trim()).filter(Boolean);
+          txt = (runNames.length === 1) ? `OA ${runNames[0]}` : `OA ${runNames.length}`;
         }
+
+        html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
 
         html += `</div>`;        // ✅ sluit plan-stack
         td.innerHTML = html;     // ✅ zet html in cel
