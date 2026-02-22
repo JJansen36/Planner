@@ -1380,8 +1380,9 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
       }
       if (wt === "onderaanneming") {
         if (isDummy) {
+          // ✅ Altijd tellen, naam is optioneel
           const nm = String(a.note || "").trim();
-          if (nm) entry.subcNames.push(nm);
+          entry.subcNames.push(nm); // mag leeg zijn
         }
       }
 
@@ -4281,8 +4282,17 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         }
 
         if (subc > 0) {
-          const names = entry?.subcNames || [];
-          const label = (names.length === 1) ? `OA ${names[0]}` : `OA ${names.length}`;
+          const names = (entry?.subcNames || []).map(x => String(x || "").trim());
+          const nonEmpty = names.filter(Boolean);
+
+          // 1 naam ingevuld -> toon die
+          // meerdere -> toon aantal
+          // geen naam -> toon alleen OA
+          const label =
+            (nonEmpty.length === 1 && subc === 1) ? `OA ${nonEmpty[0]}` :
+            (subc === 1) ? "OA" :
+            `OA ${subc}`;
+
           html += `<div class="bar bar-subc">${escapeHtml(label)}</div>`;
         }
 
