@@ -3056,6 +3056,48 @@ if (ptd) {
 
   if (subEl) subEl.textContent = `${dateISO} • ${projectId} • Montage (project)`;
 
+
+
+  function renderInhuurPicker(){
+  const pickInhuur = modal.wrap.querySelector("#amInhuurPick");
+  if (!pickInhuur) return;
+
+  const src = (inhuurByEmp || new Map());
+  const rows = [];
+
+  for (const [iid, dm] of src) {
+    const id = String(iid);
+    const hours = Number(dm?.get(dateISO) || 0);
+    const name = inhuurById?.get(id)?.name || "Inhuur";
+
+    const checked = selected.inhuurIds?.has(id);
+    const shouldShow = checked || hours > 0;
+    if (!shouldShow) continue;
+
+    rows.push(`
+      <label class="assign-item" style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+        <span style="display:flex; gap:10px; align-items:center;">
+          <input type="checkbox" class="inhuur-pick" data-iid="${escapeAttr(id)}" ${checked ? "checked" : ""} />
+          <span>${escapeHtml(name)}</span>
+        </span>
+        <span class="muted">${hours > 0 ? (hours + "u") : ""}</span>
+      </label>
+    `);
+  }
+
+  pickInhuur.innerHTML = rows.length
+    ? rows.join("")
+    : `<div class="muted" style="padding:6px 2px;">Geen inhuur-uren beschikbaar op deze dag.</div>`;
+
+  pickInhuur.querySelectorAll("input.inhuur-pick").forEach(chk => {
+    chk.onchange = () => {
+      const iid = String(chk.dataset.iid || "").trim();
+      if (!iid) return;
+      if (chk.checked) selected.inhuurIds.add(iid);
+      else selected.inhuurIds.delete(iid);
+    };
+  });
+}
   // hergebruik jouw bestaande renderBothLists() (zelfde als sectie)
   // TIP: haal jouw renderBothLists() functie omhoog zodat je hem 2x kunt gebruiken.
   // Snelste: kopieer renderBothLists() uit je sectie branch, en plak hem hier 1-op-1.
@@ -3186,11 +3228,6 @@ const countM = rowM.querySelector(".concept-count");
 
       const sObj = sectById.get(sid);
       const projectId = String(td.dataset.projectId || "");
-
-
-
-
-
 
       const modal = ensureAssignModal();
       modal.wrap.classList.add("show");
@@ -3487,47 +3524,6 @@ if (listSubc) {
   renderInhuurPicker(); // ✅ nieuw
 }
 
-function renderInhuurPicker(){
-  const pickInhuur = modal.wrap.querySelector("#amInhuurPick");
-  if (!pickInhuur) return;
-
-  // niets bekend -> lege state
-  const src = (inhuurByEmp || new Map());
-
-  const rows = [];
-  for (const [iid, dm] of src) {
-    const id = String(iid);
-    const hours = Number(dm?.get(dateISO) || 0);
-    const name = inhuurById?.get(id)?.name || "Inhuur";
-
-    const checked = selected.inhuurIds.has(id);
-    const shouldShow = checked || hours > 0;     // ✅ alleen tonen als beschikbaar of al gekozen
-    if (!shouldShow) continue;
-
-    rows.push(`
-      <label class="assign-item" style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
-        <span style="display:flex; gap:10px; align-items:center;">
-          <input type="checkbox" class="inhuur-pick" data-iid="${escapeAttr(id)}" ${checked ? "checked" : ""} />
-          <span>${escapeHtml(name)}</span>
-        </span>
-        <span class="muted">${hours > 0 ? (hours + "u") : ""}</span>
-      </label>
-    `);
-  }
-
-  pickInhuur.innerHTML = rows.length
-    ? rows.join("")
-    : `<div class="muted" style="padding:6px 2px;">Geen inhuur-uren beschikbaar op deze dag.</div>`;
-
-  pickInhuur.querySelectorAll("input.inhuur-pick").forEach(chk => {
-    chk.onchange = () => {
-      const iid = String(chk.dataset.iid || "").trim();
-      if (!iid) return;
-      if (chk.checked) selected.inhuurIds.add(iid);
-      else selected.inhuurIds.delete(iid);
-    };
-  });
-}
       };
       
       renderBothLists();
