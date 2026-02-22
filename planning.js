@@ -3487,7 +3487,7 @@ if (listSubc) {
   renderInhuurPicker(); // ✅ nieuw
 }
 
-const renderInhuurPicker = () => {
+function renderInhuurPicker(){
   const pickInhuur = modal.wrap.querySelector("#amInhuurPick");
   if (!pickInhuur) return;
 
@@ -3527,7 +3527,7 @@ const renderInhuurPicker = () => {
       else selected.inhuurIds.delete(iid);
     };
   });
-};
+}
       };
       
       renderBothLists();
