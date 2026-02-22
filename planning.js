@@ -4295,15 +4295,13 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     return "";
   });
 
-  // subc run-key (zodat tekst maar 1x komt)
-  const subcKeys = dates.map(d => {
-    const iso = toISODate(d);
-    const entry = assignMap?.get(String(sectionId))?.get(iso);
-    const names = (entry?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
-    if (!names.length) return "";
-    names.sort((a,b)=>a.localeCompare(b, "nl"));
-    return names.join(" | ");
-  });
+    // ✅ alle unieke onderaannemers in deze sectie binnen dit zichtbare bereik (vaste volgorde)
+    const dmSub = assignMap?.get(String(sectionId)) || new Map();
+    const subcNamesAll = [...new Set(dates.flatMap(dd => {
+      const iso = toISODate(dd);
+      const e = dmSub.get(iso);
+      return (e?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
+    }))].sort((a,b)=>a.localeCompare(b, "nl"));
 
   for (let i = 0; i < dates.length; i++) {
     const d = dates[i];
@@ -4401,68 +4399,50 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
       }
     }
 
-    // SUBC slot (ALTIJD onderaan, tekst alleen bij start van run)
-    {
-      const keyS  = subcKeys[i] || "";
-      const prevS = (i > 0) ? (subcKeys[i-1] || "") : "";
-      const nextS = (i < subcKeys.length - 1) ? (subcKeys[i+1] || "") : "";
+// SUBC slot: altijd paars, altijd onderaan, 1 bar per onderaannemer (geen "2" meer)
+{
+  if (subcNamesAll.length === 0) {
+    // geen onderaanneming in hele range => niets renderen
+  } else {
+    const entryToday = assignMap?.get(String(sectionId))?.get(iso);
+    const todaySet = new Set(
+      (entryToday?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean)
+    );
 
-      const isStartS = keyS && keyS !== prevS;
-      const isEndS   = keyS && keyS !== nextS;
+    const prevISO = (i > 0) ? toISODate(dates[i-1]) : "";
+    const nextISO = (i < dates.length - 1) ? toISODate(dates[i+1]) : "";
+
+    const prevSet = new Set(
+      ((assignMap?.get(String(sectionId))?.get(prevISO)?.subcNames) || [])
+        .map(x => String(x||"").trim()).filter(Boolean)
+    );
+    const nextSet = new Set(
+      ((assignMap?.get(String(sectionId))?.get(nextISO)?.subcNames) || [])
+        .map(x => String(x||"").trim()).filter(Boolean)
+    );
+
+    for (const nm of subcNamesAll) {
+      const has = todaySet.has(nm);
+
+      // placeholder bar om hoogte/uitlijning gelijk te houden
+      if (!has) {
+        html += `<div class="bar bar-subc subc-ph">\u00A0</div>`;
+        continue;
+      }
+
+      const isStartS = !prevSet.has(nm);
+      const isEndS   = !nextSet.has(nm);
 
       const startClsS = isStartS ? " bar-start" : "";
       const endClsS   = isEndS   ? " bar-end"   : "";
 
-      let txt = "\u00A0";
-      if (subc > 0 && isStartS) {
-        const runNames = keyS.split(" | ").map(s => s.trim()).filter(Boolean);
-        // ✅ GEEN "OA" meer:
-        txt = (runNames.length === 1) ? `${runNames[0]}` : `${runNames.length}`;
-      }
+      // tekst alleen aan begin van doorlopende reeks
+      const txt = isStartS ? nm : "\u00A0";
 
-      // ✅ Onderaanneming: 1 paarse bar per naam (altijd zelfde “slot” => blijft uitgelijnd)
-      if (subcNamesAll.length) {
-        const entryToday = assignMap?.get(String(sectionId))?.get(iso);
-        const todaySet = new Set(
-          (entryToday?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean)
-        );
-
-        // prev/next sets voor “run” (start/einde afronding)
-        const prevISO = (i > 0) ? toISODate(dates[i-1]) : "";
-        const nextISO = (i < dates.length - 1) ? toISODate(dates[i+1]) : "";
-
-        const prevSet = new Set(
-          ((assignMap?.get(String(sectionId))?.get(prevISO)?.subcNames) || [])
-            .map(x => String(x||"").trim()).filter(Boolean)
-        );
-        const nextSet = new Set(
-          ((assignMap?.get(String(sectionId))?.get(nextISO)?.subcNames) || [])
-            .map(x => String(x||"").trim()).filter(Boolean)
-        );
-
-        for (const nm of subcNamesAll) {
-          const has = todaySet.has(nm);
-
-          // placeholder bar om hoogte/uitlijning gelijk te houden
-          if (!has) {
-            html += `<div class="bar bar-subc subc-ph">\u00A0</div>`;
-            continue;
-          }
-
-          const isStartS = !prevSet.has(nm);
-          const isEndS   = !nextSet.has(nm);
-
-          const startClsS = isStartS ? " bar-start" : "";
-          const endClsS   = isEndS   ? " bar-end"   : "";
-
-          // tekst alleen aan begin van een doorlopende reeks
-          const txt = isStartS ? nm : "\u00A0";
-
-          html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
-        }
-      }
+      html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
     }
-
+  }
+}
     html += `</div>`; // plan-stack altijd sluiten!
     td.innerHTML = html;
     tr.appendChild(td);

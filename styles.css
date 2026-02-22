@@ -1328,3 +1328,12 @@ td.hourscol{
   color: #fff !important;
   border: 1px dashed rgba(15,23,42,.35);
 }
+
+.bar-subc{
+  background: #a855f7; /* paars */
+  color: #fff;
+}
+.bar-subc.subc-ph{
+  background: transparent;
+  border: 1px dashed rgba(168,85,247,.35);
+}
