@@ -3366,8 +3366,8 @@ const countM = rowM.querySelector(".concept-count");
         }
 
       };
-
-      renderSubcList();
+      
+      renderBothLists();
  
       saveBtn.onclick = async () => {
         // delete existing for this section+day
