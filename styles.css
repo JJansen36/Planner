@@ -1311,3 +1311,14 @@ td.hourscol{
   color: #0f172a;
   font-weight: 700;
 }
+
+.plan-stack{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.bar.placeholder{
+  opacity:0;          /* neemt ruimte in, maar niet zichtbaar */
+  pointer-events:none;
+}

@@ -4274,7 +4274,6 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
 
 function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCountByDay, assignMap, werknemers) {
-
   const empIdKey = "id";
   const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
   const empNameById = new Map((werknemers || []).map(w => [
@@ -4282,7 +4281,7 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     String(w?.[empNameKey] || w?.[empIdKey] || "")
   ]));
 
-  // keys voor prod/mont (afronding bars)
+  // keys (voor rounded start/end van prod/mont)
   const keys = dates.map((d, i) => {
     const iso = toISODate(d);
     const prod = Number(assignCountByDay?.[iso]?.prod || 0);
@@ -4296,16 +4295,14 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     return "";
   });
 
-  // ✅ run-key voor OA: dezelfde set namen => zelfde key => 1 label per aaneengesloten blok
+  // subc run-key (zodat tekst maar 1x komt)
   const subcKeys = dates.map(d => {
     const iso = toISODate(d);
     const entry = assignMap?.get(String(sectionId))?.get(iso);
-    const names = (entry?.subcNames || [])
-      .map(x => String(x || "").trim())
-      .filter(Boolean)
-      .sort((a,b)=>a.localeCompare(b, "nl"));
-
-    return names.length ? names.join(" | ") : "";
+    const names = (entry?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
+    if (!names.length) return "";
+    names.sort((a,b)=>a.localeCompare(b, "nl"));
+    return names.join(" | ");
   });
 
   for (let i = 0; i < dates.length; i++) {
@@ -4324,7 +4321,7 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     const td = document.createElement("td");
     td.dataset.sectionId = String(sectionId || "");
     td.dataset.projectId = String(projectId || "");
-    td.dataset.workDate = iso;
+    td.dataset.workDate  = iso;
 
     // tooltip met namen (prod/mont)
     const entry = assignMap?.get(String(sectionId))?.get(iso);
@@ -4341,7 +4338,7 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
       td.removeAttribute("title");
     }
 
-    // cel-kleur
+    // cel-kleur (achtergrond van de cel), bars houden eigen kleur
     let cls = `cell plan-cell section-click ${isWeekend(d) ? "wknd" : ""}`.trim();
     if (key === "both") cls += " bar-both";
     else if (key === "prod") cls += " bar-prod";
@@ -4349,10 +4346,11 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
     td.className = cls;
 
-    // drag/drop metadata
+    // Drag&Drop metadata
     td.classList.add("dd-dropzone");
     td.dataset.ddKind = "section";
-    td.dataset.ddKey = key || "";
+    td.dataset.ddKey  = key || "";
+
     const hasPlan = (prod > 0) || (mont > 0) || (subc > 0);
     if (hasPlan) {
       td.setAttribute("draggable", "true");
@@ -4362,40 +4360,53 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
       td.classList.remove("dd-draggable");
     }
 
-    // ---- HTML opbouw (altijd netjes afsluiten) ----
+    // ===== HTML: vaste layout met placeholders =====
     let html = `<div class="plan-stack">`;
 
-    // vaste marker row (placeholders)
-    html += `<div class="marker-row">`;
-    html += `<div class="marker delivery placeholder">lever</div>`;
-    html += `<div class="marker deadline placeholder">oplever</div>`;
-    html += `</div>`;
+    // markers (vaste hoogte)
+    html += `
+      <div class="marker-row">
+        <div class="marker delivery placeholder">lever</div>
+        <div class="marker deadline placeholder">oplever</div>
+      </div>
+    `;
 
-    // prod/mont bars
-    if (key) {
-      const isStart = key !== prevKey;
-      const isEnd = key !== nextKey;
+    // PROD slot
+    {
+      const isProd = (key === "prod" || key === "both");
+      const isStart = isProd && key !== prevKey;
+      const isEnd   = isProd && key !== nextKey;
       const startCls = isStart ? " bar-start" : "";
-      const endCls = isEnd ? " bar-end" : "";
+      const endCls   = isEnd   ? " bar-end"   : "";
+      const dummyCls = dummyProd ? " dummy-hatch" : "";
 
-      if (key === "both") {
+      if (isProd) {
         const prodTxt = prod > 0 ? String(prod) : "\u00A0";
-        const montTxt = mont > 0 ? String(mont) : "\u00A0";
-        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${escapeHtml(prodTxt)}</div>`;
-        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${escapeHtml(montTxt)}</div>`;
-      } else if (key === "prod") {
-        const prodTxt = prod > 0 ? String(prod) : "\u00A0";
-        html += `<div class="bar bar-prod${startCls}${endCls}${dummyProd ? " dummy-hatch" : ""}">${escapeHtml(prodTxt)}</div>`;
-      } else if (key === "mont") {
-        const montTxt = mont > 0 ? String(mont) : "\u00A0";
-        html += `<div class="bar bar-mont${startCls}${endCls}${dummyMont ? " dummy-hatch" : ""}">${escapeHtml(montTxt)}</div>`;
-      } else if (key.startsWith("lbl:")) {
-        html += `<div class="bar${startCls}${endCls}">${escapeHtml(label)}</div>`;
+        html += `<div class="bar bar-prod${startCls}${endCls}${dummyCls}">${prodTxt}</div>`;
+      } else {
+        html += `<div class="bar bar-prod placeholder">\u00A0</div>`;
       }
     }
 
-    // ✅ OA bar: label alleen op eerste dag van dezelfde run
-    if (subc > 0) {
+    // MONT slot
+    {
+      const isMont = (key === "mont" || key === "both");
+      const isStart = isMont && key !== prevKey;
+      const isEnd   = isMont && key !== nextKey;
+      const startCls = isStart ? " bar-start" : "";
+      const endCls   = isEnd   ? " bar-end"   : "";
+      const dummyCls = dummyMont ? " dummy-hatch" : "";
+
+      if (isMont) {
+        const montTxt = mont > 0 ? String(mont) : "\u00A0";
+        html += `<div class="bar bar-mont${startCls}${endCls}${dummyCls}">${montTxt}</div>`;
+      } else {
+        html += `<div class="bar bar-mont placeholder">\u00A0</div>`;
+      }
+    }
+
+    // SUBC slot (ALTIJD onderaan, tekst alleen bij start van run)
+    {
       const keyS  = subcKeys[i] || "";
       const prevS = (i > 0) ? (subcKeys[i-1] || "") : "";
       const nextS = (i < subcKeys.length - 1) ? (subcKeys[i+1] || "") : "";
@@ -4404,23 +4415,27 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
       const isEndS   = keyS && keyS !== nextS;
 
       const startClsS = isStartS ? " bar-start" : "";
-      const endClsS   = isEndS ? " bar-end" : "";
+      const endClsS   = isEndS   ? " bar-end"   : "";
 
-      let txt = "\u00A0"; // leeg maar hoogte blijft gelijk
-      if (isStartS) {
+      let txt = "\u00A0";
+      if (subc > 0 && isStartS) {
         const runNames = keyS.split(" | ").map(s => s.trim()).filter(Boolean);
+        // ✅ GEEN "OA" meer:
         txt = (runNames.length === 1) ? `${runNames[0]}` : `${runNames.length}`;
       }
 
-      html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
+      if (subc > 0) {
+        html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
+      } else {
+        html += `<div class="bar bar-subc placeholder">\u00A0</div>`;
+      }
     }
 
-    html += `</div>`; // ✅ plan-stack altijd sluiten
-
+    html += `</div>`; // plan-stack altijd sluiten!
     td.innerHTML = html;
     tr.appendChild(td);
   }
-} 
+}
 
     function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}, projectId = "") {
 
