@@ -4283,6 +4283,17 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         return "";
       });
 
+      // ✅ aparte run-key voor onderaanneming (zodat tekst niet elke dag herhaalt)
+      const subcKeys = dates.map(d => {
+        const iso = toISODate(d);
+        const entry = assignMap?.get(String(sectionId))?.get(iso);
+        const names = (entry?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
+
+        if (!names.length) return "";
+        names.sort((a,b)=>a.localeCompare(b, "nl"));
+        return names.join(" | "); // zelfde set namen = zelfde run
+      });
+
       for (let i = 0; i < dates.length; i++) {
         const d = dates[i];
         const iso = toISODate(d);
@@ -4381,20 +4392,25 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         }
 
         if (subc > 0) {
-          const names = (entry?.subcNames || []).map(x => String(x || "").trim());
+          const names = (entry?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
+          const keyS = subcKeys[i] || "";
+          const prevS = (i > 0) ? (subcKeys[i-1] || "") : "";
+          const nextS = (i < subcKeys.length - 1) ? (subcKeys[i+1] || "") : "";
 
-          // ✅ elke onderaannemer als eigen balkje (ook als naam leeg is)
-          for (let i = 0; i < names.length; i++) {
-            const nm = names[i];
-            const label = nm ? `${nm}` : "OA";
-            html += `<div class="bar bar-subc">${escapeHtml(label)}</div>`;
+          const isStartS = keyS && keyS !== prevS;
+          const isEndS   = keyS && keyS !== nextS;
+
+          const startClsS = isStartS ? " bar-start" : "";
+          const endClsS   = isEndS   ? " bar-end"   : "";
+
+          // ✅ tekst alleen op start van run
+          let txt = "&nbsp;";
+          if (isStartS) {
+            txt = (names.length === 1) ? `OA ${names[0]}` : `OA ${names.length}`;
           }
-        }
 
-        html += `</div>`;
-        td.innerHTML = html;
-        tr.appendChild(td);
-      }
+          html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
+        }
     }
 
     function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}, projectId = "") {
