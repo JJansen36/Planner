@@ -592,6 +592,12 @@ function asISODate(v){
               <div id="amListMont" class="assign-list"></div>
             </div>
 
+            <div class="hr"></div>
+              <div class="assign-col" style="margin-top:10px;">
+                <div class="assign-col-title">Inhuur (uit capaciteit)</div>
+                <div id="amInhuurPick" class="assign-list"></div>
+              </div>
+
             <div class="assign-col">
               <div class="assign-col-title" style="display:flex; align-items:center; justify-content:space-between;">
                 <span>Onderaanneming</span>
@@ -599,11 +605,6 @@ function asISODate(v){
               </div>
                 <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
 
-                <div class="hr"></div>
-                <div class="muted" style="margin:8px 0 6px;">Inhuur (uit capaciteit)</div>
-                <div id="amInhuurPick" class="assign-list" style="padding-bottom:8px;"></div>
-
-                <div class="hr"></div>
                 <div id="amListSubc" class="assign-list"></div>
             </div>
 
@@ -2402,7 +2403,47 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
 
      applyZebraVisible();
 
-     
+
+    function renderInhuurPickerTo(wrap, selected, dateISO, inhuurByEmp, inhuurById){
+      const pickInhuur = wrap.querySelector("#amInhuurPick");
+      if (!pickInhuur) return;
+
+      const src = (inhuurByEmp || new Map());
+      const rows = [];
+
+      for (const [iid, dm] of src) {
+        const id = String(iid);
+        const hours = Number(dm?.get(dateISO) || 0);
+        const name = inhuurById?.get(id)?.name || "Inhuur";
+
+        const checked = selected.inhuurIds?.has(id);
+        const shouldShow = checked || hours > 0;   // toon als beschikbaar of al geselecteerd
+        if (!shouldShow) continue;
+
+        rows.push(`
+          <label class="assign-item" style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+            <span style="display:flex; gap:10px; align-items:center;">
+              <input type="checkbox" class="inhuur-pick" data-iid="${escapeAttr(id)}" ${checked ? "checked" : ""} />
+              <span>${escapeHtml(name)}</span>
+            </span>
+            <span class="muted">${hours > 0 ? (hours + "u") : ""}</span>
+          </label>
+        `);
+      }
+
+      pickInhuur.innerHTML = rows.length
+        ? rows.join("")
+        : `<div class="muted" style="padding:6px 2px;">Geen inhuur-uren beschikbaar op deze dag.</div>`;
+
+      pickInhuur.querySelectorAll("input.inhuur-pick").forEach(chk => {
+        chk.onchange = () => {
+          const iid = String(chk.dataset.iid || "").trim();
+          if (!iid) return;
+          if (chk.checked) selected.inhuurIds.add(iid);
+          else selected.inhuurIds.delete(iid);
+        };
+      });
+    }
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
 
@@ -3521,7 +3562,7 @@ if (listSubc) {
   // init
   renderSubcList();
   renderSubcPicker(); // async
-  renderInhuurPicker(); // ✅ nieuw
+  renderInhuurPickerTo(modal.wrap, selected, dateISO, inhuurByEmp, inhuurById);
 }
 
       };
