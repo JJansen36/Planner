@@ -3367,6 +3367,8 @@ const countM = rowM.querySelector(".concept-count");
 
       };
 
+      renderSubcList();
+ 
       saveBtn.onclick = async () => {
         // delete existing for this section+day
         const del = await sb
