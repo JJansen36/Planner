@@ -3350,8 +3350,7 @@ const countM = rowM.querySelector(".concept-count");
           };
 
           // + knop: voeg lege regel toe
-          if (btnAdd && !btnAdd._bound) {
-            btnAdd._bound = true;
+          if (btnAdd) {
             btnAdd.onclick = () => {
               if (!selected.subcNames) selected.subcNames = [];
               selected.subcNames.push("");
@@ -3414,9 +3413,9 @@ const countM = rowM.querySelector(".concept-count");
       for (let i = 0; i < dummyMontCount; i++) {
         rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "montage" });
       }
-      // ✅ Onderaanneming: meerdere namen → meerdere rows
-      const subcNames = (selected.subcNames || [])
-        .map(x => String(x || "").trim())
+      // ✅ Onderaanneming: lees ALLE inputs uit de modal (betrouwbaar, ook bij meerdere)
+      const subcNames = Array.from(modal.wrap.querySelectorAll("#amListSubc input.subc-name"))
+        .map(inp => String(inp.value || "").trim())
         .filter(Boolean);
 
       for (const nm of subcNames) {
@@ -3428,7 +3427,6 @@ const countM = rowM.querySelector(".concept-count");
           note: nm
         });
       }
-
 
 if (rows.length) {
   const ins = await sb.from("section_assignments").insert(rows);
