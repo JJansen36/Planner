@@ -4283,17 +4283,13 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
         if (subc > 0) {
           const names = (entry?.subcNames || []).map(x => String(x || "").trim());
-          const nonEmpty = names.filter(Boolean);
 
-          // 1 naam ingevuld -> toon die
-          // meerdere -> toon aantal
-          // geen naam -> toon alleen OA
-          const label =
-            (nonEmpty.length === 1 && subc === 1) ? `OA ${nonEmpty[0]}` :
-            (subc === 1) ? "OA" :
-            `OA ${subc}`;
-
-          html += `<div class="bar bar-subc">${escapeHtml(label)}</div>`;
+          // ✅ elke onderaannemer als eigen balkje (ook als naam leeg is)
+          for (let i = 0; i < names.length; i++) {
+            const nm = names[i];
+            const label = nm ? `OA ${nm}` : "OA";
+            html += `<div class="bar bar-subc">${escapeHtml(label)}</div>`;
+          }
         }
 
         html += `</div>`;
