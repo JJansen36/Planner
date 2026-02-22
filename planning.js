@@ -593,7 +593,10 @@ function asISODate(v){
             </div>
 
             <div class="assign-col">
-              <div class="assign-col-title">Onderaanneming</div>
+              <div class="assign-col-title" style="display:flex; align-items:center; justify-content:space-between;">
+                <span>Onderaanneming</span>
+                <button class="btn small" id="amAddSubc" type="button">+</button>
+              </div>
               <div id="amListSubc" class="assign-list"></div>
             </div>
 
@@ -1352,7 +1355,7 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
       if (!dmA.has(d)) dmA.set(d, {
         productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
         dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
-        dummySub: 0, subcName: ""
+        dummySub: 0, subcNames: []
       });
       const entry = dmA.get(d);
 
@@ -1377,10 +1380,8 @@ const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in rang
       }
       if (wt === "onderaanneming") {
         if (isDummy) {
-          entry.dummySub += 1;
-
-          const nm = String(a.note || "").trim();   // ✅ naam uit DB
-          if (nm) entry.subcName = nm;
+          const nm = String(a.note || "").trim();
+          if (nm) entry.subcNames.push(nm);
         }
       }
 
@@ -1462,9 +1463,12 @@ for (const a of (pAssigns || [])) {
     if (isDummy) entry.dummyReis += 1;
     else entry.reis.add(emp);
   }
-    if (wt === "onderaanneming") {
-      if (isDummy) entry.dummySub += 1;
+  if (wt === "onderaanneming") {
+    if (isDummy) {
+      const nm = String(a.note || "").trim();
+      if (nm) entry.subcNames.push(nm);
     }
+  }
 
 }
 
@@ -1946,7 +1950,7 @@ for (const dd of dates) {
         assignByDay[iso] = {
           prod: entry ? (entry.productie.size + (entry.dummyProd || 0)) : 0,
           mont: entry ? (entry.montage.size + (entry.dummyMont || 0)) : 0,
-          subc: entry ? Number(entry.dummySub || 0) : 0,   // ✅ toevoegen
+          subc: entry ? Number(entry.subcNames?.length || 0) : 0,
         };
 
         }
@@ -2981,6 +2985,8 @@ if (ptd) {
     montage: new Set(cur.montage),
     dummyProd: Number(cur.dummyProd || 0),
     dummyMont: Number(cur.dummyMont || 0),
+
+    subcNames: Array.isArray(cur.subcNames) ? [...cur.subcNames] : []
   };
 
   const subEl   = modal.wrap.querySelector("#amSub");
@@ -3137,11 +3143,9 @@ const countM = rowM.querySelector(".concept-count");
         montage: new Set(cur.montage),
         dummyProd: Number(cur.dummyProd || 0),
         dummyMont: Number(cur.dummyMont || 0),
-        dummySub:  Number(cur.dummySub  || 0),
 
-        subcEnabled: (Number(cur.dummySub || 0) > 0),
-        subcName: String(cur.subcName || cur.note || "").trim(),
-
+        // ✅ onderaanneming: meerdere namen
+        subcNames: Array.isArray(cur.subcNames) ? [...cur.subcNames] : []
       };
 
       // ✅ snapshot: hoeveel montage stond er al op deze sectie (incl concept)
@@ -3298,62 +3302,70 @@ const countM = rowM.querySelector(".concept-count");
           listMont.appendChild(rowM);
         }
 
-        // --- Onderaanneming: naam + checkbox ---
+        // --- Onderaanneming: meerdere namen ( + knop + input + ✕ ) ---
         if (listSubc) {
-          const curName = String(cur?.subcName || cur?.note || "").trim(); // fallback
-          const checked = Number(cur?.dummySub || 0) > 0;
+          const btnAdd = modal.wrap.querySelector("#amAddSubc");
 
-          const wrap = document.createElement("div");
-          wrap.className = "assign-item";
-          wrap.style.display = "grid";
-          wrap.style.gap = "10px";
+          const renderSubcList = () => {
+            listSubc.innerHTML = "";
 
-          wrap.innerHTML = `
-            <label class="assign-item" style="display:flex; gap:10px; align-items:center;">
-              <input type="checkbox" class="subc-check" ${checked ? "checked" : ""} />
-              <span>Ingepland</span>
-            </label>
+            // lege state
+            if (!selected.subcNames || selected.subcNames.length === 0) {
+              const hint = document.createElement("div");
+              hint.className = "muted";
+              hint.style.padding = "6px 2px";
+              hint.textContent = "Klik op + om een onderaannemer toe te voegen.";
+              listSubc.appendChild(hint);
+              return;
+            }
 
-            <input class="input subc-name" type="text"
-              placeholder="Naam onderaannemer…"
-              value="${escapeAttr(curName)}"
-            />
-            <div class="muted" style="font-size:12px;">Deze naam komt in de planning te staan.</div>
-          `;
+            selected.subcNames.forEach((name, idx) => {
+              const row = document.createElement("div");
+              row.className = "assign-item";
+              row.style.display = "flex";
+              row.style.gap = "8px";
+              row.style.alignItems = "center";
 
-          const chk = wrap.querySelector(".subc-check");
-          const inp = wrap.querySelector(".subc-name");
+              row.innerHTML = `
+                <input class="input subc-name" type="text"
+                  placeholder="Naam onderaannemer…"
+                  value="${escapeAttr(name || "")}"
+                  style="flex:1;"
+                />
+                <button type="button" class="btn small subc-del" title="Verwijderen">✕</button>
+              `;
 
-          // disabled als niet ingepland
-          inp.disabled = !chk.checked;
+              const inp = row.querySelector("input.subc-name");
+              const del = row.querySelector(".subc-del");
 
-          chk.onchange = () => {
-            inp.disabled = !chk.checked;
-            if (!chk.checked) inp.value = ""; // optional: leegmaken bij uitzetten
+              inp.oninput = () => { selected.subcNames[idx] = String(inp.value || ""); };
+              del.onclick = () => {
+                selected.subcNames.splice(idx, 1);
+                renderSubcList();
+              };
+
+              listSubc.appendChild(row);
+            });
           };
 
-          // opslaan in selected
-          selected.subcEnabled = chk.checked;
-          selected.subcName = String(inp.value || "").trim();
+          // + knop: voeg lege regel toe
+          if (btnAdd && !btnAdd._bound) {
+            btnAdd._bound = true;
+            btnAdd.onclick = () => {
+              if (!selected.subcNames) selected.subcNames = [];
+              selected.subcNames.push("");
+              renderSubcList();
+              setTimeout(() => {
+                const inputs = listSubc.querySelectorAll("input.subc-name");
+                inputs[inputs.length - 1]?.focus();
+              }, 0);
+            };
+          }
 
-          inp.addEventListener("input", () => {
-            selected.subcName = String(inp.value || "").trim();
-          });
-          chk.addEventListener("change", () => {
-            selected.subcEnabled = !!chk.checked;
-          });
-
-          listSubc.appendChild(wrap);
+          renderSubcList();
         }
 
       };
-
-
-    renderBothLists();
-
-
-
-
 
       saveBtn.onclick = async () => {
         // delete existing for this section+day
@@ -3399,15 +3411,18 @@ const countM = rowM.querySelector(".concept-count");
       for (let i = 0; i < dummyMontCount; i++) {
         rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "montage" });
       }
-      // ✅ Onderaanneming: checkbox (0/1) + naam opslaan in note
-      if (selected.subcEnabled) {
-        const nm = String(selected.subcName || "").trim();
+      // ✅ Onderaanneming: meerdere namen → meerdere rows
+      const subcNames = (selected.subcNames || [])
+        .map(x => String(x || "").trim())
+        .filter(Boolean);
+
+      for (const nm of subcNames) {
         rows.push({
           section_id: sid,
           work_date: dateISO,
           werknemer_id: Number(DUMMY_SEC_ID),
           work_type: "onderaanneming",
-          note: nm || null
+          note: nm
         });
       }
 
@@ -4264,8 +4279,9 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         }
 
         if (subc > 0) {
-          const nm = String(entry?.subcName || "").trim();
-          html += `<div class="bar bar-subc">${nm ? `OA ${escapeHtml(nm)}` : "OA"}</div>`;
+          const names = entry?.subcNames || [];
+          const label = (names.length === 1) ? `OA ${names[0]}` : `OA ${names.length}`;
+          html += `<div class="bar bar-subc">${escapeHtml(label)}</div>`;
         }
 
         html += `</div>`;
