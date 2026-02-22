@@ -3537,6 +3537,18 @@ if (rows.length) {
   if (ins.error) { alert("Fout opslaan: " + ins.error.message); return; }
 }
 
+// ✅ onderaanneming-snelkeuze meteen updaten voor dit project
+const pidKey = String(projectId || "").trim();
+if (pidKey) {
+  const existing = _subcSuggestCache.get(pidKey) || [];
+  const merged = [...new Set([...existing, ...subcNames])]
+    .filter(Boolean)
+    .map(s => String(s).trim())
+    .filter(Boolean)
+    .sort((a,b)=>a.localeCompare(b, "nl"));
+  _subcSuggestCache.set(pidKey, merged);
+}
+
 const newSectMontCount = Number(selected.montage.size || 0) + Number(dummyMontCount || 0);
 const deltaMont = newSectMontCount - Number(prevSectMontCount || 0);
 
