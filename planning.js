@@ -427,7 +427,7 @@ function ensureHoverTip(){
   return tip;
 }
 
-  const RANGE_DAYS = 56; // 8 weken zoals je PDF-screens
+  const RANGE_DAYS = 70;
   let rangeStart = startOfISOWeek(new Date()); // maandag
 
   function bindUI(){
@@ -1237,6 +1237,9 @@ function parseSectionNo(v){
 
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
+
+    const totalDays = dates.length;
+    document.documentElement.style.setProperty('--days', String(totalDays));
 
       console.log("DATES preview:", dates.slice(0,14).map(d => toISODate(d)).join(", "));
 
