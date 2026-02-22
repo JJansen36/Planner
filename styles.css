@@ -1337,8 +1337,8 @@ td.hourscol{
 /* Onderaanneming bar (paars) */
 .bar-subc{
   background: #a955f767;       /* paars */
-  color: #fff;
-  font-weight: 600;
+  color: #0f172a !important;     /* zwart (zelfde als je --text) */
+  font-weight: 400 !important;   /* zelfde dikte als je andere bars */
 }
 
 /* Placeholder bars: wel ruimte, geen kleur */
@@ -1348,3 +1348,4 @@ td.hourscol{
   color: transparent !important;
   visibility: hidden;         /* <- belangrijkste */
 }
+
