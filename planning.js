@@ -3060,32 +3060,6 @@ const countM = rowM.querySelector(".concept-count");
     listProd.innerHTML = `<div class="muted" style="padding:8px;">(n.v.t.)</div>`;
   };
 
-    // --- Onderaanneming (alleen teller, geen medewerkers) ---
-    if (listSubc) {
-      const rowS = document.createElement("div");
-      rowS.className = "assign-item";
-      rowS.style.display = "flex";
-      rowS.style.justifyContent = "space-between";
-      rowS.style.alignItems = "center";
-      rowS.innerHTML = `
-        <span>Concept</span>
-        <span style="display:flex; gap:6px; align-items:center;">
-          <button type="button" class="btn small subc-minus">−</button>
-          <span class="subc-count" style="min-width:18px; text-align:center;">${Number(selected.dummySub || 0)}</span>
-          <button type="button" class="btn small subc-plus">+</button>
-        </span>
-      `;
-
-      const minusS = rowS.querySelector(".subc-minus");
-      const plusS  = rowS.querySelector(".subc-plus");
-      const countS = rowS.querySelector(".subc-count");
-
-      plusS.onclick  = () => { selected.dummySub = Number(selected.dummySub || 0) + 1; countS.textContent = String(selected.dummySub); };
-      minusS.onclick = () => { selected.dummySub = Math.max(0, Number(selected.dummySub || 0) - 1); countS.textContent = String(selected.dummySub); };
-
-      listSubc.appendChild(rowS);
-    }
-
   renderBothLists();
 
   saveBtn.onclick = async () => {
@@ -3113,12 +3087,6 @@ const countM = rowM.querySelector(".concept-count");
     const dummyMontCount = Number(selected.dummyMont || 0);
     for (let i = 0; i < dummyMontCount; i++) {
       rows.push({ project_id: projectId, work_date: dateISO, werknemer_id: Number(DUMMY_EMP_ID), work_type: "montage" });
-    }
-
-    // ✅ Onderaanneming (dummy teller) opslaan als losse regels
-    const dummySubCount = Number(selected.dummySub || 0);
-    for (let i = 0; i < dummySubCount; i++) {
-      rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "onderaanneming" });
     }
 
     if (rows.length) {
@@ -3323,6 +3291,31 @@ const countM = rowM.querySelector(".concept-count");
         }
       };
 
+      // --- Onderaanneming (teller) ---
+      if (listSubc) {
+        const rowS = document.createElement("div");
+        rowS.className = "assign-item";
+        rowS.style.display = "flex";
+        rowS.style.justifyContent = "space-between";
+        rowS.style.alignItems = "center";
+        rowS.innerHTML = `
+          <span>Concept</span>
+          <span style="display:flex; gap:6px; align-items:center;">
+            <button type="button" class="btn small subc-minus">−</button>
+            <span class="subc-count" style="min-width:18px; text-align:center;">${Number(selected.dummySub || 0)}</span>
+            <button type="button" class="btn small subc-plus">+</button>
+          </span>
+        `;
+
+        const minusS = rowS.querySelector(".subc-minus");
+        const plusS  = rowS.querySelector(".subc-plus");
+        const countS = rowS.querySelector(".subc-count");
+
+        plusS.onclick  = () => { selected.dummySub = Number(selected.dummySub || 0) + 1; countS.textContent = String(selected.dummySub); };
+        minusS.onclick = () => { selected.dummySub = Math.max(0, Number(selected.dummySub || 0) - 1); countS.textContent = String(selected.dummySub); };
+
+        listSubc.appendChild(rowS);
+      }
 
     renderBothLists();
 
@@ -3373,6 +3366,10 @@ const countM = rowM.querySelector(".concept-count");
       }
       for (let i = 0; i < dummyMontCount; i++) {
         rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "montage" });
+      }
+      const dummySubCount = Number(selected.dummySub || 0);
+      for (let i = 0; i < dummySubCount; i++) {
+        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: Number(DUMMY_SEC_ID), work_type: "onderaanneming" });
       }
 
 
