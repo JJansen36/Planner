@@ -1337,3 +1337,17 @@ td.hourscol{
   background: transparent;
   border: 1px dashed rgba(168,85,247,.35);
 }
+
+/* Onderaanneming bar (paars) */
+.bar-subc{
+  background: #8b5cf6;       /* paars */
+  color: #fff;
+}
+
+/* Placeholder bars: wel ruimte, geen kleur */
+.bar-subc.subc-ph{
+  background: transparent !important;
+  border-color: transparent !important;
+  color: transparent !important;
+  visibility: hidden;         /* <- belangrijkste */
+}

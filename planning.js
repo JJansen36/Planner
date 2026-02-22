@@ -4424,9 +4424,9 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     for (const nm of subcNamesAll) {
       const has = todaySet.has(nm);
 
-      // placeholder bar om hoogte/uitlijning gelijk te houden
       if (!has) {
-        html += `<div class="bar bar-subc subc-ph">\u00A0</div>`;
+        // placeholder: houdt hoogte/uitlijning, maar geen kleur
+        html += `<div class="bar bar-subc subc-ph" aria-hidden="true"></div>`;
         continue;
       }
 
