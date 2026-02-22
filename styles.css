@@ -1349,3 +1349,28 @@ td.hourscol{
   visibility: hidden;         /* <- belangrijkste */
 }
 
+/* wrapper die de horizontale scrollbar onderaan toont */
+.planner-scroll{
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-top: 1px solid var(--line);
+  padding-bottom: 2px; /* zorgt dat scrollbar niet tegen content plakt */
+  position: relative;  /* helpt i.c.m. sticky */
+}
+
+/* optioneel: mooie scrollbar */
+.planner-scroll::-webkit-scrollbar{ height: 10px; }
+.planner-scroll::-webkit-scrollbar-thumb{
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.planner-scroll::-webkit-scrollbar-thumb:hover{
+  background: #94a3b8;
+}
+
+/* zorg dat grid niet geforceerd krimpt */
+#plannerGrid{
+  width: max-content;     /* laat breedte meegroeien met kolommen */
+  min-width: 100%;        /* maar nooit smaller dan container */
+}
