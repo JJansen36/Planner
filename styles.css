@@ -1307,9 +1307,9 @@ td.hourscol{
 
 .bar-subc{
   border: 1px dashed #64748b;
-  background: #f1f5f9;
+  background: #000000;
   color: #0f172a;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .plan-stack{
@@ -1329,10 +1329,6 @@ td.hourscol{
   border: 1px dashed rgba(15,23,42,.35);
 }
 
-.bar-subc{
-  background: #a955f767; /* paars */
-  color: #fff;
-}
 .bar-subc.subc-ph{
   background: transparent;
   border: 1px dashed rgba(168,85,247,.35);
@@ -1342,6 +1338,7 @@ td.hourscol{
 .bar-subc{
   background: #a955f767;       /* paars */
   color: #fff;
+  font-weight: 600;
 }
 
 /* Placeholder bars: wel ruimte, geen kleur */
