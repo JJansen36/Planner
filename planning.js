@@ -4024,7 +4024,6 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
     const prod = Number(assignByDay?.[iso]?.prod || 0);
     const mont = Number(assignByDay?.[iso]?.mont || 0);
-    const subc = Number(assignCountByDay?.[iso]?.subc || 0);
     const label = labels[i] || "";
 
     const key = keys[i];
@@ -4049,9 +4048,6 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
     else if (key === "mont") cls += " bar-mont";
     else if (key.startsWith("lbl:")) cls += ` ${barClass(label)}`;
     td.className = cls;
-    if (subc > 0) {
-      html += `<div class="bar bar-subc">OA ${subc}</div>`;
-    }
 
     let html = `<div class="plan-stack">`;
 
@@ -4229,11 +4225,11 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
             html += `<div class="bar${startCls}${endCls}">${escapeHtml(label)}</div>`;
           }
 
-          if (subc > 0) {
+        }
+
+        if (subc > 0) {
             html += `<div class="bar bar-subc">OA ${subc}</div>`;
           }
-
-        }
 
         html += `</div>`;
         td.innerHTML = html;
