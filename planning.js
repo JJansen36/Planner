@@ -4285,7 +4285,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
           // ✅ elke onderaannemer als eigen balkje (ook als naam leeg is)
           for (let i = 0; i < names.length; i++) {
             const nm = names[i];
-            const label = nm ? `OA ${nm}` : "OA";
+            const label = nm ? `${nm}` : "OA";
             html += `<div class="bar bar-subc">${escapeHtml(label)}</div>`;
           }
         }
