@@ -3177,7 +3177,6 @@ const countM = rowM.querySelector(".concept-count");
           if (shouldHide) continue;
 
           
-      // ✅ Concept (dummy) als teller i.p.v. checkbox (meerdere per dag)
       if (isDummy(eid)) {
 
         // Productie concept row
@@ -3289,33 +3288,35 @@ const countM = rowM.querySelector(".concept-count");
           };
           listMont.appendChild(rowM);
         }
+
+        // ✅ PLAK HIER ONDERAANNEMING:
+        if (listSubc) {
+          const rowS = document.createElement("div");
+          rowS.className = "assign-item";
+          rowS.style.display = "flex";
+          rowS.style.justifyContent = "space-between";
+          rowS.style.alignItems = "center";
+          rowS.innerHTML = `
+            <span>Concept</span>
+            <span style="display:flex; gap:6px; align-items:center;">
+              <button type="button" class="btn small subc-minus">−</button>
+              <span class="subc-count" style="min-width:18px; text-align:center;">${Number(selected.dummySub || 0)}</span>
+              <button type="button" class="btn small subc-plus">+</button>
+            </span>
+          `;
+
+          const minusS = rowS.querySelector(".subc-minus");
+          const plusS  = rowS.querySelector(".subc-plus");
+          const countS = rowS.querySelector(".subc-count");
+
+          plusS.onclick  = () => { selected.dummySub = Number(selected.dummySub || 0) + 1; countS.textContent = String(selected.dummySub); };
+          minusS.onclick = () => { selected.dummySub = Math.max(0, Number(selected.dummySub || 0) - 1); countS.textContent = String(selected.dummySub); };
+
+          listSubc.appendChild(rowS);
+        }
+
       };
 
-      // --- Onderaanneming (teller) ---
-      if (listSubc) {
-        const rowS = document.createElement("div");
-        rowS.className = "assign-item";
-        rowS.style.display = "flex";
-        rowS.style.justifyContent = "space-between";
-        rowS.style.alignItems = "center";
-        rowS.innerHTML = `
-          <span>Concept</span>
-          <span style="display:flex; gap:6px; align-items:center;">
-            <button type="button" class="btn small subc-minus">−</button>
-            <span class="subc-count" style="min-width:18px; text-align:center;">${Number(selected.dummySub || 0)}</span>
-            <button type="button" class="btn small subc-plus">+</button>
-          </span>
-        `;
-
-        const minusS = rowS.querySelector(".subc-minus");
-        const plusS  = rowS.querySelector(".subc-plus");
-        const countS = rowS.querySelector(".subc-count");
-
-        plusS.onclick  = () => { selected.dummySub = Number(selected.dummySub || 0) + 1; countS.textContent = String(selected.dummySub); };
-        minusS.onclick = () => { selected.dummySub = Math.max(0, Number(selected.dummySub || 0) - 1); countS.textContent = String(selected.dummySub); };
-
-        listSubc.appendChild(rowS);
-      }
 
     renderBothLists();
 
