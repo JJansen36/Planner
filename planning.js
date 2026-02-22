@@ -4407,8 +4407,6 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
         }
 
         if (subc > 0) {
-          const names = (entry?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
-
           const keyS  = subcKeys[i] || "";
           const prevS = (i > 0) ? (subcKeys[i-1] || "") : "";
           const nextS = (i < subcKeys.length - 1) ? (subcKeys[i+1] || "") : "";
@@ -4419,10 +4417,11 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
           const startClsS = isStartS ? " bar-start" : "";
           const endClsS   = isEndS   ? " bar-end"   : "";
 
-          // tekst alleen op start van run
+          // ✅ label op basis van de run-key (niet per dag opnieuw)
           let txt = "&nbsp;";
           if (isStartS) {
-            txt = (names.length === 1) ? `OA ${names[0]}` : `OA ${names.length}`;
+            const runNames = keyS.split(" | ").map(s => s.trim()).filter(Boolean);
+            txt = (runNames.length === 1) ? `OA ${runNames[0]}` : `OA ${runNames.length}`;
           }
 
           html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
