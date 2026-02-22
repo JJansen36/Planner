@@ -302,7 +302,7 @@ a{ color:inherit; text-decoration:none; }
 
 .planner-grid{
   position:relative;
-  overflow:auto;
+  overflow: visible;   /* <- geen eigen scroll meer */
   border:1px solid #e6e8ef;
   border-radius:12px;
   background:#fff;
@@ -330,7 +330,8 @@ a{ color:inherit; text-decoration:none; }
   --stack-h: 22px;
   --row-h: 18px;
 
-  width:100%;
+  width: max-content;  /* exact zo breed als je kolommen */
+  min-width: 100%;     /* maar minimaal schermbreedte */
   border-collapse:collapse;
   table-layout:fixed;
 }
@@ -1371,28 +1372,3 @@ td.hourscol{
 
 
 
-:root{
-  --col-project: 360px;  /* <-- pas aan naar smaak */
-  --col-day: 48px;       /* dagcel breedte */
-}
-
-/* je planning grid */
-.planning-grid{
-  display: grid;
-  grid-auto-rows: minmax(24px, auto);
-  /* BELANGRIJK: vaste 1e kolom + vaste dagkolommen */
-  grid-template-columns: var(--col-project) repeat(var(--days, 70), var(--col-day));
-  width: max-content;     /* breedte groeit door dagen, NIET door projecttekst */
-}
-
-/* projectnaam-cel (tekst afkappen i.p.v. kolom breder maken) */
-.planning-grid .proj,
-.planning-grid .project,
-.planning-grid .project-cell{
-  width: var(--col-project);
-  min-width: var(--col-project);
-  max-width: var(--col-project);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}

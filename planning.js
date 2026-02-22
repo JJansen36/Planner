@@ -427,7 +427,7 @@ function ensureHoverTip(){
   return tip;
 }
 
-  const RANGE_DAYS = 70;
+  const RANGE_DAYS = 100;
   let rangeStart = startOfISOWeek(new Date()); // maandag
 
   function bindUI(){
