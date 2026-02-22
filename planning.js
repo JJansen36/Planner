@@ -4409,7 +4409,7 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
       let txt = "\u00A0"; // leeg maar hoogte blijft gelijk
       if (isStartS) {
         const runNames = keyS.split(" | ").map(s => s.trim()).filter(Boolean);
-        txt = (runNames.length === 1) ? `OA ${runNames[0]}` : `OA ${runNames.length}`;
+        txt = (runNames.length === 1) ? `${runNames[0]}` : `${runNames.length}`;
       }
 
       html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
