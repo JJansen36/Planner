@@ -4420,10 +4420,46 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
         txt = (runNames.length === 1) ? `${runNames[0]}` : `${runNames.length}`;
       }
 
-      if (subc > 0) {
-        html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
-      } else {
-        html += `<div class="bar bar-subc placeholder">\u00A0</div>`;
+      // ✅ Onderaanneming: 1 paarse bar per naam (altijd zelfde “slot” => blijft uitgelijnd)
+      if (subcNamesAll.length) {
+        const entryToday = assignMap?.get(String(sectionId))?.get(iso);
+        const todaySet = new Set(
+          (entryToday?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean)
+        );
+
+        // prev/next sets voor “run” (start/einde afronding)
+        const prevISO = (i > 0) ? toISODate(dates[i-1]) : "";
+        const nextISO = (i < dates.length - 1) ? toISODate(dates[i+1]) : "";
+
+        const prevSet = new Set(
+          ((assignMap?.get(String(sectionId))?.get(prevISO)?.subcNames) || [])
+            .map(x => String(x||"").trim()).filter(Boolean)
+        );
+        const nextSet = new Set(
+          ((assignMap?.get(String(sectionId))?.get(nextISO)?.subcNames) || [])
+            .map(x => String(x||"").trim()).filter(Boolean)
+        );
+
+        for (const nm of subcNamesAll) {
+          const has = todaySet.has(nm);
+
+          // placeholder bar om hoogte/uitlijning gelijk te houden
+          if (!has) {
+            html += `<div class="bar bar-subc subc-ph">\u00A0</div>`;
+            continue;
+          }
+
+          const isStartS = !prevSet.has(nm);
+          const isEndS   = !nextSet.has(nm);
+
+          const startClsS = isStartS ? " bar-start" : "";
+          const endClsS   = isEndS   ? " bar-end"   : "";
+
+          // tekst alleen aan begin van een doorlopende reeks
+          const txt = isStartS ? nm : "\u00A0";
+
+          html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
+        }
       }
     }
 
