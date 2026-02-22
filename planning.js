@@ -4393,7 +4393,8 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
         if (subc > 0) {
           const names = (entry?.subcNames || []).map(x => String(x||"").trim()).filter(Boolean);
-          const keyS = subcKeys[i] || "";
+
+          const keyS  = subcKeys[i] || "";
           const prevS = (i > 0) ? (subcKeys[i-1] || "") : "";
           const nextS = (i < subcKeys.length - 1) ? (subcKeys[i+1] || "") : "";
 
@@ -4403,7 +4404,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
           const startClsS = isStartS ? " bar-start" : "";
           const endClsS   = isEndS   ? " bar-end"   : "";
 
-          // ✅ tekst alleen op start van run
+          // tekst alleen op start van run
           let txt = "&nbsp;";
           if (isStartS) {
             txt = (names.length === 1) ? `OA ${names[0]}` : `OA ${names.length}`;
@@ -4411,7 +4412,12 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
           html += `<div class="bar bar-subc${startClsS}${endClsS}">${escapeHtml(txt)}</div>`;
         }
-    }
+
+        html += `</div>`;        // ✅ sluit plan-stack
+        td.innerHTML = html;     // ✅ zet html in cel
+        tr.appendChild(td);      // ✅ voeg cel toe aan rij
+      }                          // ✅ einde for-loop
+    } 
 
     function appendProjectMontageSummaryDayCells(tr, dates, projMontByDay = {}, projectId = "") {
 
