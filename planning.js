@@ -597,6 +597,7 @@ function asISODate(v){
                 <span>Onderaanneming</span>
                 <button class="btn small" id="amAddSubc" type="button">+</button>
               </div>
+              <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
               <div id="amListSubc" class="assign-list"></div>
             </div>
 
@@ -1185,12 +1186,53 @@ function parseSectionNo(v){
   };
 }
 
+    // ===== Onderaanneming suggesties (per project cache) =====
+    const _subcSuggestCache = new Map(); // projectId -> [names]
 
+    function getProjectSectionIds(pid, sectiesByProject, sectIdKey, sectLookup){
+      const secs = sectiesByProject.get(pid) || [];
+      return secs.map(s => {
+        const raw = s?.[sectIdKey] ? String(s[sectIdKey]) : String(s?.section_id || "");
+        const canon = sectLookup.get(raw) || raw;
+        return canon;
+      }).filter(Boolean);
+    }
+
+    async function fetchSubcSuggestionsForProject(projectId, sectiesByProject, sectIdKey, sectLookup){
+      const pid = String(projectId || "").trim();
+      if (!pid) return [];
+      if (_subcSuggestCache.has(pid)) return _subcSuggestCache.get(pid);
+
+      const sectionIds = getProjectSectionIds(pid, sectiesByProject, sectIdKey, sectLookup);
+      if (!sectionIds.length) { _subcSuggestCache.set(pid, []); return []; }
+
+      const { data, error } = await sb
+        .from("section_assignments")
+        .select("note, section_id")
+        .eq("work_type", "onderaanneming")
+        .in("section_id", sectionIds)
+        .not("note", "is", null)
+        .limit(5000);
+
+      if (error) {
+        console.warn("fetchSubcSuggestionsForProject error:", error.message);
+        _subcSuggestCache.set(pid, []);
+        return [];
+      }
+
+      const names = [...new Set((data || [])
+        .map(r => String(r.note || "").trim())
+        .filter(Boolean)
+      )].sort((a,b)=>a.localeCompare(b, "nl"));
+
+      _subcSuggestCache.set(pid, names);
+      return names;
+    }
 
     // -------- RENDER --------
     function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders, inhuurEntries, inhuurPeopleVisible }) {
-const DEBUG_OFFNR = "2600013";   // <-- zet hier jouw projectnr uit de screenshot
-const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in range
+    const DEBUG_OFFNR = "2600013";   // <-- zet hier jouw projectnr uit de screenshot
+    const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in range
 
 
     const dates = [];
@@ -3157,6 +3199,7 @@ const countM = rowM.querySelector(".concept-count");
       const listMont = modal.wrap.querySelector("#amListMont");
       const saveBtn = modal.wrap.querySelector("#amSave");
       const listSubc = modal.wrap.querySelector("#amListSubc");
+      const pickSubc = modal.wrap.querySelector("#amSubcPick");
       if (subEl) subEl.textContent = `${dateISO} • ${sid}`;
 
 
@@ -3303,67 +3346,125 @@ const countM = rowM.querySelector(".concept-count");
           listMont.appendChild(rowM);
         }
 
-        // --- Onderaanneming: meerdere namen ( + knop + input + ✕ ) ---
-        if (listSubc) {
-          const btnAdd = modal.wrap.querySelector("#amAddSubc");
+// --- Onderaanneming: snelle keuze (aanvinken) + meerdere regels (+ / ✕) ---
+if (listSubc) {
+  const btnAdd = modal.wrap.querySelector("#amAddSubc");
 
-          const renderSubcList = () => {
-            listSubc.innerHTML = "";
+  const renderSubcList = () => {
+    listSubc.innerHTML = "";
 
-            // lege state
-            if (!selected.subcNames || selected.subcNames.length === 0) {
-              const hint = document.createElement("div");
-              hint.className = "muted";
-              hint.style.padding = "6px 2px";
-              hint.textContent = "Klik op + om een onderaannemer toe te voegen.";
-              listSubc.appendChild(hint);
-              return;
-            }
+    if (!selected.subcNames) selected.subcNames = [];
 
-            selected.subcNames.forEach((name, idx) => {
-              const row = document.createElement("div");
-              row.className = "assign-item";
-              row.style.display = "flex";
-              row.style.gap = "8px";
-              row.style.alignItems = "center";
+    if (selected.subcNames.length === 0) {
+      const hint = document.createElement("div");
+      hint.className = "muted";
+      hint.style.padding = "6px 2px";
+      hint.textContent = "Klik op + of vink een naam aan bij Snelle keuze.";
+      listSubc.appendChild(hint);
+      return;
+    }
 
-              row.innerHTML = `
-                <input class="input subc-name" type="text"
-                  placeholder="Naam onderaannemer…"
-                  value="${escapeAttr(name || "")}"
-                  style="flex:1;"
-                />
-                <button type="button" class="btn small subc-del" title="Verwijderen">✕</button>
-              `;
+    selected.subcNames.forEach((name, idx) => {
+      const row = document.createElement("div");
+      row.className = "assign-item";
+      row.style.display = "flex";
+      row.style.gap = "8px";
+      row.style.alignItems = "center";
 
-              const inp = row.querySelector("input.subc-name");
-              const del = row.querySelector(".subc-del");
+      row.innerHTML = `
+        <input class="input subc-name" type="text"
+          placeholder="Naam onderaannemer…"
+          value="${escapeAttr(name || "")}"
+          style="flex:1;"
+        />
+        <button type="button" class="btn small subc-del" title="Verwijderen">✕</button>
+      `;
 
-              inp.oninput = () => { selected.subcNames[idx] = String(inp.value || ""); };
-              del.onclick = () => {
-                selected.subcNames.splice(idx, 1);
-                renderSubcList();
-              };
+      const inp = row.querySelector("input.subc-name");
+      const del = row.querySelector(".subc-del");
 
-              listSubc.appendChild(row);
-            });
-          };
+      inp.oninput = () => { selected.subcNames[idx] = String(inp.value || ""); };
+      del.onclick = () => {
+        selected.subcNames.splice(idx, 1);
+        renderSubcList();
+        renderSubcPicker(); // ✅ sync checkboxes
+      };
 
-          // + knop: voeg lege regel toe
-          if (btnAdd) {
-            btnAdd.onclick = () => {
-              if (!selected.subcNames) selected.subcNames = [];
-              selected.subcNames.push("");
-              renderSubcList();
-              setTimeout(() => {
-                const inputs = listSubc.querySelectorAll("input.subc-name");
-                inputs[inputs.length - 1]?.focus();
-              }, 0);
-            };
-          }
+      listSubc.appendChild(row);
+    });
+  };
 
-          renderSubcList();
-        }
+  // + knop: voeg lege regel toe (bind ALTIJD opnieuw, geen _bound)
+  if (btnAdd) {
+    btnAdd.onclick = () => {
+      if (!selected.subcNames) selected.subcNames = [];
+      selected.subcNames.push("");
+      renderSubcList();
+      setTimeout(() => {
+        const inputs = listSubc.querySelectorAll("input.subc-name");
+        inputs[inputs.length - 1]?.focus();
+      }, 0);
+    };
+  }
+
+  // Snelle keuze (checkboxes) op basis van project-historie
+  const renderSubcPicker = async () => {
+    if (!pickSubc) return;
+
+    pickSubc.innerHTML = `<div class="muted" style="padding:6px 2px;">Snelle keuze laden…</div>`;
+
+    const suggestions = await fetchSubcSuggestionsForProject(
+      projectId,
+      sectiesByProject,
+      sectIdKey,
+      sectLookup
+    );
+
+    if (!suggestions.length) {
+      pickSubc.innerHTML = `<div class="muted" style="padding:6px 2px;">Geen eerdere onderaannemers in dit project.</div>`;
+      return;
+    }
+
+    // huidige selectie (trim + unique)
+    const curSet = new Set((selected.subcNames || []).map(x => String(x || "").trim()).filter(Boolean));
+
+    pickSubc.innerHTML = `
+      <div class="muted" style="margin-bottom:6px;">Snelle keuze (vink aan):</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        ${suggestions.map(nm => {
+          const checked = curSet.has(nm) ? "checked" : "";
+          return `
+            <label class="assign-item" style="display:flex; gap:10px; align-items:center;">
+              <input type="checkbox" class="subc-pick" data-name="${escapeAttr(nm)}" ${checked} />
+              <span>${escapeHtml(nm)}</span>
+            </label>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    // bind changes
+    pickSubc.querySelectorAll("input.subc-pick").forEach(chk => {
+      chk.onchange = () => {
+        const nm = String(chk.dataset.name || "").trim();
+        if (!nm) return;
+
+        if (!selected.subcNames) selected.subcNames = [];
+        const set = new Set(selected.subcNames.map(x => String(x || "").trim()).filter(Boolean));
+
+        if (chk.checked) set.add(nm);
+        else set.delete(nm);
+
+        selected.subcNames = [...set]; // unique
+        renderSubcList();
+      };
+    });
+  };
+
+  // init
+  renderSubcList();
+  renderSubcPicker(); // async
+}
 
       };
       
@@ -3654,7 +3755,7 @@ function bindHoverTips(){
     bindHoverTips(); 
     restoreOpenState();
 
-  }
+  } 
 
   // -------- RUN BUILDERS (bars via colspan) --------
   function buildBarRunsForSection(sectionId, workMap, dates){
