@@ -592,20 +592,16 @@ function asISODate(v){
               <div id="amListMont" class="assign-list"></div>
             </div>
 
-            <div class="hr"></div>
-              <div class="assign-col" style="margin-top:10px;">
-                <div class="assign-col-title">Inhuur (uit capaciteit)</div>
-                <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
-                <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
+          <div class="hr"></div>
+          <div class="assign-col" style="margin-top:10px;">
+            <div class="assign-col-title">Inhuur (uit capaciteit)</div>
 
-                <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
-                <div id="amInhuurMontPick" class="assign-list"></div>
-                <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
-                <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
+            <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
+            <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
 
-                <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
-                <div id="amInhuurMontPick" class="assign-list"></div>
-              </div>
+            <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
+            <div id="amInhuurMontPick" class="assign-list"></div>
+          </div>
 
             <div class="assign-col">
               <div class="assign-col-title" style="display:flex; align-items:center; justify-content:space-between;">
@@ -1068,7 +1064,7 @@ async function openInhuurModalAtWeek(wkStart){
     // 6b) project_assignments in range (projectniveau planning zoals "↳ Montage"-regel)
     const { data: pAssigns, error: paErr } = await sb
       .from("project_assignments")
-      .select("project_id, work_date, werknemer_id, work_type")
+      .select("project_id, work_date, werknemer_id, work_type, note")
       .gte("work_date", startISO)
       .lte("work_date", endISO)
       .limit(200000);
@@ -1417,7 +1413,8 @@ function parseSectionNo(v){
         productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
         dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
         dummySub: 0, subcNames: [],
-        inhuurIds: new Set()           // ✅ nieuw
+        inhuurProdIds: new Set(),
+        inhuurMontIds: new Set(),
         
       });
       const entry = dmA.get(d);
@@ -1425,13 +1422,28 @@ function parseSectionNo(v){
       const isDummy = (emp === String(DUMMY_SEC_ID)); // ✅ sectie dummy alleen
 
 
+const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
+
       if (wt === "productie") {
-        if (isDummy) entry.dummyProd += 1;
-        else entry.productie.add(emp);
+        if (isDummy && note.startsWith("inhuur:")) {
+          const iid = note.slice("inhuur:".length).trim();
+          if (iid) entry.inhuurProdIds.add(iid);     // ✅ inhuur, NIET concept
+        } else if (isDummy) {
+          entry.dummyProd += 1;                      // ✅ echte concept
+        } else {
+          entry.productie.add(emp);
+        }
       }
+
       if (wt === "montage") {
-        if (isDummy) entry.dummyMont += 1;
-        else entry.montage.add(emp);
+        if (isDummy && note.startsWith("inhuur:")) {
+          const iid = note.slice("inhuur:".length).trim();
+          if (iid) entry.inhuurMontIds.add(iid);     // ✅ inhuur, NIET concept
+        } else if (isDummy) {
+          entry.dummyMont += 1;                      // ✅ echte concept
+        } else {
+          entry.montage.add(emp);
+        }
       }
       if (wt === "cnc") {
         if (isDummy) entry.dummyCnc += 1;
@@ -1448,12 +1460,6 @@ function parseSectionNo(v){
           entry.subcNames.push(nm); // mag leeg zijn
         }
       }
-      if (wt === "inhuur") {
-      if (isDummy) {
-        const iid = String(a.note || "").trim(); // we slaan inhuur_id op in note
-        if (iid) entry.inhuurIds.add(iid);
-      }
-    }
 
     }
 
@@ -1507,24 +1513,41 @@ for (const a of (pAssigns || [])) {
   if (!projectAssignMap.has(pid)) projectAssignMap.set(pid, new Map());
   const dmP = projectAssignMap.get(pid);
 
-  if (!dmP.has(d)) dmP.set(d, {
-    productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
-    dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
-    dummySub: 0
-  });
+    if (!dmP.has(d)) dmP.set(d, {
+      productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
+      dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
+      dummySub: 0,
+      inhuurProdIds: new Set(),
+      inhuurMontIds: new Set()
+    });
+
   const entry = dmP.get(d);
 
   const isDummy = (emp === String(DUMMY_EMP_ID)); // ✅ project dummy alleen
 
+const note = String(a.note || "");
 
-  if (wt === "productie") {
-    if (isDummy) entry.dummyProd += 1;
-    else entry.productie.add(emp);
+if (wt === "productie") {
+  if (isDummy && note.startsWith("inhuur:")) {
+    const iid = note.slice("inhuur:".length).trim();
+    if (iid) entry.inhuurProdIds.add(iid);
+  } else if (isDummy) {
+    entry.dummyProd += 1;
+  } else {
+    entry.productie.add(emp);
   }
-  if (wt === "montage") {
-    if (isDummy) entry.dummyMont += 1;
-    else entry.montage.add(emp);
+}
+
+if (wt === "montage") {
+  if (isDummy && note.startsWith("inhuur:")) {
+    const iid = note.slice("inhuur:".length).trim();
+    if (iid) entry.inhuurMontIds.add(iid);
+  } else if (isDummy) {
+    entry.dummyMont += 1;
+  } else {
+    entry.montage.add(emp);
   }
+}
   if (wt === "cnc") {
   if (isDummy) entry.dummyCnc += 1;
   else entry.cnc.add(emp);
@@ -1863,8 +1886,8 @@ for (const dd of dates) {
     const entry = assignMap.get(sidC)?.get(iso);
 
     if (entry) {
-      prod += entry.productie.size + (entry.dummyProd || 0);
-      mont += entry.montage.size + (entry.dummyMont || 0);
+      prod += entry.productie.size + (entry.dummyProd || 0) + (entry.inhuurProdIds?.size || 0);
+      mont += entry.montage.size + (entry.dummyMont || 0) + (entry.inhuurMontIds?.size || 0);
 
       if ((entry.dummyProd || 0) > 0) dummyProd = true;
       if ((entry.dummyMont || 0) > 0) dummyMont = true;
@@ -1874,8 +1897,8 @@ for (const dd of dates) {
   // 2) project-niveau (project_assignments)  ✅ dit miste
   const pe = projectAssignMap.get(String(pid))?.get(iso);
   if (pe) {
-    prod += pe.productie.size + (pe.dummyProd || 0);
-    mont += pe.montage.size + (pe.dummyMont || 0);
+    prod += pe.productie.size + (pe.dummyProd || 0) + (pe.inhuurProdIds?.size || 0);
+    mont += pe.montage.size + (pe.dummyMont || 0) + (pe.inhuurMontIds?.size || 0);
 
     if ((pe.dummyProd || 0) > 0) dummyProd = true;
     if ((pe.dummyMont || 0) > 0) dummyMont = true;
@@ -3104,7 +3127,7 @@ if (ptd) {
     dummyMont: Number(cur.dummyMont || 0),
 
     subcNames: Array.isArray(cur.subcNames) ? [...cur.subcNames] : [],
-    inhuurIds: new Set(cur.inhuurIds ? Array.from(cur.inhuurIds) : [])
+
   };
 
   const subEl   = modal.wrap.querySelector("#amSub");
@@ -3667,16 +3690,6 @@ if (listSubc) {
           note: nm
         });
 
-        // ✅ Inhuur: per geselecteerde inhuur_id één regel opslaan
-        for (const iid of (selected.inhuurIds || [])) {
-          rows.push({
-            section_id: sid,
-            work_date: dateISO,
-            werknemer_id: Number(DUMMY_SEC_ID),
-            work_type: "inhuur",
-            note: String(iid)              // ✅ hierin staat inhuur_id
-          });
-        }
       }
 
 if (rows.length) {
@@ -5086,7 +5099,7 @@ async function moveSectionDay(sectionId, fromDate, toDate){
   // 1) haal bestaande regels op (zodat we ze 1-op-1 kunnen kopiëren)
   const { data: rows, error: selErr } = await sb
     .from("section_assignments")
-    .select("id, section_id, werknemer_id, work_type")
+    .select("id, section_id, werknemer_id, work_type, note")
     .eq("section_id", sid)
     .eq("work_date", f);
 
@@ -5121,12 +5134,13 @@ pushUndo({
   }
 
   // 3) insert nieuwe dag
-  const newRows = rows.map(r => ({
-    section_id: r.section_id,
-    work_date: t,
-    werknemer_id: r.werknemer_id,
-    work_type: r.work_type
-  }));
+const newRows = rows.map(r => ({
+  section_id: r.section_id,
+  work_date: t,
+  werknemer_id: r.werknemer_id,
+  work_type: r.work_type,
+  note: r.note || null
+}));
 
   const { error: insErr } = await sb
     .from("section_assignments")
