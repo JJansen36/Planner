@@ -2048,7 +2048,7 @@ for (const dd of dates) {
 
         }
 
-        appendSectionDayCells(secRow, dates, labels, sid, String(pid), assignByDay, assignMap, werknemers);
+        appendSectionDayCells(secRow, dates, labels, sid, String(pid), assignByDay, assignMap, werknemers, inhuurById);
 
 
 
@@ -4440,7 +4440,7 @@ function appendProjectDayCells(tr, dates, labels, markerISO = "", deliveryISO = 
 
 
 
-function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCountByDay, assignMap, werknemers) {
+function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCountByDay, assignMap, werknemers, inhuurById) {
   const empIdKey = "id";
   const empNameKey = pickKey(werknemers?.[0], ["naam","name","fullname","display_name"]);
   const empNameById = new Map((werknemers || []).map(w => [
