@@ -595,7 +595,16 @@ function asISODate(v){
             <div class="hr"></div>
               <div class="assign-col" style="margin-top:10px;">
                 <div class="assign-col-title">Inhuur (uit capaciteit)</div>
-                <div id="amInhuurPick" class="assign-list"></div>
+                <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
+                <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
+
+                <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
+                <div id="amInhuurMontPick" class="assign-list"></div>
+                <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
+                <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
+
+                <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
+                <div id="amInhuurMontPick" class="assign-list"></div>
               </div>
 
             <div class="assign-col">
@@ -2406,19 +2415,20 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
 
 
     function renderInhuurPickerTo(wrap, selected, dateISO, inhuurByEmp, inhuurById){
-      const pickInhuur = wrap.querySelector("#amInhuurPick");
-      if (!pickInhuur) return;
+    const src = (inhuurByEmp || new Map());
 
-      const src = (inhuurByEmp || new Map());
+    function renderOne(containerId, targetSet){
+      const el = wrap.querySelector(containerId);
+      if (!el) return;
+
       const rows = [];
-
       for (const [iid, dm] of src) {
         const id = String(iid);
         const hours = Number(dm?.get(dateISO) || 0);
         const name = inhuurById?.get(id)?.name || "Inhuur";
 
-        const checked = selected.inhuurIds?.has(id);
-        const shouldShow = checked || hours > 0;   // toon als beschikbaar of al geselecteerd
+        const checked = targetSet.has(id);          // ✅ check in productie/montage set
+        const shouldShow = checked || hours > 0;    // toon als beschikbaar of al gekozen
         if (!shouldShow) continue;
 
         rows.push(`
@@ -2432,19 +2442,25 @@ for (const [iid, dm] of (inhuurByEmp || new Map())) {
         `);
       }
 
-      pickInhuur.innerHTML = rows.length
+      el.innerHTML = rows.length
         ? rows.join("")
         : `<div class="muted" style="padding:6px 2px;">Geen inhuur-uren beschikbaar op deze dag.</div>`;
 
-      pickInhuur.querySelectorAll("input.inhuur-pick").forEach(chk => {
+      el.querySelectorAll("input.inhuur-pick").forEach(chk => {
         chk.onchange = () => {
           const iid = String(chk.dataset.iid || "").trim();
           if (!iid) return;
-          if (chk.checked) selected.inhuurIds.add(iid);
-          else selected.inhuurIds.delete(iid);
+
+          if (chk.checked) targetSet.add(iid);   // ✅ nu nooit undefined
+          else targetSet.delete(iid);
         };
       });
     }
+
+    // ✅ Inhuur -> Productie/Montage sets (bestaan al)
+    renderOne("#amInhuurProdPick", selected.productie);
+    renderOne("#amInhuurMontPick", selected.montage);
+  }
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
 
