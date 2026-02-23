@@ -3130,6 +3130,9 @@ if (ptd) {
 
   };
 
+  for (const iid of (cur.inhuurProdIds || [])) selected.productie.add(String(iid));
+  for (const iid of (cur.inhuurMontIds || [])) selected.montage.add(String(iid));
+
   const subEl   = modal.wrap.querySelector("#amSub");
   const listProd = modal.wrap.querySelector("#amListProd");
   const listMont = modal.wrap.querySelector("#amListMont");
@@ -3335,6 +3338,10 @@ const countM = rowM.querySelector(".concept-count");
         // ✅ onderaanneming: meerdere namen
         subcNames: Array.isArray(cur.subcNames) ? [...cur.subcNames] : []
       };
+
+      // ✅ Inhuur die in assignMap zit ook meenemen als selectie, zodat checkboxes aangevinkt zijn
+      for (const iid of (cur.inhuurProdIds || [])) selected.productie.add(String(iid));
+      for (const iid of (cur.inhuurMontIds || [])) selected.montage.add(String(iid));
 
       // ✅ snapshot: hoeveel montage stond er al op deze sectie (incl concept)
       const prevSectMontCount = (cur?.montage?.size || 0) + Number(cur?.dummyMont || 0);
@@ -4487,11 +4494,18 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     const dummyMont = (entry?.dummyMont || 0) > 0;
 
     if (entry) {
-      const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
-      const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
-      let tip = "";
-      if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
-      if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
+    const prodNames = Array.from(entry.productie || []).map(id => empNameById.get(String(id)) || String(id));
+    const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
+
+    const inhuurProdNames = Array.from(entry.inhuurProdIds || []).map(id => inhuurById?.get(String(id))?.name || String(id));
+    const inhuurMontNames = Array.from(entry.inhuurMontIds || []).map(id => inhuurById?.get(String(id))?.name || String(id));
+
+    let tip = "";
+    if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
+    if (inhuurProdNames.length) tip += (tip ? "\n\n" : "") + `Inhuur productie:\n- ${inhuurProdNames.join("\n- ")}`;
+
+    if (montNames.length) tip += (tip ? "\n\n" : "") + `Montage:\n- ${montNames.join("\n- ")}`;
+    if (inhuurMontNames.length) tip += (tip ? "\n\n" : "") + `Inhuur montage:\n- ${inhuurMontNames.join("\n- ")}`;
       if (tip) td.dataset.tip = tip;
       td.removeAttribute("title");
     }
