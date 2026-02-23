@@ -1409,6 +1409,7 @@ function parseSectionNo(v){
         dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
         dummySub: 0, subcNames: [],
         inhuurIds: new Set()           // ✅ nieuw
+        
       });
       const entry = dmA.get(d);
 
@@ -3230,11 +3231,18 @@ const countM = rowM.querySelector(".concept-count");
 
     for (const eid of selected.montage) {
       const werknemerId = Number(eid);
-      if (!Number.isFinite(werknemerId)) {
-        alert(`Onjuiste werknemer_id (geen getal): "${eid}".`);
-        return;
+
+      if (Number.isFinite(werknemerId)) {
+        rows.push({ project_id: projectId, work_date: dateISO, werknemer_id: werknemerId, work_type: "montage" });
+      } else {
+        rows.push({
+          project_id: projectId,
+          work_date: dateISO,
+          werknemer_id: Number(DUMMY_EMP_ID),
+          work_type: "montage",
+          note: "inhuur:" + String(eid)
+        });
       }
-      rows.push({ project_id: projectId, work_date: dateISO, werknemer_id: werknemerId, work_type: "montage" });
     }
 
     // concepten (dummy) meerdere keren opslaan
@@ -3583,24 +3591,40 @@ if (listSubc) {
 
       const rows = [];
 
+      // ✅ Productie: echte medewerker (nummer) of inhuur (tekst/uuid)
       for (const eid of selected.productie) {
         const werknemerId = Number(eid);
-        if (!Number.isFinite(werknemerId)) {
-          alert(`Onjuiste werknemer_id (geen getal): "${eid}". Check werknemers.id`);
-          console.log("Gekozen eid:", eid, "werknemers[0]:", werknemers?.[0]);
-          return;
+
+        if (Number.isFinite(werknemerId)) {
+          rows.push({ section_id: sid, work_date: dateISO, werknemer_id: werknemerId, work_type: "productie" });
+        } else {
+          // inhuur -> opslaan als dummy met herkenbare note
+          rows.push({
+            section_id: sid,
+            work_date: dateISO,
+            werknemer_id: Number(DUMMY_SEC_ID),
+            work_type: "productie",
+            note: "inhuur:" + String(eid)
+          });
         }
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: werknemerId, work_type: "productie" });
       }
 
+      // ✅ Montage: echte medewerker (nummer) of inhuur (tekst/uuid)
       for (const eid of selected.montage) {
         const werknemerId = Number(eid);
-        if (!Number.isFinite(werknemerId)) {
-          alert(`Onjuiste werknemer_id (geen getal): "${eid}". Check werknemers.id`);
-          console.log("Gekozen eid:", eid, "werknemers[0]:", werknemers?.[0]);
-          return;
+
+        if (Number.isFinite(werknemerId)) {
+          rows.push({ section_id: sid, work_date: dateISO, werknemer_id: werknemerId, work_type: "montage" });
+        } else {
+          // inhuur -> opslaan als dummy met herkenbare note
+          rows.push({
+            section_id: sid,
+            work_date: dateISO,
+            werknemer_id: Number(DUMMY_SEC_ID),
+            work_type: "montage",
+            note: "inhuur:" + String(eid)
+          });
         }
-        rows.push({ section_id: sid, work_date: dateISO, werknemer_id: werknemerId, work_type: "montage" });
       }
 
             // ✅ Concepten (dummy) als meerdere regels opslaan
