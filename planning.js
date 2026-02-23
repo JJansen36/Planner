@@ -1850,9 +1850,9 @@ for (const s of secsForProj) {
     const e = dmSec.get(iso);
     if (!e) continue;
 
-    const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0);
+    const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0) + (e.inhuurProdIds?.size || 0);
     const cncCnt  = (e.cnc?.size || 0)       + (e.dummyCnc  || 0);
-    const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0);
+    const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0) + (e.inhuurMontIds?.size || 0);
     const reisCnt = (e.reis?.size || 0)      + (e.dummyReis || 0);
 
     pl.prod += prodCnt * HOURS_PER_PERSON_DAY * pf;
@@ -2041,8 +2041,8 @@ for (const dd of dates) {
           const iso = toISODate(dd);
           const entry = dmA?.get(iso);
         assignByDay[iso] = {
-          prod: entry ? (entry.productie.size + (entry.dummyProd || 0)) : 0,
-          mont: entry ? (entry.montage.size + (entry.dummyMont || 0)) : 0,
+          prod: entry ? (entry.productie.size + (entry.dummyProd || 0) + (entry.inhuurProdIds?.size || 0)) : 0,
+          mont: entry ? (entry.montage.size + (entry.dummyMont || 0) + (entry.inhuurMontIds?.size || 0)) : 0,
           subc: entry ? Number(entry.subcNames?.length || 0) : 0,
         };
 
