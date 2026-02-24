@@ -2365,6 +2365,9 @@ for (const dd of dates) {
         const inProd = !!empAssignByDay[dayISO]?.prod?.has(empIdStr);
         const inMont = !!empAssignByDay[dayISO]?.mont?.has(empIdStr);
 
+        if (inProd && inMont) td.classList.add("cap-assigned-both");
+        else if (inProd) td.classList.add("cap-assigned-prod");
+        else if (inMont) td.classList.add("cap-assigned-mont");
 
         td.textContent = fmt0(h);
         tr.appendChild(td);
@@ -2415,6 +2418,10 @@ for (const dd of dates) {
         const iidStr = String(iid).trim();
         const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidStr);
         const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidStr);
+
+        if (inProd && inMont) td.classList.add("cap-assigned-both");
+        else if (inProd) td.classList.add("cap-assigned-prod");
+        else if (inMont) td.classList.add("cap-assigned-mont");
 
 
         // ✅ nodig om op cel te kunnen klikken
