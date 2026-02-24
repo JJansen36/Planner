@@ -1498,6 +1498,44 @@ function dbgSectionKeysForProject(pid){
       }
     }
 
+    // ======================
+    // ✅ busy per dag per project (zodat dezelfde medewerker wel op meerdere secties
+    // binnen hetzelfde project kan, maar NIET in een ander project)
+    // ======================
+    const busyByDayByProject = new Map(); // dateISO -> Map(projectId -> Set(empId))
+
+    for (const [sid, dm] of assignMap) {
+      const secObj = sectById.get(String(sid));
+      const pid = String(secObj?.[sectProjKey] || "").trim();
+      if (!pid) continue;
+
+      for (const [dateISO, entry] of dm) {
+        if (!busyByDayByProject.has(dateISO)) busyByDayByProject.set(dateISO, new Map());
+        const pm = busyByDayByProject.get(dateISO);
+
+        if (!pm.has(pid)) pm.set(pid, new Set());
+        const set = pm.get(pid);
+
+        for (const id of (entry.productie || [])) set.add(String(id));
+        for (const id of (entry.montage || [])) set.add(String(id));
+        for (const id of (entry.cnc || [])) set.add(String(id));
+        for (const id of (entry.reis || [])) set.add(String(id));
+      }
+    }
+
+    // helper: busy set maar dan alleen "andere projecten"
+    function getBusyOtherProjects(dateISO, projectId){
+      const all = busyByDay.get(dateISO) || new Set();
+      const pm = busyByDayByProject.get(dateISO);
+      const same = pm?.get(String(projectId)) || new Set();
+
+      const out = new Set();
+      for (const id of all) {
+        if (!same.has(id)) out.add(id);
+      }
+      return out;
+    }
+
 
     // ======================
 // projectAssignMap: project_id -> dateISO -> { productie:Set, montage:Set, dummyProd:number, dummyMont:number }
@@ -3401,7 +3439,9 @@ const countM = rowM.querySelector(".concept-count");
         listMont.innerHTML = "";
         if (listSubc) listSubc.innerHTML = "";
 
-        const busySet = busyByDay.get(dateISO) || new Set();
+        // ✅ Alleen "busy" in ANDERE projecten blokkeert.
+        // Binnen hetzelfde project mag dezelfde medewerker op meerdere secties.
+        const busySet = getBusyOtherProjects(dateISO, projectId);
 
         const keepVisible = new Set([
           ...Array.from(selected.productie),
