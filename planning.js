@@ -1064,7 +1064,7 @@ async function openInhuurModalAtWeek(wkStart){
     // 6b) project_assignments in range (projectniveau planning zoals "↳ Montage"-regel)
     const { data: pAssigns, error: paErr } = await sb
       .from("project_assignments")
-      .select("project_id, work_date, werknemer_id, work_type, note")
+      .select("project_id, work_date, werknemer_id, work_type")
       .gte("work_date", startISO)
       .lte("work_date", endISO)
       .limit(200000);
@@ -2365,9 +2365,6 @@ for (const dd of dates) {
         const inProd = !!empAssignByDay[dayISO]?.prod?.has(empIdStr);
         const inMont = !!empAssignByDay[dayISO]?.mont?.has(empIdStr);
 
-        if (inProd && inMont) td.classList.add("cap-assigned-both");
-        else if (inProd) td.classList.add("cap-assigned-prod");
-        else if (inMont) td.classList.add("cap-assigned-mont");
 
         td.textContent = fmt0(h);
         tr.appendChild(td);
