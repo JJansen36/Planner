@@ -2416,9 +2416,6 @@ for (const dd of dates) {
         const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidStr);
         const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidStr);
 
-        if (inProd && inMont) td.classList.add("cap-assigned-both");
-        else if (inProd) td.classList.add("cap-assigned-prod");
-        else if (inMont) td.classList.add("cap-assigned-mont");
 
         // ✅ nodig om op cel te kunnen klikken
         td.dataset.inhuurId = String(iid);
