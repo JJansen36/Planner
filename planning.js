@@ -1246,7 +1246,7 @@ function parseSectionNo(v){
     const DEBUG_OFFNR = "2600013";   // <-- zet hier jouw projectnr uit de screenshot
     const DEBUG_ISO   = null;        // bv "2026-02-12" of null = alle dagen in range
 
-    let INHUUR_BY_ID = new Map();
+
 
     const dates = [];
     for(let i=0;i<days;i++) dates.push(addDays(start, i));
@@ -1619,7 +1619,7 @@ if (wt === "montage") {
       inhuurById.set(String(p.inhuur_id), { name: String(p.name || "").trim() || "Inhuur" });
     }
 
-    INHUUR_BY_ID = inhuurById;
+
 
     const inhuurByEmp = new Map(); // inhuur_id -> Map(dateISO -> hours)
     const inhuurTotalByDay = {};   // dateISO -> hours
@@ -2435,10 +2435,7 @@ for (const dd of dates) {
       tbody.appendChild(trI);
     }
 
-    // ✅ kleur zoals vaste werknemers (productie / montage)
-    const iidStr = String(iid);
-    const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidStr);
-    const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidStr);
+
 
     if (inProd && inMont) td.classList.add("cap-assigned-both");
     else if (inProd) td.classList.add("cap-assigned-prod");
@@ -4545,10 +4542,10 @@ function appendSectionDayCells(tr, dates, labels, sectionId, projectId, assignCo
     const montNames = Array.from(entry.montage || []).map(id => empNameById.get(String(id)) || String(id));
 
     const inhuurProdNames = Array.from(entry.inhuurProdIds || [])
-      .map(id => INHUUR_BY_ID?.get(String(id))?.name || String(id));
+      .map(id => inhuurById?.get(String(id))?.name || String(id));
 
     const inhuurMontNames = Array.from(entry.inhuurMontIds || [])
-      .map(id => INHUUR_BY_ID?.get(String(id))?.name || String(id));
+      .map(id => inhuurById?.get(String(id))?.name || String(id));
 
     let tip = "";
     if (prodNames.length) tip += `Productie:\n- ${prodNames.join("\n- ")}`;
