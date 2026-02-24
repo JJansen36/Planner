@@ -1935,50 +1935,35 @@ for (const s of secsForProj) {
 const pf = (settings.planFactor ?? 1);
 const pl = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-for (const s of secsForProj) {
-  const sidRaw = s?.[sectIdKey]
-    ? String(s[sectIdKey])
-    : (s?.section_id ? String(s.section_id) : null);
-  if (!sidRaw) continue;
+// ✅ split per medewerker over secties binnen hetzelfde project op dezelfde dag
+const pidS = String(pid || "").trim();
 
-  const sidC = sectLookup.get(String(sidRaw)) || String(sidRaw);
-  const dmSec = assignMap.get(sidC);
-  if (!dmSec) continue;
+// productie
+for (const emp of (e.productie || [])) {
+  const div = getSplit(pidS, iso, "productie", String(emp));
+  pl.prod += (HOURS_PER_PERSON_DAY * pf) / div;
+}
+// cnc
+for (const emp of (e.cnc || [])) {
+  const div = getSplit(pidS, iso, "cnc", String(emp));
+  pl.cnc += (HOURS_PER_PERSON_DAY * pf) / div;
+}
+// montage
+for (const emp of (e.montage || [])) {
+  const div = getSplit(pidS, iso, "montage", String(emp));
+  pl.mont += (HOURS_PER_PERSON_DAY * pf) / div;
+}
+// reis
+for (const emp of (e.reis || [])) {
+  const div = getSplit(pidS, iso, "reis", String(emp));
+  pl.reis += (HOURS_PER_PERSON_DAY * pf) / div;
+}
 
-  for (const dd of dates) {
-    const iso = toISODate(dd);
-    const e = dmSec.get(iso);
-    if (!e) continue;
-
-  // ✅ split per medewerker over secties binnen hetzelfde project op dezelfde dag
-  const pidS = String(projectId || "").trim();
-
-  // productie
-  for (const emp of (e.productie || [])) {
-    const div = getSplit(pidS, iso, "productie", String(emp));
-    plS.prod += (HOURS_PER_PERSON_DAY * pfS) / div;
-  }
-  // cnc
-  for (const emp of (e.cnc || [])) {
-    const div = getSplit(pidS, iso, "cnc", String(emp));
-    plS.cnc += (HOURS_PER_PERSON_DAY * pfS) / div;
-  }
-  // montage  ✅ dit is jouw probleem
-  for (const emp of (e.montage || [])) {
-    const div = getSplit(pidS, iso, "montage", String(emp));
-    plS.mont += (HOURS_PER_PERSON_DAY * pfS) / div;
-  }
-  // reis
-  for (const emp of (e.reis || [])) {
-    const div = getSplit(pidS, iso, "reis", String(emp));
-    plS.reis += (HOURS_PER_PERSON_DAY * pfS) / div;
-  }
-
-  // concept (dummy) laten we zoals het was: telt per sectie
-  plS.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfS;
-  plS.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfS;
-  plS.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfS;
-  plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
+// concept (dummy) telt zoals het was (per sectie)
+pl.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pf;
+pl.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pf;
+pl.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pf;
+pl.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pf;
   }
 }
 
@@ -2135,15 +2120,31 @@ for (const dd of dates) {
           const e = dmSec.get(iso);
           if (!e) continue;
 
-          const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0);
-          const cncCnt  = (e.cnc?.size || 0)       + (e.dummyCnc  || 0);
-          const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0);
-          const reisCnt = (e.reis?.size || 0)      + (e.dummyReis || 0);
+// ✅ split per medewerker (alleen echte medewerkers)
+const pidS = String(pid || "").trim();
 
-          plS.prod += prodCnt * HOURS_PER_PERSON_DAY * pfS;
-          plS.cnc  += cncCnt  * HOURS_PER_PERSON_DAY * pfS;
-          plS.mont += montCnt * HOURS_PER_PERSON_DAY * pfS;
-          plS.reis += reisCnt * HOURS_PER_PERSON_DAY * pfS;
+for (const emp of (e.productie || [])) {
+  const div = getSplit(pidS, iso, "productie", String(emp));
+  plS.prod += (HOURS_PER_PERSON_DAY * pfS) / div;
+}
+for (const emp of (e.cnc || [])) {
+  const div = getSplit(pidS, iso, "cnc", String(emp));
+  plS.cnc += (HOURS_PER_PERSON_DAY * pfS) / div;
+}
+for (const emp of (e.montage || [])) {
+  const div = getSplit(pidS, iso, "montage", String(emp));
+  plS.mont += (HOURS_PER_PERSON_DAY * pfS) / div;
+}
+for (const emp of (e.reis || [])) {
+  const div = getSplit(pidS, iso, "reis", String(emp));
+  plS.reis += (HOURS_PER_PERSON_DAY * pfS) / div;
+}
+
+// concept (dummy) zoals het was
+plS.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfS;
+plS.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfS;
+plS.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfS;
+plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
         }
       }
 
@@ -2363,7 +2364,7 @@ for (const dd of dates) {
       if (projLeft) projLeft.classList.add("project-topline-cell");
 
 
-    }
+    
 
     // CAPACITY BLOCK
   tbody.appendChild(spacerRow(dates.length));
@@ -4069,7 +4070,7 @@ function bindHoverTips(){
     bindHoverTips(); 
     restoreOpenState();
 
-  } 
+  
 
   // -------- RUN BUILDERS (bars via colspan) --------
   function buildBarRunsForSection(sectionId, workMap, dates){
