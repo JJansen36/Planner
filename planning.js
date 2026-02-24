@@ -2431,10 +2431,6 @@ for (const dd of dates) {
 
 
 
-    if (inProd && inMont) td.classList.add("cap-assigned-both");
-    else if (inProd) td.classList.add("cap-assigned-prod");
-    else if (inMont) td.classList.add("cap-assigned-mont");
-
     // Gepland productie
     tbody.appendChild(labelRow("Gepland productie", dates, plannedProdByDay, "planned-prod"));
 
