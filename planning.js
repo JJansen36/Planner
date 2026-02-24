@@ -1464,6 +1464,37 @@ const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
 
     }
 
+    // ======================
+    // ✅ Split-counts: per project + dag + type + medewerker
+    // (hoeveel secties binnen dit project heeft deze medewerker die dag)
+    // ======================
+    const splitCount = new Map(); // key -> count
+
+    function _k(pid, dateISO, wt, empId){
+      return `${pid}||${dateISO}||${wt}||${empId}`;
+    }
+    function incSplit(pid, dateISO, wt, empId){
+      const key = _k(pid, dateISO, wt, empId);
+      splitCount.set(key, (splitCount.get(key) || 0) + 1);
+    }
+    function getSplit(pid, dateISO, wt, empId){
+      return splitCount.get(_k(pid, dateISO, wt, empId)) || 1;
+    }
+
+    // vul splitCount vanuit assignMap (alleen echte medewerkers; concept/inhuur laten we buiten splitten)
+    for (const [sid, dm] of assignMap) {
+      const sObj = sectById.get(String(sid));
+      const pid = String(sObj?.[sectProjKey] || "").trim();
+      if (!pid) continue;
+
+      for (const [dateISO, entry] of dm) {
+        for (const emp of (entry.productie || [])) incSplit(pid, dateISO, "productie", String(emp));
+        for (const emp of (entry.montage   || [])) incSplit(pid, dateISO, "montage",   String(emp));
+        for (const emp of (entry.cnc       || [])) incSplit(pid, dateISO, "cnc",       String(emp));
+        for (const emp of (entry.reis      || [])) incSplit(pid, dateISO, "reis",      String(emp));
+      }
+    }
+
 function dbgSectionKeysForProject(pid){
   const secs = sectiesByProject.get(pid) || [];
 
@@ -1919,15 +1950,35 @@ for (const s of secsForProj) {
     const e = dmSec.get(iso);
     if (!e) continue;
 
-    const prodCnt = (e.productie?.size || 0) + (e.dummyProd || 0) + (e.inhuurProdIds?.size || 0);
-    const cncCnt  = (e.cnc?.size || 0)       + (e.dummyCnc  || 0);
-    const montCnt = (e.montage?.size || 0)   + (e.dummyMont || 0) + (e.inhuurMontIds?.size || 0);
-    const reisCnt = (e.reis?.size || 0)      + (e.dummyReis || 0);
+  // ✅ split per medewerker over secties binnen hetzelfde project op dezelfde dag
+  const pidS = String(projectId || "").trim();
 
-    pl.prod += prodCnt * HOURS_PER_PERSON_DAY * pf;
-    pl.cnc  += cncCnt  * HOURS_PER_PERSON_DAY * pf;
-    pl.mont += montCnt * HOURS_PER_PERSON_DAY * pf;
-    pl.reis += reisCnt * HOURS_PER_PERSON_DAY * pf;
+  // productie
+  for (const emp of (e.productie || [])) {
+    const div = getSplit(pidS, iso, "productie", String(emp));
+    plS.prod += (HOURS_PER_PERSON_DAY * pfS) / div;
+  }
+  // cnc
+  for (const emp of (e.cnc || [])) {
+    const div = getSplit(pidS, iso, "cnc", String(emp));
+    plS.cnc += (HOURS_PER_PERSON_DAY * pfS) / div;
+  }
+  // montage  ✅ dit is jouw probleem
+  for (const emp of (e.montage || [])) {
+    const div = getSplit(pidS, iso, "montage", String(emp));
+    plS.mont += (HOURS_PER_PERSON_DAY * pfS) / div;
+  }
+  // reis
+  for (const emp of (e.reis || [])) {
+    const div = getSplit(pidS, iso, "reis", String(emp));
+    plS.reis += (HOURS_PER_PERSON_DAY * pfS) / div;
+  }
+
+  // concept (dummy) laten we zoals het was: telt per sectie
+  plS.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfS;
+  plS.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfS;
+  plS.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfS;
+  plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
   }
 }
 
