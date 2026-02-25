@@ -818,43 +818,19 @@ async function openInhuurModalAtWeek(wkStart){
     if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
 
     const iid = String(selEl.value || "");
-formEl.innerHTML = `
-  <div class="fieldgrid cap-weekgrid">
-    ${days.map(d => {
-      const iso = toISODate(d);
-      const val = Number(empMap.get(iso) || 0);
-
-      const planned = getPlannedForEmpDate(String(empId).trim(), iso);
-      const plannedHtml = planned.length
-        ? planned.map(p => `
-            <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
-              ${String(p.text).replace(/\n/g, "<br>")}
+    formEl.innerHTML = `
+      <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
+        ${days.map(d=>{
+          const iso = toISODate(d);
+          return `
+            <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+            <div class="value">
+              <input class="input" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
             </div>
-          `).join("")
-        : `<div class="cap-planempty">—</div>`;
-
-      return `
-        <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
-
-        <div class="value cap-hourswrap">
-          <input
-            class="input cap-hours"
-            type="text"
-            inputmode="decimal"
-            pattern="[0-9]*[.,]?[0-9]*"
-            data-iso="${iso}"
-            value="${val ? String(val).replace(".", ",") : ""}"
-            placeholder="0"
-          />
-        </div>
-
-        <div class="value cap-planwrap">
-          ${plannedHtml}
-        </div>
-      `;
-    }).join("")}
-  </div>
-`;
+          `;
+        }).join("")}
+      </div>
+    `;
     // load bestaande waarden
     if (iid) {
       const { data, error } = await sb
@@ -2916,15 +2892,26 @@ function getPlannedForEmpDate(empIdStr, dateISO) {
     const empMap = capByEmp.get(String(empId)) || new Map();
 
     formEl.innerHTML = `
-      <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
-        ${days.map(d=>{
+      <div class="fieldgrid cap-weekgrid">
+        ${days.map(d => {
           const iso = toISODate(d);
           const val = Number(empMap.get(iso) || 0);
+
+          const planned = getPlannedForEmpDate(String(empId).trim(), iso);
+          const plannedHtml = planned.length
+            ? planned.map(p => `
+                <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
+                  ${String(p.text).replace(/\n/g, "<br>")}
+                </div>
+              `).join("")
+            : `<div class="cap-planempty">—</div>`;
+
           return `
             <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
-            <div class="value" style="gap:10px;">
+
+            <div class="value cap-hourswrap">
               <input
-                class="input"
+                class="input cap-hours"
                 type="text"
                 inputmode="decimal"
                 pattern="[0-9]*[.,]?[0-9]*"
@@ -2932,6 +2919,10 @@ function getPlannedForEmpDate(empIdStr, dateISO) {
                 value="${val ? String(val).replace(".", ",") : ""}"
                 placeholder="0"
               />
+            </div>
+
+            <div class="value cap-planwrap">
+              ${plannedHtml}
             </div>
           `;
         }).join("")}
@@ -3108,28 +3099,43 @@ function getPlannedForEmpDate(empIdStr, dateISO) {
         // bestaande waarden ophalen uit capByEmp map
         const empMap = capByEmp.get(String(empId).trim()) || new Map();
 
-        formEl.innerHTML = `
-          <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
-            ${days.map(d=>{
-              const iso = toISODate(d);
-              const val = Number(empMap.get(iso) || 0);
-              return `
-                <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
-                <div class="value" style="gap:10px;">
-                  <input
-                    class="input"
-                    type="text"
-                    inputmode="decimal"
-                    pattern="[0-9]*[.,]?[0-9]*"
-                    data-iso="${iso}"
-                    value="${val ? String(val).replace(".", ",") : ""}"
-                    placeholder="0"
-                  />
-                </div>
-              `;
-            }).join("")}
-          </div>
-        `;
+      formEl.innerHTML = `
+        <div class="fieldgrid cap-weekgrid">
+          ${days.map(d => {
+            const iso = toISODate(d);
+            const val = Number(empMap.get(iso) || 0);
+
+            const planned = getPlannedForEmpDate(String(empId).trim(), iso);
+            const plannedHtml = planned.length
+              ? planned.map(p => `
+                  <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
+                    ${String(p.text).replace(/\n/g, "<br>")}
+                  </div>
+                `).join("")
+              : `<div class="cap-planempty">—</div>`;
+
+            return `
+              <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+
+              <div class="value cap-hourswrap">
+                <input
+                  class="input cap-hours"
+                  type="text"
+                  inputmode="decimal"
+                  pattern="[0-9]*[.,]?[0-9]*"
+                  data-iso="${iso}"
+                  value="${val ? String(val).replace(".", ",") : ""}"
+                  placeholder="0"
+                />
+              </div>
+
+              <div class="value cap-planwrap">
+                ${plannedHtml}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
 
         formEl.querySelectorAll('input.input[data-iso]').forEach(inp => {
     // Tijdens typen: NIET formatteren, alleen ongeldige tekens blokkeren
