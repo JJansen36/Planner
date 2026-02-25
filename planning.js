@@ -906,34 +906,34 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
   });
 }
 
-formEl.innerHTML = `
-  <div class="fieldgrid cap-weekgrid">
-    ${days.map(d=>{
-      const iso = toISODate(d);
+    formEl.innerHTML = `
+      <div class="cap-weeklist">
+        ${days.map(d => {
+          const iso = toISODate(d);
 
-      const planned = iid ? getPlannedForInhuurDate(iid, iso) : [];
-      const plannedHtml = planned.length
-        ? planned.map(p => `
-            <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
-              ${escapeHtml(String(p.text)).replace(/\n/g, "<br>")}
+          const planned = iid ? getPlannedForInhuurDate(iid, iso) : [];
+          const plannedHtml = planned.length
+            ? planned.map(p => `
+                <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
+                  ${escapeHtml(String(p.text)).replace(/\n/g, "<br>")}
+                </div>
+              `).join("")
+            : `<div class="cap-planempty">—</div>`;
+
+          return `
+            <div class="cap-dayrow">
+              <div class="cap-left">
+                <div class="cap-daylabel">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+                <input class="input cap-hours" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
+              </div>
+              <div class="cap-right">
+                ${plannedHtml}
+              </div>
             </div>
-          `).join("")
-        : `<div class="cap-planempty">—</div>`;
-
-      return `
-        <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
-
-        <div class="value cap-hourswrap">
-          <input class="input cap-hours" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
-        </div>
-
-        <div class="value cap-planwrap">
-          ${plannedHtml}
-        </div>
-      `;
-    }).join("")}
-  </div>
-`;
+          `;
+        }).join("")}
+      </div>
+    `;
     // load bestaande waarden
     if (iid) {
       const { data, error } = await sb
