@@ -4213,20 +4213,33 @@ loadAndRender();
   // MAAR: haal hieruit elke restoreOpenState() weg.
 }
 
+    // --- project meta voor labels (offerno + projectnaam)
+    const projMetaById = new Map();
+    for (const p of (projecten || [])) {
+      const pid = String(p?.[projIdKey] ?? "").trim();
+      if (!pid) continue;
+      projMetaById.set(pid, {
+        nr: String(p?.[projNrKey] ?? "").trim(),
+        nm: String(p?.[projNameKey] ?? "").trim(),
+      });
+    }
 
-    // ✅ context beschikbaar maken voor modals buiten renderPlanner (zoals inhuur modal)
+    // ✅ maak context globaal beschikbaar voor modals
     window.__plannerCtx = {
-      projById,
+      projMetaById,
       sectById,
-      projIdKey,
-      projNrKey,
-      projNameKey,
+
+      // keys
       sectProjKey,
       sectNameKey,
       sectParaKey,
+
+      // planning maps
       assignMap,
-      projectAssignMap
+      projectAssignMap,
     };
+
+    
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
