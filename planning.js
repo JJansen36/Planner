@@ -620,7 +620,6 @@ function asISODate(v){
               <div class="hr"></div>
 
               <div class="assign-col">
-                <div class="assign-col-title">Inhuur (uit capaciteit)</div>
                 <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
                 <div id="amInhuurProdPick" class="assign-list"></div>
               </div>
