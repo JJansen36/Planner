@@ -1570,6 +1570,63 @@ td.hourscol{
   min-height: 120px;
 }
 
+
+/* CAPACITY MODAL – week layout (2 kolommen per dag) */
+.cap-weeklist{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.cap-dayrow{
+  display:grid;
+  grid-template-columns: 120px 1fr;
+  gap:12px;
+  align-items:start;
+}
+
+.cap-left{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.cap-daylabel{
+  color: var(--muted);
+  font-size: 14px;
+  padding-top: 4px;
+}
+
+.cap-hours{
+  width: 100%;
+  text-align: center;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.cap-right{
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  min-height: 56px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.cap-planempty{
+  color: var(--muted);
+  text-align:center;
+  padding: 10px 0;
+}
+
+.cap-planchip{
+  border-radius: 14px;
+  padding: 10px 12px;
+  line-height: 1.2;
+}
+
 @media (max-width: 720px){
   .assign-grid-2{ grid-template-columns: 1fr; }
 }
