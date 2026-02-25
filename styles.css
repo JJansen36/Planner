@@ -1465,7 +1465,7 @@ td.hourscol{
 }
 
 /* =========================
-   CAPACITY MODAL – week layout (2 kolommen per dag)
+   CAPACITY MODAL – week layout (zoals afbeelding 2)
 ========================= */
 .cap-weeklist{
   display:flex;
@@ -1510,14 +1510,12 @@ td.hourscol{
   gap:10px;
 }
 
-/* lege toestand */
 .cap-planempty{
   color: var(--muted);
   text-align:center;
   padding: 10px 0;
 }
 
-/* chips blijven zoals je al had, maar dit helpt met ruimte */
 .cap-planchip{
   border-radius: 14px;
   padding: 10px 12px;
