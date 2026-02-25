@@ -1928,58 +1928,7 @@ for (const s of secsForProj) {
   req.mont += Number(s?.uren_montage ?? s?.uren_mont ?? 0);
   req.reis += Number(s?.uren_reis ?? 0);
 }
-// ===== planned uren voor projectregel =====
-// split dezelfde medewerker over meerdere secties binnen hetzelfde project op dezelfde dag
-const pf = (settings.planFactor ?? 1);
-const pl = { prod: 0, cnc: 0, mont: 0, reis: 0 };
 
-const pidS = String(pid || "").trim();           // ✅ projectId bestaat hier niet → gebruik pid
-
-for (const s of secsForProj) {
-  const sidRaw = s?.[sectIdKey]
-    ? String(s[sectIdKey])
-    : (s?.section_id ? String(s.section_id) : null);
-  if (!sidRaw) continue;
-
-  const sidC = sectLookup.get(String(sidRaw)) || String(sidRaw);
-  const dmSec = assignMap.get(sidC);
-  if (!dmSec) continue;
-
-  for (const dd of dates) {
-    const iso = toISODate(dd);
-    const e = dmSec.get(iso);
-    if (!e) continue;
-
-    // productie
-    for (const emp of (e.productie || [])) {
-      const div = getSplit(pidS, iso, "productie", String(emp));
-      pl.prod += (HOURS_PER_PERSON_DAY * pf) / div;
-    }
-    // cnc
-    for (const emp of (e.cnc || [])) {
-      const div = getSplit(pidS, iso, "cnc", String(emp));
-      pl.cnc += (HOURS_PER_PERSON_DAY * pf) / div;
-    }
-    // montage
-    for (const emp of (e.montage || [])) {
-      const div = getSplit(pidS, iso, "montage", String(emp));
-      pl.mont += (HOURS_PER_PERSON_DAY * pf) / div;
-    }
-    // reis
-    for (const emp of (e.reis || [])) {
-      const div = getSplit(pidS, iso, "reis", String(emp));
-      pl.reis += (HOURS_PER_PERSON_DAY * pf) / div;
-    }
-
-    // concept (dummy) telt zoals het was (per sectie)
-    pl.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pf;
-    pl.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pf;
-    pl.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pf;
-    pl.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pf;
-  }
-}
-
-hoursTd.innerHTML = miniHoursHtml(req, pl);
  
   // tel ingeplande mensen per dag op over alle secties van dit project
   const projAssignByDay = {};
@@ -2375,7 +2324,8 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
       if (projLeft) projLeft.classList.add("project-topline-cell");
 
 
-    
+      } // ✅ sluit: for(const p of projecten || []){ ... }
+          
 
     // CAPACITY BLOCK
   tbody.appendChild(spacerRow(dates.length));
@@ -5484,4 +5434,5 @@ function getContiguousRunFromCell(td){
   }
 
   return { startISO, endISO };
+}
 }
