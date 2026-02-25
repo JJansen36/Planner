@@ -4213,16 +4213,7 @@ loadAndRender();
   // MAAR: haal hieruit elke restoreOpenState() weg.
 }
 
-    // --- project meta voor labels (offerno + projectnaam)
-    const projMetaById = new Map();
-    for (const p of (projecten || [])) {
-      const pid = String(p?.[projIdKey] ?? "").trim();
-      if (!pid) continue;
-      projMetaById.set(pid, {
-        nr: String(p?.[projNrKey] ?? "").trim(),
-        nm: String(p?.[projNameKey] ?? "").trim(),
-      });
-    }
+
 
     // ✅ maak context globaal beschikbaar voor modals
     window.__plannerCtx = {
@@ -4239,7 +4230,7 @@ loadAndRender();
       projectAssignMap,
     };
 
-    
+
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
