@@ -1551,3 +1551,25 @@ td.hourscol{
   .right-empty{ display:none; }
   .hr.span-2{ grid-column:auto; }
 }
+
+.assign-grid-2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 22px;
+  align-items:start;
+}
+
+.assign-stack{
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+}
+
+/* optioneel */
+.right-empty{
+  min-height: 120px;
+}
+
+@media (max-width: 720px){
+  .assign-grid-2{ grid-template-columns: 1fr; }
+}
