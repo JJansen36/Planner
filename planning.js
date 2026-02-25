@@ -790,20 +790,43 @@ async function openInhuurModalAtWeek(wkStart){
     if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
 
     const iid = String(selEl.value || "");
-    formEl.innerHTML = `
-      <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
-        ${days.map(d=>{
-          const iso = toISODate(d);
-          return `
-            <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
-            <div class="value">
-              <input class="input" type="text" inputmode="decimal" data-iso="${iso}" value="" placeholder="0" />
-            </div>
-          `;
-        }).join("")}
-      </div>
-    `;
+formEl.innerHTML = `
+  <div class="fieldgrid cap-weekgrid">
+    ${days.map(d => {
+      const iso = toISODate(d);
+      const val = Number(empMap.get(iso) || 0);
 
+      const planned = getPlannedForEmpDate(String(empId).trim(), iso);
+      const plannedHtml = planned.length
+        ? planned.map(p => `
+            <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
+              ${String(p.text).replace(/\n/g, "<br>")}
+            </div>
+          `).join("")
+        : `<div class="cap-planempty">—</div>`;
+
+      return `
+        <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+
+        <div class="value cap-hourswrap">
+          <input
+            class="input cap-hours"
+            type="text"
+            inputmode="decimal"
+            pattern="[0-9]*[.,]?[0-9]*"
+            data-iso="${iso}"
+            value="${val ? String(val).replace(".", ",") : ""}"
+            placeholder="0"
+          />
+        </div>
+
+        <div class="value cap-planwrap">
+          ${plannedHtml}
+        </div>
+      `;
+    }).join("")}
+  </div>
+`;
     // load bestaande waarden
     if (iid) {
       const { data, error } = await sb
@@ -2787,6 +2810,72 @@ if (capCell) {
     for (let i=0;i<7;i++) days.push(addDays(wkStart, i));
     return days;
   };
+
+// --- helper: nette label voor chip ---
+function buildPlanLabel({ pid, sid, type }) {
+  const pObj = projById.get(String(pid || "")) || {};
+  const nr = String(pObj?.[projNrKey] ?? "").trim();
+  const nm = String(pObj?.[projNameKey] ?? "").trim();
+
+  let sectTxt = "";
+  if (sid) {
+    const sObj = sectById.get(String(sid)) || {};
+    const sName = String(sObj?.[sectNameKey] || sObj?.name || "").trim();
+    const sNr   = String(sObj?.[sectNrKey]   || sObj?.sectienr || "").trim();
+    sectTxt = [sNr, sName].filter(Boolean).join(" ");
+  }
+
+  // kort & duidelijk (pas dit gerust aan)
+  const top = [nr, nm].filter(Boolean).join(" - ");
+  const out = [top, sectTxt].filter(Boolean).join("\n");
+  return out || (type === "montage" ? "Montage" : "Productie");
+}
+
+// --- helper: geplande items voor medewerker op datum ---
+function getPlannedForEmpDate(empIdStr, dateISO) {
+  const out = []; // { type:'productie'|'montage', text:string }
+
+  // 1) sectie assignments (assignMap: sid -> dateISO -> entry)
+  for (const [sid, dm] of (assignMap || new Map())) {
+    const entry = dm?.get(dateISO);
+    if (!entry) continue;
+
+    if ((entry.productie || []).some(x => String(x).trim() === empIdStr)) {
+      const sObj = sectById.get(String(sid));
+      const pid = String(sObj?.[sectProjKey] || "").trim();
+      if (pid) out.push({ type: "productie", text: buildPlanLabel({ pid, sid, type: "productie" }) });
+    }
+
+    if ((entry.montage || []).some(x => String(x).trim() === empIdStr)) {
+      const sObj = sectById.get(String(sid));
+      const pid = String(sObj?.[sectProjKey] || "").trim();
+      if (pid) out.push({ type: "montage", text: buildPlanLabel({ pid, sid, type: "montage" }) });
+    }
+  }
+
+  // 2) project assignments (projectAssignMap: pid -> dateISO -> entry)
+  for (const [pid, dm] of (projectAssignMap || new Map())) {
+    const entry = dm?.get(dateISO);
+    if (!entry) continue;
+
+    if (entry.productie?.has(empIdStr)) {
+      out.push({ type: "productie", text: buildPlanLabel({ pid, sid: null, type: "productie" }) });
+    }
+    if (entry.montage?.has(empIdStr)) {
+      out.push({ type: "montage", text: buildPlanLabel({ pid, sid: null, type: "montage" }) });
+    }
+  }
+
+  // kleine dedupe (zelfde tekst/type)
+  const seen = new Set();
+  return out.filter(it => {
+    const k = `${it.type}||${it.text}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 
   const renderWeek = () => {
     const days = buildWeekDays();
