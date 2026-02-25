@@ -1372,55 +1372,41 @@ td.hourscol{
 
 
 
-/* capaciteit modal: week invoer met 'gepland' kolom */
+/* Nieuwe indeling modal (zoals afbeelding 2) */
 .cap-weekgrid{
   display:grid;
-  grid-template-columns: 120px 84px 1fr; /* label | uren | gepland */
-  gap: 10px 12px;
+  grid-template-columns: 150px 1fr;   /* links smal, rechts breed */
+  gap: 10px 14px;
   align-items:start;
 }
 
-.cap-hourswrap{ display:flex; align-items:center; }
-.cap-hours{
-  width: 72px;           /* kleiner veld */
-  text-align: center;
-  padding: 8px 10px;
-}
-
-.cap-planwrap{
+.cap-daycol{
   display:flex;
   flex-direction:column;
-  gap: 8px;
-  min-height: 36px;
+  gap:8px;
 }
 
-.cap-planchip{
-  border-radius: 14px;
-  padding: 8px 10px;
-  font-size: 12px;
-  line-height: 1.25;
-  white-space: normal;
-}
-
-.cap-planchip.prod{ background: var(--chip-green); }
-.cap-planchip.mont{ background: #fde68a; } /* geel (montage) */
-
-.cap-planempty{
+.cap-daycol .label{
+  margin:0;
+  font-weight:600;
   color: var(--muted);
-  padding: 8px 0;
 }
 
-.cap-weekgrid{
-  display:grid;
-  grid-template-columns: 120px 84px 1fr; /* label | uren | gepland */
-  gap: 10px 12px;
-  align-items:start;
+.cap-daycol .cap-hourswrap{
+  margin:0;
 }
 
-.cap-hours{ width:72px; text-align:center; padding:8px 10px; }
+.cap-daycol .cap-hours{
+  width: 100%;
+}
 
-.cap-planwrap{ display:flex; flex-direction:column; gap:8px; }
-.cap-planchip{ border-radius:14px; padding:8px 10px; font-size:12px; line-height:1.25; }
-.cap-planchip.prod{ background: var(--chip-green); }
-.cap-planchip.mont{ background: #fde68a; }
-.cap-planempty{ color: var(--muted); padding: 8px 0; }
+/* optioneel: planvlak iets “strakker” */
+.cap-planwrap{
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: 46px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
