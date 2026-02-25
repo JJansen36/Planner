@@ -614,11 +614,11 @@ function asISODate(v){
               <div class="assign-col-title">Productie</div>
               <div id="amListProd" class="assign-list"></div>
             </div>
-
             <div class="assign-col">
               <div class="assign-col-title">Montage</div>
               <div id="amListMont" class="assign-list"></div>
             </div>
+            <div class="assign-grid">
             <div class="assign-col-title">Inhuur (uit capaciteit)</div>
               <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
               <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
@@ -637,10 +637,8 @@ function asISODate(v){
                 <button class="btn small" id="amAddSubc" type="button">+</button>
               </div>
                 <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
-
                 <div id="amListSubc" class="assign-list"></div>
             </div>
-
           </div>
         </div>
         <div class="ft">
