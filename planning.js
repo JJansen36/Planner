@@ -773,6 +773,21 @@ function ensureInhuurModal(){
   return inhuurModal;
 }
 
+function escapeHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(s){
+  return escapeHtml(String(s ?? "")).replaceAll('"', "&quot;");
+}
+function cssEsc(s){
+  return String(s ?? "").replaceAll('"','\\"');
+}
+
 async function loadAllInhuurKrachtenForModal(){
   const sel = document.getElementById("imSelect");
   if (!sel) return;
@@ -1091,7 +1106,7 @@ async function openInhuurModalAtWeek(wkStart){
     // 6b) project_assignments in range (projectniveau planning zoals "↳ Montage"-regel)
     const { data: pAssigns, error: paErr } = await sb
       .from("project_assignments")
-      .select("project_id, work_date, werknemer_id, work_type")
+      .select("project_id, work_date, werknemer_id, work_type, note")
       .gte("work_date", startISO)
       .lte("work_date", endISO)
       .limit(200000);
@@ -2844,17 +2859,19 @@ function getPlannedForEmpDate(empIdStr, dateISO) {
     const entry = dm?.get(dateISO);
     if (!entry) continue;
 
-    if ((entry.productie || []).some(x => String(x).trim() === empIdStr)) {
-      const sObj = sectById.get(String(sid));
-      const pid = String(sObj?.[sectProjKey] || "").trim();
-      if (pid) out.push({ type: "productie", text: buildPlanLabel({ pid, sid, type: "productie" }) });
-    }
+const emp = String(empIdStr).trim();
 
-    if ((entry.montage || []).some(x => String(x).trim() === empIdStr)) {
-      const sObj = sectById.get(String(sid));
-      const pid = String(sObj?.[sectProjKey] || "").trim();
-      if (pid) out.push({ type: "montage", text: buildPlanLabel({ pid, sid, type: "montage" }) });
-    }
+if (entry.productie?.has(emp)) {
+  const sObj = sectById.get(String(sid));
+  const pid = String(sObj?.[sectProjKey] || "").trim();
+  if (pid) out.push({ type: "productie", text: buildPlanLabel({ pid, sid, type: "productie" }) });
+}
+
+if (entry.montage?.has(emp)) {
+  const sObj = sectById.get(String(sid));
+  const pid = String(sObj?.[sectProjKey] || "").trim();
+  if (pid) out.push({ type: "montage", text: buildPlanLabel({ pid, sid, type: "montage" }) });
+}
   }
 
   // 2) project assignments (projectAssignMap: pid -> dateISO -> entry)
