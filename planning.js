@@ -833,25 +833,30 @@ async function openInhuurModalAtWeek(wkStart){
     if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
 
     const iid = String(selEl.value || "");
+
  // helpers voor chips (binnen renderWeek)
-function buildPlanLabel({ pid, sid, type }) {
-  const ctx = window.__plannerCtx || {};
-  const pObj = (ctx.projById?.get(String(pid)) || {});
-  const nr = String(pObj?.[ctx.projNrKey] ?? "").trim();
-  const nm = String(pObj?.[ctx.projNameKey] ?? "").trim();
+    function buildPlanLabel({ pid, sid, type }) {
+      const ctx = window.__plannerCtx || {};
 
-  let sectTxt = "";
-  if (sid) {
-    const sObj = (ctx.sectById?.get(String(sid)) || {});
-    const sName = String(sObj?.[ctx.sectNameKey] || sObj?.name || "").trim();
-    const sNr   = String(sObj?.[ctx.sectParaKey] || sObj?.paragraph || "").trim();
-    sectTxt = [sNr, sName].filter(Boolean).join(" ").trim();
-  }
+      // ✅ projectnr + projectnaam uit projMetaById
+      const pMeta = ctx.projMetaById?.get(String(pid)) || {};
+      const nr = String(pMeta.nr || "").trim();
+      const nm = String(pMeta.nm || "").trim();
 
-  const top = [nr, nm].filter(Boolean).join(" - ").trim();
-  const out = [top, sectTxt].filter(Boolean).join("\n");
-  return out || (type === "montage" ? "Montage" : "Productie");
-}
+      // ✅ sectie (nr + naam)
+      let sectTxt = "";
+      if (sid) {
+        const sObj = ctx.sectById?.get(String(sid)) || {};
+        const sName = String(sObj?.[ctx.sectNameKey] || sObj?.name || "").trim();
+        const sNr   = String(sObj?.[ctx.sectParaKey] || sObj?.paragraph || "").trim();
+        sectTxt = [sNr, sName].filter(Boolean).join(" ").trim();
+      }
+
+      const top = [nr, nm].filter(Boolean).join(" - ").trim();
+      const out = [top, sectTxt].filter(Boolean).join("\n");
+
+      return out || (type === "montage" ? "Montage" : "Productie");
+    }
 
 function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
   const ctx = window.__plannerCtx || {};
