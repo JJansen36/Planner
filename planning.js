@@ -833,19 +833,102 @@ async function openInhuurModalAtWeek(wkStart){
     if (weekLabelEl) weekLabelEl.textContent = `Week ${weekNumberISO(days[0])}`;
 
     const iid = String(selEl.value || "");
-    formEl.innerHTML = `
-      <div class="fieldgrid" style="grid-template-columns: 120px 1fr;">
-        ${days.map(d=>{
-          const iso = toISODate(d);
-          return `
-            <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
-            <div class="value">
-              <input class="input" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
+ // helpers voor chips (binnen renderWeek)
+function buildPlanLabel({ pid, sid, type }) {
+  const ctx = window.__plannerCtx || {};
+  const pObj = (ctx.projById?.get(String(pid)) || {});
+  const nr = String(pObj?.[ctx.projNrKey] ?? "").trim();
+  const nm = String(pObj?.[ctx.projNameKey] ?? "").trim();
+
+  let sectTxt = "";
+  if (sid) {
+    const sObj = (ctx.sectById?.get(String(sid)) || {});
+    const sName = String(sObj?.[ctx.sectNameKey] || sObj?.name || "").trim();
+    const sNr   = String(sObj?.[ctx.sectParaKey] || sObj?.paragraph || "").trim();
+    sectTxt = [sNr, sName].filter(Boolean).join(" ").trim();
+  }
+
+  const top = [nr, nm].filter(Boolean).join(" - ").trim();
+  const out = [top, sectTxt].filter(Boolean).join("\n");
+  return out || (type === "montage" ? "Montage" : "Productie");
+}
+
+function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
+  const ctx = window.__plannerCtx || {};
+  const out = []; // { type:'productie'|'montage', text:string }
+
+  const aMap = ctx.assignMap || new Map();
+  const pMap = ctx.projectAssignMap || new Map();
+
+  // 1) sectie assignments
+  for (const [sid, dm] of aMap) {
+    const entry = dm?.get(dateISO);
+    if (!entry) continue;
+
+    const hasProd = entry.inhuurProdIds?.has(String(inhuurIdStr));
+    const hasMont = entry.inhuurMontIds?.has(String(inhuurIdStr));
+
+    if (hasProd || hasMont) {
+      const sObj = ctx.sectById?.get(String(sid));
+      const pid = String(sObj?.[ctx.sectProjKey] || "").trim();
+      if (!pid) continue;
+
+      if (hasProd) out.push({ type: "productie", text: buildPlanLabel({ pid, sid, type: "productie" }) });
+      if (hasMont) out.push({ type: "montage",  text: buildPlanLabel({ pid, sid, type: "montage"  }) });
+    }
+  }
+
+  // 2) project assignments
+  for (const [pid, dm] of pMap) {
+    const entry = dm?.get(dateISO);
+    if (!entry) continue;
+
+    if (entry.inhuurProdIds?.has(String(inhuurIdStr))) {
+      out.push({ type: "productie", text: buildPlanLabel({ pid, sid: null, type: "productie" }) });
+    }
+    if (entry.inhuurMontIds?.has(String(inhuurIdStr))) {
+      out.push({ type: "montage", text: buildPlanLabel({ pid, sid: null, type: "montage" }) });
+    }
+  }
+
+  // dedupe
+  const seen = new Set();
+  return out.filter(it => {
+    const k = `${it.type}||${it.text}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+formEl.innerHTML = `
+  <div class="fieldgrid cap-weekgrid">
+    ${days.map(d=>{
+      const iso = toISODate(d);
+      const planned = getPlannedForInhuurDate(String(iid).trim(), iso);
+
+      const plannedHtml = planned.length
+        ? planned.map(p => `
+            <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
+              ${String(p.text).replace(/\n/g, "<br>")}
             </div>
-          `;
-        }).join("")}
-      </div>
-    `;
+          `).join("")
+        : `<div class="cap-planempty">—</div>`;
+
+      return `
+        <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
+
+        <div class="value cap-hourswrap">
+          <input class="input" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
+        </div>
+
+        <div class="value cap-planwrap">
+          ${plannedHtml}
+        </div>
+      `;
+    }).join("")}
+  </div>
+`;
     // load bestaande waarden
     if (iid) {
       const { data, error } = await sb
@@ -4107,6 +4190,20 @@ loadAndRender();
   // MAAR: haal hieruit elke restoreOpenState() weg.
 }
 
+
+    // ✅ context beschikbaar maken voor modals buiten renderPlanner (zoals inhuur modal)
+    window.__plannerCtx = {
+      projById,
+      sectById,
+      projIdKey,
+      projNrKey,
+      projNameKey,
+      sectProjKey,
+      sectNameKey,
+      sectParaKey,
+      assignMap,
+      projectAssignMap
+    };
     // mount
     gridEl.innerHTML = "";
     gridEl.appendChild(table);
