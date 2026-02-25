@@ -192,6 +192,34 @@ function captureOpenState(){
 }
 
 
+function applyZebraVisible(){
+  const tbody = gridEl?.querySelector(".planner-table tbody");
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  let i = 0;
+
+  for (const tr of rows) {
+    // rijen die je nooit zebra wil geven
+    if (
+      tr.classList.contains("spacer") ||
+      tr.classList.contains("block-title") ||
+      tr.classList.contains("info-row")
+    ){
+      tr.classList.remove("zebra");
+      continue;
+    }
+
+    // verborgen rijen tellen NIET mee
+    if (tr.classList.contains("hidden")){
+      tr.classList.remove("zebra");
+      continue;
+    }
+
+    tr.classList.toggle("zebra", (i % 2) === 1);
+    i++;
+  }
+}
 
 function restoreOpenState(){
   if (!gridEl) return;
@@ -5033,34 +5061,6 @@ async function dbgProjectDummyMontageCount(projectId, dateISO){
 
 
 
-function applyZebraVisible(){
-  const tbody = gridEl?.querySelector(".planner-table tbody");
-  if (!tbody) return;
-
-  const rows = Array.from(tbody.querySelectorAll("tr"));
-  let i = 0;
-
-  for (const tr of rows) {
-    // rijen die je nooit zebra wil geven
-    if (
-      tr.classList.contains("spacer") ||
-      tr.classList.contains("block-title") ||
-      tr.classList.contains("info-row")
-    ){
-      tr.classList.remove("zebra");
-      continue;
-    }
-
-    // verborgen rijen tellen NIET mee
-    if (tr.classList.contains("hidden")){
-      tr.classList.remove("zebra");
-      continue;
-    }
-
-    tr.classList.toggle("zebra", (i % 2) === 1);
-    i++;
-  }
-}
 
 function renderOrdersAccordion(byBN){
   if(!byBN || !byBN.size) return `<div class="muted" style="padding:6px 0;">Geen bestellingen</div>`;
