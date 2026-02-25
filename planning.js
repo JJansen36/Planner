@@ -1387,6 +1387,8 @@ function parseSectionNo(v){
       if (!pid) continue;
       const complRaw = p?.[completionKey] ?? "";
       projById.set(String(pid), {
+        nr: String(p?.[projNrKey] ?? "").trim(),
+        nm: String(p?.[projNameKey] ?? "").trim(),
         complTxt: formatDateNL(complRaw),
       });
     }
@@ -2833,19 +2835,18 @@ if (capCell) {
 // --- helper: nette label voor chip ---
 function buildPlanLabel({ pid, sid, type }) {
   const pObj = projById.get(String(pid || "")) || {};
-  const nr = String(pObj?.[projNrKey] ?? "").trim();
-  const nm = String(pObj?.[projNameKey] ?? "").trim();
+  const nr = String(pObj.nr || "").trim();
+  const nm = String(pObj.nm || "").trim();
 
   let sectTxt = "";
   if (sid) {
     const sObj = sectById.get(String(sid)) || {};
     const sName = String(sObj?.[sectNameKey] || sObj?.name || "").trim();
-    const sNr   = String(sObj?.[sectNrKey]   || sObj?.sectienr || "").trim();
-    sectTxt = [sNr, sName].filter(Boolean).join(" ");
+    const sNr   = String(sObj?.[sectParaKey] || sObj?.paragraph || "").trim(); // ✅ FIX
+    sectTxt = [sNr, sName].filter(Boolean).join(" ").trim();
   }
 
-  // kort & duidelijk (pas dit gerust aan)
-  const top = [nr, nm].filter(Boolean).join(" - ");
+  const top = [nr, nm].filter(Boolean).join(" - ").trim();
   const out = [top, sectTxt].filter(Boolean).join("\n");
   return out || (type === "montage" ? "Montage" : "Productie");
 }
