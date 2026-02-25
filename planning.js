@@ -905,12 +905,12 @@ formEl.innerHTML = `
   <div class="fieldgrid cap-weekgrid">
     ${days.map(d=>{
       const iso = toISODate(d);
-      const planned = getPlannedForInhuurDate(String(iid).trim(), iso);
 
+      const planned = iid ? getPlannedForInhuurDate(iid, iso) : [];
       const plannedHtml = planned.length
         ? planned.map(p => `
             <div class="cap-planchip ${p.type === "montage" ? "mont" : "prod"}">
-              ${String(p.text).replace(/\n/g, "<br>")}
+              ${escapeHtml(String(p.text)).replace(/\n/g, "<br>")}
             </div>
           `).join("")
         : `<div class="cap-planempty">—</div>`;
@@ -919,7 +919,7 @@ formEl.innerHTML = `
         <div class="label">${dayNameNL(d.getDay())} ${d.getDate()}-${d.getMonth()+1}</div>
 
         <div class="value cap-hourswrap">
-          <input class="input" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
+          <input class="input cap-hours" type="text" inputmode="decimal" data-iso="${iso}" placeholder="0" />
         </div>
 
         <div class="value cap-planwrap">
@@ -1779,6 +1779,29 @@ if (wt === "montage") {
   }
 })();
 
+      // --- project meta voor labels (offerno + projectnaam)
+      const projMetaById = new Map();
+      for (const p of (projecten || [])) {
+        const pid = String(p?.[projIdKey] ?? "").trim();
+        if (!pid) continue;
+        projMetaById.set(pid, {
+          nr: String(p?.[projNrKey] ?? "").trim(),
+          nm: String(p?.[projNameKey] ?? "").trim(),
+        });
+      }
+
+      // --- maak context globaal beschikbaar voor modals (inhuur/capacity chips)
+      window.__plannerCtx = {
+        projMetaById,
+        sectById,
+        // keys
+        sectProjKey,
+        sectNameKey,
+        sectParaKey,
+        // planning maps
+        assignMap,
+        projectAssignMap,
+      };
 
     // capacity: per werknemer per dag  (KEYS ALS STRING!)
     const capByEmp = new Map(); // empIdStr -> dateISO -> sumHours
@@ -4571,6 +4594,70 @@ function infoRow(text, cols){
     }
     return null; // niets gevonden
   }
+
+function buildPlanLabelFromCtx(ctx, { pid, sid }) {
+  const p = ctx?.projMetaById?.get(String(pid)) || {};
+  const top = [p.nr, p.nm].filter(Boolean).join(" - ");
+
+  let sectTxt = "";
+  if (sid) {
+    const sObj = ctx?.sectById?.get(String(sid)) || {};
+    const sNr  = String(sObj?.[ctx.sectParaKey] ?? "").trim();   // bv "03."
+    const sNm  = String(sObj?.[ctx.sectNameKey] ?? sObj?.name ?? "").trim();
+    sectTxt = [sNr, sNm].filter(Boolean).join(" ");
+  }
+
+  return [top, sectTxt].filter(Boolean).join("\n");
+}
+
+function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
+  const ctx = window.__plannerCtx;
+  if (!ctx) return [];
+
+  const iid = String(inhuurIdStr || "").trim();
+  const iso = String(dateISO || "").trim();
+  const out = [];
+
+  // 1) sectie-niveau: section_assignments -> assignMap (inhuurProdIds / inhuurMontIds)
+  for (const [sid, dm] of (ctx.assignMap || new Map())) {
+    const entry = dm?.get(iso);
+    if (!entry) continue;
+
+    const sObj = ctx.sectById.get(String(sid));
+    const pid = String(sObj?.[ctx.sectProjKey] || "").trim();
+    if (!pid) continue;
+
+    if (entry.inhuurProdIds?.has(iid)) {
+      out.push({ type: "productie", text: buildPlanLabelFromCtx(ctx, { pid, sid }) });
+    }
+    if (entry.inhuurMontIds?.has(iid)) {
+      out.push({ type: "montage", text: buildPlanLabelFromCtx(ctx, { pid, sid }) });
+    }
+  }
+
+  // 2) project-niveau: project_assignments -> projectAssignMap (inhuurProdIds / inhuurMontIds)
+  for (const [pid, dm] of (ctx.projectAssignMap || new Map())) {
+    const entry = dm?.get(iso);
+    if (!entry) continue;
+
+    if (entry.inhuurProdIds?.has(iid)) {
+      out.push({ type: "productie", text: buildPlanLabelFromCtx(ctx, { pid, sid: null }) });
+    }
+    if (entry.inhuurMontIds?.has(iid)) {
+      out.push({ type: "montage", text: buildPlanLabelFromCtx(ctx, { pid, sid: null }) });
+    }
+  }
+
+  // dedupe
+  const seen = new Set();
+  return out.filter(x => {
+    const k = `${x.type}||${x.text}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 
   function escapeHtml(s){
     return String(s ?? "")
