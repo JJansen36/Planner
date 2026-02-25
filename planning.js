@@ -610,6 +610,7 @@ function asISODate(v){
         </div>
         <div class="bd">
           <div class="assign-grid">
+            <!-- rij 1 -->
             <div class="assign-col">
               <div class="assign-col-title">Productie</div>
               <div id="amListProd" class="assign-list"></div>
@@ -620,27 +621,38 @@ function asISODate(v){
               <div id="amListMont" class="assign-list"></div>
             </div>
 
-          <div class="hr"></div>
-          <div class="assign-col" style="margin-top:10px;">
-            <div class="assign-col-title">Inhuur (uit capaciteit)</div>
+            <!-- rij 2: divider over beide kolommen -->
+            <div class="hr span-2"></div>
 
-            <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
-            <div id="amInhuurProdPick" class="assign-list" style="padding-bottom:10px;"></div>
+            <!-- rij 3: Inhuur titel (links) + spacer (rechts) -->
+            <div class="assign-col inhuur-title">
+              <div class="assign-col-title">Inhuur (uit capaciteit)</div>
+            </div>
+            <div class="inhuur-spacer"></div>
 
-            <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
-            <div id="amInhuurMontPick" class="assign-list"></div>
-          </div>
+            <!-- rij 4: Inhuur links/rechts -->
+            <div class="assign-col">
+              <div class="muted" style="margin:6px 0 6px;">Inhuur → Productie</div>
+              <div id="amInhuurProdPick" class="assign-list"></div>
+            </div>
 
+            <div class="assign-col">
+              <div class="muted" style="margin:6px 0 6px;">Inhuur → Montage</div>
+              <div id="amInhuurMontPick" class="assign-list"></div>
+            </div>
+
+            <!-- rij 5: Onderaanneming links + leeg rechts -->
             <div class="assign-col">
               <div class="assign-col-title" style="display:flex; align-items:center; justify-content:space-between;">
                 <span>Onderaanneming</span>
                 <button class="btn small" id="amAddSubc" type="button">+</button>
               </div>
-                <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
 
-                <div id="amListSubc" class="assign-list"></div>
+              <div id="amSubcPick" class="assign-list" style="padding-bottom:8px;"></div>
+              <div id="amListSubc" class="assign-list"></div>
             </div>
 
+            <div class="right-empty"></div>
           </div>
         </div>
         <div class="ft">
