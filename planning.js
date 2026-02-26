@@ -1414,6 +1414,15 @@ function parseSectionNo(v){
     }
 
 
+    function normInhuurId(v){
+      const s = String(v ?? "").trim();
+      if (!s) return "";
+      // puur cijfer? -> normaliseer 0012 -> 12
+      if (/^\d+$/.test(s)) return String(Number(s));
+      // uuid/tekst -> case-insensitive match
+      return s.toLowerCase();
+    }
+
     function openDayModal({
       dateISO,
       werknemers,
@@ -1447,9 +1456,15 @@ function parseSectionNo(v){
 
     // A) uit inhuurPeopleVisible (array met {inhuur_id, name})
     for (const p of (inhuurPeopleVisible || [])) {
-      const id = String(p?.inhuur_id ?? p?.id ?? "").trim();
+      const rawId = (p?.inhuur_id ?? p?.id ?? "");
+      const id = normInhuurId(rawId);
       const nm = String(p?.name ?? p?.naam ?? "").trim();
+
       if (id) inhuurNameById.set(id, nm || "Inhuur");
+
+      // extra: ook de “on-genormaliseerde” variant bewaren (veilig)
+      const id2 = String(rawId ?? "").trim();
+      if (id2 && !inhuurNameById.has(id2)) inhuurNameById.set(id2, nm || "Inhuur");
     }
 
     // B) daarnaast ook uit inhuurById (Map) als die bestaat
@@ -1501,9 +1516,9 @@ function parseSectionNo(v){
       for (const eid of (entry.reis || []))      addEmpItem(eid, "reis", txt);
 
           // inhuur (we zetten ze als “pseudo medewerker” met prefix)
-    for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "productie", txt);
-    for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "montage", txt);
-        }
+      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "productie", txt);
+      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "montage", txt);   
+      }
 
     // 2) project-niveau (projectAssignMap)
     for (const [pid, dm] of (projectAssignMap || new Map())) {
@@ -1564,10 +1579,9 @@ function parseSectionNo(v){
 
     for (const k of keysSorted) {
     const isInhuur = k.startsWith("inhuur:");
-    const iid = isInhuur ? k.slice(6).trim() : "";
-
+    const iid = isInhuur ? normInhuurId(k.slice(6)) : "";
     const name = isInhuur
-      ? `${inhuurNameById.get(iid) || "Inhuur"} (inhuur)`
+      ? `${inhuurNameById.get(iid) || inhuurNameById.get(String(k.slice(6)).trim()) || "Inhuur"} (inhuur)`
       : (empNameById.get(k) || k);
 
     // dedupe per werknemer (zelfde type+text)
@@ -1792,8 +1806,8 @@ const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
 
       if (wt === "productie") {
         if (isDummy && note.startsWith("inhuur:")) {
-          const iid = note.slice("inhuur:".length).trim();
-          if (iid) entry.inhuurProdIds.add(iid);     // ✅ inhuur, NIET concept
+        const iid = normInhuurId(note.slice("inhuur:".length));
+        if (iid) entry.inhuurProdIds.add(iid);
         } else if (isDummy) {
           entry.dummyProd += 1;                      // ✅ echte concept
         } else {
@@ -1803,8 +1817,8 @@ const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
 
       if (wt === "montage") {
         if (isDummy && note.startsWith("inhuur:")) {
-          const iid = note.slice("inhuur:".length).trim();
-          if (iid) entry.inhuurMontIds.add(iid);     // ✅ inhuur, NIET concept
+        const iid = normInhuurId(note.slice("inhuur:".length));
+        if (iid) entry.inhuurProdIds.add(iid);
         } else if (isDummy) {
           entry.dummyMont += 1;                      // ✅ echte concept
         } else {
@@ -1964,7 +1978,7 @@ const note = String(a.note || "");
 
 if (wt === "productie") {
   if (isDummy && note.startsWith("inhuur:")) {
-    const iid = note.slice("inhuur:".length).trim();
+    const iid = normInhuurId(note.slice("inhuur:".length));
     if (iid) entry.inhuurProdIds.add(iid);
   } else if (isDummy) {
     entry.dummyProd += 1;
@@ -1975,8 +1989,8 @@ if (wt === "productie") {
 
 if (wt === "montage") {
   if (isDummy && note.startsWith("inhuur:")) {
-    const iid = note.slice("inhuur:".length).trim();
-    if (iid) entry.inhuurMontIds.add(iid);
+    const iid = normInhuurId(note.slice("inhuur:".length));
+    if (iid) entry.inhuurProdIds.add(iid);
   } else if (isDummy) {
     entry.dummyMont += 1;
   } else {
