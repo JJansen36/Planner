@@ -2319,8 +2319,73 @@ for (const s of secsForProj) {
   req.mont += Number(s?.uren_montage ?? s?.uren_mont ?? 0);
   req.reis += Number(s?.uren_reis ?? 0);
 }
-
  
+
+// ===== planned (gepland) uren voor project (uit assignments) =====
+const pfP = (settings.planFactor ?? 1);
+const plP = { prod: 0, cnc: 0, mont: 0, reis: 0 };
+
+const secsP = (sectiesByProject.get(pid) || []);
+
+for (const dd of dates) {
+  const iso = toISODate(dd);
+
+  for (const s of secsP) {
+    const sidRaw = s?.[sectIdKey]
+      ? String(s[sectIdKey])
+      : (s?.section_id ? String(s.section_id) : null);
+    if (!sidRaw) continue;
+
+    const sidC = sectLookup.get(String(sidRaw)) || String(sidRaw);
+    const e = assignMap.get(sidC)?.get(iso);
+    if (!e) continue;
+
+    // echte medewerkers (splitten binnen project)
+    for (const emp of (e.productie || [])) {
+      plP.prod += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "productie", String(emp));
+    }
+    for (const emp of (e.cnc || [])) {
+      plP.cnc += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "cnc", String(emp));
+    }
+    for (const emp of (e.montage || [])) {
+      plP.mont += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "montage", String(emp));
+    }
+    for (const emp of (e.reis || [])) {
+      plP.reis += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "reis", String(emp));
+    }
+
+    // concept (dummy) telt gewoon als “personen”
+    plP.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfP;
+
+    // inhuur telt ook als “personen” (zelfde factor)
+    plP.prod += Number(e.inhuurProdIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.mont += Number(e.inhuurMontIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
+  }
+
+  // projectniveau (↳ regels) ook meenemen
+  const pe = projectAssignMap.get(String(pid))?.get(iso);
+  if (pe) {
+    for (const emp of (pe.productie || [])) plP.prod += HOURS_PER_PERSON_DAY * pfP;
+    for (const emp of (pe.cnc || []))       plP.cnc  += HOURS_PER_PERSON_DAY * pfP;
+    for (const emp of (pe.montage || []))   plP.mont += HOURS_PER_PERSON_DAY * pfP;
+    for (const emp of (pe.reis || []))      plP.reis += HOURS_PER_PERSON_DAY * pfP;
+
+    plP.prod += Number(pe.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.cnc  += Number(pe.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.mont += Number(pe.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.reis += Number(pe.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfP;
+
+    plP.prod += Number(pe.inhuurProdIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
+    plP.mont += Number(pe.inhuurMontIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
+  }
+}
+
+// vullen!
+hoursTd.innerHTML = miniHoursHtml(req, plP);
+
   // tel ingeplande mensen per dag op over alle secties van dit project
   const projAssignByDay = {};
   const secs = sectiesByProject.get(pid) || [];
