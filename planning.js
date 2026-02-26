@@ -1432,7 +1432,16 @@ function parseSectionNo(v){
     // naam maps
     const empNameById = new Map((werknemers || []).map(w => [String(w.id), String(w.name || "").trim()]));
     const inhuurNameById = new Map();
-    for (const [iid, obj] of (inhuurById || new Map())) inhuurNameById.set(String(iid), String(obj?.name || "Inhuur"));
+    // inhuurById kan Map zijn (zoals jij nu) of object; beide ondersteunen:
+    if (inhuurById instanceof Map) {
+      for (const [iid, obj] of inhuurById.entries()) {
+        inhuurNameById.set(String(iid), String(obj?.name || "Inhuur").trim() || "Inhuur");
+      }
+    } else {
+      for (const k of Object.keys(inhuurById || {})) {
+        inhuurNameById.set(String(k), String(inhuurById[k]?.name || "Inhuur").trim() || "Inhuur");
+      }
+    }
 
     // helper: label (zoals jouw chips)
     const buildLabel = (pid, sid) => {
@@ -1496,9 +1505,16 @@ function parseSectionNo(v){
     const rows = [];
 
     const keysSorted = Array.from(byEmp.keys()).sort((a,b)=>{
-      const an = a.startsWith("inhuur:") ? (inhuurNameById.get(a.slice(6)) || "Inhuur") : (empNameById.get(a) || a);
-      const bn = b.startsWith("inhuur:") ? (inhuurNameById.get(b.slice(6)) || "Inhuur") : (empNameById.get(b) || b);
-      return an.localeCompare(bn, "nl");
+      const aIn = a.startsWith("inhuur:");
+      const bIn = b.startsWith("inhuur:");
+
+      // ✅ vaste medewerkers eerst
+      if (aIn !== bIn) return aIn ? 1 : -1;
+
+      const an = aIn ? (inhuurNameById.get(a.slice(6)) || "Inhuur") : (empNameById.get(a) || a);
+      const bn = bIn ? (inhuurNameById.get(b.slice(6)) || "Inhuur") : (empNameById.get(b) || b);
+
+      return String(an).localeCompare(String(bn), "nl", { sensitivity:"base" });
     });
 
     for (const k of keysSorted) {
