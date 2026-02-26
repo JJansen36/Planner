@@ -1381,6 +1381,163 @@ function parseSectionNo(v){
       return names;
     }
 
+    // -------- DAY MODAL (wie is ingepland op deze dag) --------
+    let dayModal = null;
+
+    function ensureDayModal(){
+      if (dayModal) return dayModal;
+
+      const wrap = document.createElement("div");
+      wrap.className = "modal-backdrop";
+      wrap.id = "dayModalBackdrop";
+      wrap.innerHTML = `
+        <div class="modal day-modal" role="dialog" aria-modal="true">
+          <div class="hd">
+            <div>
+              <div class="assign-title" id="dmTitle">Dag</div>
+              <div class="assign-sub" id="dmSub"></div>
+            </div>
+            <button class="btn small" id="dmClose" type="button">✕</button>
+          </div>
+          <div class="bd">
+            <div id="dmBody"></div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(wrap);
+
+      const close = () => wrap.classList.remove("show");
+      wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+      wrap.querySelector("#dmClose").onclick = close;
+
+      dayModal = { wrap, close };
+      return dayModal;
+    }
+
+
+    function openDayModal({ dateISO, werknemers, inhuurById, assignMap, projectAssignMap, sectById, projMetaById, sectProjKey, sectParaKey, sectNameKey }){
+    const modal = ensureDayModal();
+    const titleEl = modal.wrap.querySelector("#dmTitle");
+    const subEl   = modal.wrap.querySelector("#dmSub");
+    const bodyEl  = modal.wrap.querySelector("#dmBody");
+
+    const d = parseISODate(dateISO) || new Date();
+    const dayName = d.toLocaleDateString("nl-NL", { weekday:"long" });
+    const nice = d.toLocaleDateString("nl-NL", { day:"numeric", month:"numeric" });
+
+    if (titleEl) titleEl.textContent = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+    if (subEl) subEl.textContent = nice;
+
+    // naam maps
+    const empNameById = new Map((werknemers || []).map(w => [String(w.id), String(w.name || "").trim()]));
+    const inhuurNameById = new Map();
+    for (const [iid, obj] of (inhuurById || new Map())) inhuurNameById.set(String(iid), String(obj?.name || "Inhuur"));
+
+    // helper: label (zoals jouw chips)
+    const buildLabel = (pid, sid) => {
+      const pm = projMetaById?.get(String(pid)) || {};
+      const top = [String(pm.nr||"").trim(), String(pm.nm||"").trim()].filter(Boolean).join(" - ").trim();
+
+      let sect = "";
+      if (sid) {
+        const sObj = sectById?.get(String(sid));
+        const sNr = String(sObj?.[sectParaKey] ?? sObj?.paragraph ?? "").trim();
+        const sNm = String(sObj?.[sectNameKey] ?? sObj?.name ?? "").trim();
+        sect = [sNr, sNm].filter(Boolean).join(" ").trim();
+      }
+      return [top, sect].filter(Boolean).join("\n");
+    };
+
+    // verzamelen: empId -> items[]
+    const byEmp = new Map(); // empId => [{type, text}]
+    const addEmpItem = (empId, type, text) => {
+      const k = String(empId);
+      if (!byEmp.has(k)) byEmp.set(k, []);
+      byEmp.get(k).push({ type, text });
+    };
+
+    // 1) sectie-niveau (assignMap)
+    for (const [sid, dm] of (assignMap || new Map())) {
+      const entry = dm?.get(dateISO);
+      if (!entry) continue;
+
+      const sObj = sectById?.get(String(sid));
+      const pid = String(sObj?.[sectProjKey] || "").trim();
+      if (!pid) continue;
+
+      const txt = buildLabel(pid, sid);
+
+      // echte medewerkers
+      for (const eid of (entry.productie || [])) addEmpItem(eid, "productie", txt);
+      for (const eid of (entry.montage || []))   addEmpItem(eid, "montage", txt);
+      for (const eid of (entry.cnc || []))       addEmpItem(eid, "cnc", txt);
+      for (const eid of (entry.reis || []))      addEmpItem(eid, "reis", txt);
+
+      // inhuur (we zetten ze als “pseudo medewerker” met prefix)
+      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${iid}`, "productie", txt);
+      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${iid}`, "montage", txt);
+    }
+
+    // 2) project-niveau (projectAssignMap)
+    for (const [pid, dm] of (projectAssignMap || new Map())) {
+      const entry = dm?.get(dateISO);
+      if (!entry) continue;
+
+      const txt = buildLabel(pid, null);
+
+      for (const eid of (entry.productie || [])) addEmpItem(eid, "productie", txt);
+      for (const eid of (entry.montage || []))   addEmpItem(eid, "montage", txt);
+      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${iid}`, "productie", txt);
+      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${iid}`, "montage", txt);
+    }
+
+    // Render
+    const rows = [];
+
+    const keysSorted = Array.from(byEmp.keys()).sort((a,b)=>{
+      const an = a.startsWith("inhuur:") ? (inhuurNameById.get(a.slice(6)) || "Inhuur") : (empNameById.get(a) || a);
+      const bn = b.startsWith("inhuur:") ? (inhuurNameById.get(b.slice(6)) || "Inhuur") : (empNameById.get(b) || b);
+      return an.localeCompare(bn, "nl");
+    });
+
+    for (const k of keysSorted) {
+      const isInhuur = k.startsWith("inhuur:");
+      const name = isInhuur
+        ? `${inhuurNameById.get(k.slice(6)) || "Inhuur"} (inhuur)`
+        : (empNameById.get(k) || k);
+
+      // dedupe per werknemer (zelfde type+text)
+      const seen = new Set();
+      const items = (byEmp.get(k) || []).filter(it=>{
+        const kk = `${it.type}||${it.text}`;
+        if (seen.has(kk)) return false;
+        seen.add(kk);
+        return true;
+      });
+
+      rows.push(`
+        <div class="dm-row">
+          <div class="dm-name">${escapeHtml(name)}</div>
+          <div class="dm-items">
+            ${items.map(it => `
+              <div class="dm-card ${it.type === "montage" ? "mont" : it.type === "productie" ? "prod" : ""}">
+                ${escapeHtml(it.text).replace(/\n/g,"<br>")}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `);
+    }
+
+    bodyEl.innerHTML = rows.length
+      ? `<div class="dm-list">${rows.join("")}</div>`
+      : `<div class="muted">Geen ingeplande medewerkers op deze dag.</div>`;
+
+    modal.wrap.classList.add("show");
+  }
+
+
     // -------- RENDER --------
     function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders, inhuurEntries, inhuurPeopleVisible }) {
     const DEBUG_OFFNR = "2600013";   // <-- zet hier jouw projectnr uit de screenshot
@@ -2021,8 +2178,13 @@ trMonth.appendChild(hdrCell("", `hdr-cell hourscol sticky-top sticky-left2 ${hou
     trDay.appendChild(hdrCell("",  `hdr-cell hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
-      const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
-      trDay.appendChild(hdrCell(`${dayNameNL(d.getDay())}<br>${d.getDate()}-${d.getMonth()+1}`, cls));
+      const cls = ["sticky-top3", "dayhead", isWeekend(d) ? "wknd" : ""].filter(Boolean).join(" ");
+      trDay.appendChild(hdrCell(
+        `<button type="button" class="dayhead-btn" data-iso="${escapeAttr(iso)}">
+          ${dayNameNL(d.getDay())}<br>${d.getDate()}-${d.getMonth()+1}
+        </button>`,
+        cls
+      ));
     }
     thead.appendChild(trDay);
     table.appendChild(thead);
@@ -2743,6 +2905,29 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
   }
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
+
+
+          // ✅ klik op dagheader => dagmodal
+    const dayBtn = ev.target.closest(".dayhead-btn[data-iso]");
+    if (dayBtn) {
+      ev.stopPropagation();
+      const dateISO = String(dayBtn.dataset.iso || "");
+      if (!dateISO) return;
+
+      openDayModal({
+        dateISO,
+        werknemers,
+        inhuurById,
+        assignMap,
+        projectAssignMap,
+        sectById,
+        projMetaById,
+        sectProjKey,
+        sectParaKey,
+        sectNameKey
+      });
+      return;
+    }
 
       // ✅ Inhuur "+" knop (naast Uren beschikbaar)
       const inBtn = ev.target.closest("#btnInhuurPlus");
