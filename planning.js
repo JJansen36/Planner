@@ -1416,7 +1416,21 @@ function parseSectionNo(v){
     }
 
 
-    function openDayModal({ dateISO, werknemers, inhuurById, assignMap, projectAssignMap, sectById, projMetaById, sectProjKey, sectParaKey, sectNameKey }){
+    function openDayModal({
+      dateISO,
+      werknemers,
+      inhuurById,
+      inhuurPeopleVisible,   // ✅ toevoegen
+      assignMap,
+      projectAssignMap,
+      sectById,
+      projMetaById,
+      sectProjKey,
+      sectParaKey,
+      sectNameKey
+    }){
+
+      
     const modal = ensureDayModal();
     const titleEl = modal.wrap.querySelector("#dmTitle");
     const subEl   = modal.wrap.querySelector("#dmSub");
