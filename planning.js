@@ -2023,21 +2023,6 @@ if (wt === "montage") {
         });
       }
 
-      // --- maak context globaal beschikbaar voor modals (inhuur/capacity chips)
-      window.__plannerCtx = {
-        projMetaById,
-        sectById,
-        sectProjKey,
-        sectNameKey,
-        sectParaKey,
-        assignMap,
-        projectAssignMap,
-
-        // ✅ nieuw: beschikbaarheid
-        capByEmp,       // Map(empId -> Map(dateISO -> hours))
-        inhuurByEmp,    // Map(inhuurId -> Map(dateISO -> hours))
-      };
-
     // capacity: per werknemer per dag  (KEYS ALS STRING!)
     const capByEmp = new Map(); // empIdStr -> dateISO -> sumHours
     for (const r of cap || []) {
@@ -2184,6 +2169,22 @@ if (wt === "montage") {
 
     // THEAD (3 rijen: maand / week / dag)
     const thead = document.createElement("thead");
+
+    
+      // --- maak context globaal beschikbaar voor modals (inhuur/capacity chips)
+      window.__plannerCtx = {
+        projMetaById,
+        sectById,
+        sectProjKey,
+        sectNameKey,
+        sectParaKey,
+        assignMap,
+        projectAssignMap,
+
+        // ✅ nieuw: beschikbaarheid
+        capByEmp,
+        inhuurByEmp,
+      };
 
 
 
