@@ -1432,17 +1432,22 @@ function parseSectionNo(v){
     // naam maps
     const empNameById = new Map((werknemers || []).map(w => [String(w.id), String(w.name || "").trim()]));
     const inhuurNameById = new Map();
-    // inhuurById kan Map zijn (zoals jij nu) of object; beide ondersteunen:
-    if (inhuurById instanceof Map) {
-      for (const [iid, obj] of inhuurById.entries()) {
-        inhuurNameById.set(String(iid), String(obj?.name || "Inhuur").trim() || "Inhuur");
-      }
-    } else {
-      for (const k of Object.keys(inhuurById || {})) {
-        inhuurNameById.set(String(k), String(inhuurById[k]?.name || "Inhuur").trim() || "Inhuur");
-      }
+
+    // A) uit inhuurPeopleVisible (array met {inhuur_id, name})
+    for (const p of (inhuurPeopleVisible || [])) {
+      const id = String(p?.inhuur_id ?? "").trim();
+      const nm = String(p?.name ?? "").trim();
+      if (id) inhuurNameById.set(id, nm || "Inhuur");
     }
 
+    // B) daarnaast ook uit inhuurById (Map) als die bestaat
+    if (inhuurById instanceof Map) {
+      for (const [iid, obj] of inhuurById.entries()) {
+        const id = String(iid ?? "").trim();
+        const nm = String(obj?.name ?? "").trim();
+        if (id && !inhuurNameById.has(id)) inhuurNameById.set(id, nm || "Inhuur");
+      }
+    }
     // helper: label (zoals jouw chips)
     const buildLabel = (pid, sid) => {
       const pm = projMetaById?.get(String(pid)) || {};
@@ -1484,8 +1489,8 @@ function parseSectionNo(v){
       for (const eid of (entry.reis || []))      addEmpItem(eid, "reis", txt);
 
       // inhuur (we zetten ze als “pseudo medewerker” met prefix)
-      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${iid}`, "productie", txt);
-      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${iid}`, "montage", txt);
+      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "productie", txt);
+      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "montage", txt);
     }
 
     // 2) project-niveau (projectAssignMap)
@@ -2934,6 +2939,7 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
         dateISO,
         werknemers,
         inhuurById,
+        inhuurPeopleVisible
         assignMap,
         projectAssignMap,
         sectById,
