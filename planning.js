@@ -4493,6 +4493,11 @@ loadAndRender();
       // planning maps
       assignMap,
       projectAssignMap,
+
+      // ✅ beschikbaarheid
+      capByEmp,
+      inhuurByEmp,
+      inhuurById, // (handig, maar niet verplicht)
     };
 
 
