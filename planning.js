@@ -1144,23 +1144,21 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
           inhuurEntries = iData || [];
         }
 
-        const inhuurIds = [...new Set(inhuurEntries.map(r => r.inhuur_id).filter(Boolean))];
+      // ✅ altijd alle actieve inhuur, zodat namen er altijd staan
+      const { data: pDataAll, error: pErrAll } = await sb
+        .from(INHUUR_TABLE)
+        .select("inhuur_id, name")
+        .eq("is_active", true)
+        .order("name", { ascending: true })
+        .limit(5000);
 
-        if (inhuurIds.length) {
-          const { data: pData, error: pErr } = await sb
-            .from(INHUUR_TABLE)
-            .select("inhuur_id, name")
-            .in("inhuur_id", inhuurIds)
-            .order("name", { ascending: true })
-            .limit(5000);
-
-          if (pErr) {
-            console.warn("Fout inhuur_krachten:", pErr.message);
-            inhuurPeopleVisible = [];
-          } else {
-            inhuurPeopleVisible = pData || [];
-          }
-        }
+      if (pErrAll) {
+        console.warn("Fout inhuur_krachten:", pErrAll.message);
+        inhuurPeopleVisible = [];
+      } else {
+        inhuurPeopleVisible = pDataAll || [];
+      }
+        
       } catch (e) {
         console.warn("Inhuur load exception:", e);
         inhuurEntries = [];
@@ -1520,6 +1518,31 @@ function parseSectionNo(v){
       for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${iid}`, "montage", txt);
     }
 
+    // ✅ ook tonen: iedereen met beschikbaarheid (uren > 0) op deze dag
+    const ctx = window.__plannerCtx || {};
+    const capByEmp = ctx.capByEmp || new Map();
+    const inhuurByEmp = ctx.inhuurByEmp || new Map();
+
+    // vaste medewerkers met capaciteit > 0
+    for (const w of (werknemers || [])) {
+      const eid = String(w?.id ?? "").trim();
+      if (!eid) continue;
+
+      const h = Number(capByEmp.get(eid)?.get(dateISO) || 0);
+      if (h > 0) {
+        if (!byEmp.has(eid)) byEmp.set(eid, []); // leeg = beschikbaar maar niets ingepland
+      }
+    }
+
+    // inhuur met uren > 0
+    for (const [iid, dm] of (inhuurByEmp || new Map())) {
+      const h = Number(dm?.get(dateISO) || 0);
+      if (h > 0) {
+        const key = `inhuur:${String(iid).trim()}`;
+        if (!byEmp.has(key)) byEmp.set(key, []);
+      }
+    }
+
     // Render
     const rows = [];
 
@@ -1554,13 +1577,16 @@ function parseSectionNo(v){
       rows.push(`
         <div class="dm-row">
           <div class="dm-name">${escapeHtml(name)}</div>
-          <div class="dm-items">
-            ${items.map(it => `
-              <div class="dm-card ${it.type === "montage" ? "mont" : it.type === "productie" ? "prod" : ""}">
-                ${escapeHtml(it.text).replace(/\n/g,"<br>")}
-              </div>
-            `).join("")}
-          </div>
+            <div class="dm-items">
+              ${items.length
+                ? items.map(it => `
+                    <div class="dm-card ${it.type === "montage" ? "mont" : it.type === "productie" ? "prod" : ""}">
+                      ${escapeHtml(it.text).replace(/\n/g,"<br>")}
+                    </div>
+                  `).join("")
+                : `<div class="muted">Beschikbaar</div>`
+              }
+            </div>
         </div>
       `);
     }
@@ -2001,13 +2027,15 @@ if (wt === "montage") {
       window.__plannerCtx = {
         projMetaById,
         sectById,
-        // keys
         sectProjKey,
         sectNameKey,
         sectParaKey,
-        // planning maps
         assignMap,
         projectAssignMap,
+
+        // ✅ nieuw: beschikbaarheid
+        capByEmp,       // Map(empId -> Map(dateISO -> hours))
+        inhuurByEmp,    // Map(inhuurId -> Map(dateISO -> hours))
       };
 
     // capacity: per werknemer per dag  (KEYS ALS STRING!)
