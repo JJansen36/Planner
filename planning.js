@@ -2939,7 +2939,7 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
         dateISO,
         werknemers,
         inhuurById,
-        inhuurPeopleVisible
+        inhuurPeopleVisible,
         assignMap,
         projectAssignMap,
         sectById,
