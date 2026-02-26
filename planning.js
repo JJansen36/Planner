@@ -1514,8 +1514,8 @@ function parseSectionNo(v){
 
       for (const eid of (entry.productie || [])) addEmpItem(eid, "productie", txt);
       for (const eid of (entry.montage || []))   addEmpItem(eid, "montage", txt);
-      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${iid}`, "productie", txt);
-      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${iid}`, "montage", txt);
+      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "productie", txt);
+      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "montage", txt);
     }
 
     // ✅ ook tonen: iedereen met beschikbaarheid (uren > 0) op deze dag
@@ -1553,16 +1553,19 @@ function parseSectionNo(v){
       // ✅ vaste medewerkers eerst
       if (aIn !== bIn) return aIn ? 1 : -1;
 
-      const an = aIn ? (inhuurNameById.get(a.slice(6)) || "Inhuur") : (empNameById.get(a) || a);
-      const bn = bIn ? (inhuurNameById.get(b.slice(6)) || "Inhuur") : (empNameById.get(b) || b);
+      const aId = aIn ? a.slice(6).trim() : "";
+      const bId = bIn ? b.slice(6).trim() : "";
+
+      const an = aIn ? (inhuurNameById.get(aId) || "Inhuur") : (empNameById.get(a) || a);
+      const bn = bIn ? (inhuurNameById.get(bId) || "Inhuur") : (empNameById.get(b) || b);
 
       return String(an).localeCompare(String(bn), "nl", { sensitivity:"base" });
     });
 
     for (const k of keysSorted) {
-      const isInhuur = k.startsWith("inhuur:");
+      const iid = isInhuur ? k.slice(6).trim() : "";
       const name = isInhuur
-        ? `${inhuurNameById.get(k.slice(6)) || "Inhuur"} (inhuur)`
+        ? `${inhuurNameById.get(iid) || "Inhuur"} (inhuur)`
         : (empNameById.get(k) || k);
 
       // dedupe per werknemer (zelfde type+text)
