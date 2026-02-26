@@ -1563,36 +1563,38 @@ function parseSectionNo(v){
     });
 
     for (const k of keysSorted) {
-      const iid = isInhuur ? k.slice(6).trim() : "";
-      const name = isInhuur
-        ? `${inhuurNameById.get(iid) || "Inhuur"} (inhuur)`
-        : (empNameById.get(k) || k);
+    const isInhuur = k.startsWith("inhuur:");
+    const iid = isInhuur ? k.slice(6).trim() : "";
 
-      // dedupe per werknemer (zelfde type+text)
-      const seen = new Set();
-      const items = (byEmp.get(k) || []).filter(it=>{
-        const kk = `${it.type}||${it.text}`;
-        if (seen.has(kk)) return false;
-        seen.add(kk);
-        return true;
-      });
+    const name = isInhuur
+      ? `${inhuurNameById.get(iid) || "Inhuur"} (inhuur)`
+      : (empNameById.get(k) || k);
 
-      rows.push(`
-        <div class="dm-row">
-          <div class="dm-name">${escapeHtml(name)}</div>
-            <div class="dm-items">
-              ${items.length
-                ? items.map(it => `
-                    <div class="dm-card ${it.type === "montage" ? "mont" : it.type === "productie" ? "prod" : ""}">
-                      ${escapeHtml(it.text).replace(/\n/g,"<br>")}
-                    </div>
-                  `).join("")
-                : `<div class="muted">Beschikbaar</div>`
-              }
-            </div>
+    // dedupe per werknemer (zelfde type+text)
+    const seen = new Set();
+    const items = (byEmp.get(k) || []).filter(it=>{
+      const kk = `${it.type}||${it.text}`;
+      if (seen.has(kk)) return false;
+      seen.add(kk);
+      return true;
+    });
+
+    rows.push(`
+      <div class="dm-row">
+        <div class="dm-name">${escapeHtml(name)}</div>
+        <div class="dm-items">
+          ${items.length
+            ? items.map(it => `
+                <div class="dm-card ${it.type === "montage" ? "mont" : it.type === "productie" ? "prod" : ""}">
+                  ${escapeHtml(it.text).replace(/\n/g,"<br>")}
+                </div>
+              `).join("")
+            : `<div class="muted">Beschikbaar</div>`
+          }
         </div>
-      `);
-    }
+      </div>
+    `);
+  }
 
     bodyEl.innerHTML = rows.length
       ? `<div class="dm-list">${rows.join("")}</div>`
