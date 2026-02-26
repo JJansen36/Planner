@@ -40,8 +40,12 @@
   let statusEl = null;
   let ordersBySection = new Map();
   let __wasDragging = false;
+
   // ===== Extra kolom: uren (uit Supabase) vs gepland =====
-  let hoursColOpen = false; // alleen handmatig via pijltje boven de orders
+  const HOURS_COL_KEY = "lovd_hourscol_open_v1";
+  let hoursColOpen = localStorage.getItem(HOURS_COL_KEY)
+    ? (localStorage.getItem(HOURS_COL_KEY) === "1")
+    : true; // ✅ standaard OPEN
 
 
 
@@ -2906,12 +2910,7 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
 
     table.appendChild(tbody);
 
-    if (!hoursColOpen) {
-      table.querySelectorAll("th.hourscol, td.hourscol").forEach((cell) => {
-        cell.style.display = "table-cell";
-        cell.classList.add("hourscol-collapsed");
-      });
-    }
+
 
     // =========================
     // EXPANDERS BINDEN (na render)
@@ -4512,6 +4511,7 @@ loadAndRender();
         ev.preventDefault();
         ev.stopPropagation();
         hoursColOpen = !hoursColOpen;
+        localStorage.setItem(HOURS_COL_KEY, hoursColOpen ? "1" : "0"); // ✅ onthouden
         loadAndRender();
       };
     }
