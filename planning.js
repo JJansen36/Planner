@@ -1447,8 +1447,8 @@ function parseSectionNo(v){
 
     // A) uit inhuurPeopleVisible (array met {inhuur_id, name})
     for (const p of (inhuurPeopleVisible || [])) {
-      const id = String(p?.inhuur_id ?? "").trim();
-      const nm = String(p?.name ?? "").trim();
+      const id = String(p?.inhuur_id ?? p?.id ?? "").trim();
+      const nm = String(p?.name ?? p?.naam ?? "").trim();
       if (id) inhuurNameById.set(id, nm || "Inhuur");
     }
 
@@ -1500,10 +1500,10 @@ function parseSectionNo(v){
       for (const eid of (entry.cnc || []))       addEmpItem(eid, "cnc", txt);
       for (const eid of (entry.reis || []))      addEmpItem(eid, "reis", txt);
 
-      // inhuur (we zetten ze als “pseudo medewerker” met prefix)
-      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "productie", txt);
-      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "montage", txt);
-    }
+          // inhuur (we zetten ze als “pseudo medewerker” met prefix)
+    for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "productie", txt);
+    for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "montage", txt);
+        }
 
     // 2) project-niveau (projectAssignMap)
     for (const [pid, dm] of (projectAssignMap || new Map())) {
