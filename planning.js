@@ -1475,9 +1475,9 @@ function parseSectionNo(v){
     // B) daarnaast ook uit inhuurById (Map) als die bestaat
     if (inhuurById instanceof Map) {
       for (const [iid, obj] of inhuurById.entries()) {
-        const id = String(iid ?? "").trim();
-        const nm = String(obj?.name ?? "").trim();
-        if (id && !inhuurNameById.has(id)) inhuurNameById.set(id, nm || "Inhuur");
+        const idN = normInhuurId(iid);
+        const nm  = String(obj?.name ?? "").trim();
+        if (idN && !inhuurNameById.has(idN)) inhuurNameById.set(idN, nm || "Inhuur");
       }
     }
     // helper: label (zoals jouw chips)
@@ -2076,28 +2076,31 @@ if (wt === "montage") {
     }
 
     // ===== Inhuur aggregatie (per inhuur_id per dag + totaal per dag) =====
-    const inhuurById = new Map(); // inhuur_id -> { name }
+    const inhuurById = new Map();
     for (const p of (inhuurPeopleVisible || [])) {
-      inhuurById.set(normInhuurId(p.inhuur_id), { name: String(p.name || "").trim() || "Inhuur" });
+      const rawId = (p?.inhuur_id ?? p?.id ?? "");
+      const iidN  = normInhuurId(rawId);
+      const nm    = String(p?.name || p?.naam || "").trim();
+      if (iidN) inhuurById.set(iidN, { name: nm || "Inhuur" });
     }
 
 
 
-    const inhuurByEmp = new Map(); // inhuur_id -> Map(dateISO -> hours)
-    const inhuurTotalByDay = {};   // dateISO -> hours
+      const inhuurByEmp = new Map(); // iidN -> Map(dateISO -> hours)
+      const inhuurTotalByDay = {};
 
-    for (const r of (inhuurEntries || [])) {
-      const iid = String(r.inhuur_id || "").trim();
-      const d = String(r.work_date || "").trim();
-      const h = Number(r.hours || 0);
-      if (!iid || !d || !(h > 0)) continue;
+      for (const r of (inhuurEntries || [])) {
+        const iidN = normInhuurId(r.inhuur_id);
+        const d = String(r.work_date || "").trim();
+        const h = Number(r.hours || 0);
+        if (!iidN || !d || !(h > 0)) continue;
 
-      if (!inhuurByEmp.has(iid)) inhuurByEmp.set(iid, new Map());
-      const dm = inhuurByEmp.get(iid);
-      dm.set(d, (dm.get(d) || 0) + h);
+        if (!inhuurByEmp.has(iidN)) inhuurByEmp.set(iidN, new Map());
+        const dm = inhuurByEmp.get(iidN);
+        dm.set(d, (dm.get(d) || 0) + h);
 
-      inhuurTotalByDay[d] = (inhuurTotalByDay[d] || 0) + h;
-    }
+        inhuurTotalByDay[d] = (inhuurTotalByDay[d] || 0) + h;
+      }
 
     // ✅ Inhuur meenemen in "Uren beschikbaar" totals
     for (const k of Object.keys(inhuurTotalByDay)) {
