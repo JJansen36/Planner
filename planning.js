@@ -1529,8 +1529,8 @@ function parseSectionNo(v){
 
       for (const eid of (entry.productie || [])) addEmpItem(eid, "productie", txt);
       for (const eid of (entry.montage || []))   addEmpItem(eid, "montage", txt);
-      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "productie", txt);
-      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${String(iid).trim()}`, "montage", txt);
+      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "productie", txt);
+      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "montage", txt);
     }
 
     // ✅ ook tonen: iedereen met beschikbaarheid (uren > 0) op deze dag
@@ -1553,7 +1553,7 @@ function parseSectionNo(v){
     for (const [iid, dm] of (inhuurByEmp || new Map())) {
       const h = Number(dm?.get(dateISO) || 0);
       if (h > 0) {
-        const key = `inhuur:${String(iid).trim()}`;
+        const key = `inhuur:${normInhuurId(iid)}`;
         if (!byEmp.has(key)) byEmp.set(key, []);
       }
     }
@@ -1568,9 +1568,8 @@ function parseSectionNo(v){
       // ✅ vaste medewerkers eerst
       if (aIn !== bIn) return aIn ? 1 : -1;
 
-      const aId = aIn ? a.slice(6).trim() : "";
-      const bId = bIn ? b.slice(6).trim() : "";
-
+      const aId = aIn ? normInhuurId(a.slice(6)) : "";
+      const bId = bIn ? normInhuurId(b.slice(6)) : "";
       const an = aIn ? (inhuurNameById.get(aId) || "Inhuur") : (empNameById.get(a) || a);
       const bn = bIn ? (inhuurNameById.get(bId) || "Inhuur") : (empNameById.get(b) || b);
 
@@ -1818,7 +1817,7 @@ const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
       if (wt === "montage") {
         if (isDummy && note.startsWith("inhuur:")) {
         const iid = normInhuurId(note.slice("inhuur:".length));
-        if (iid) entry.inhuurProdIds.add(iid);
+        if (iid) entry.inhuurMontIds.add(iid);
         } else if (isDummy) {
           entry.dummyMont += 1;                      // ✅ echte concept
         } else {
@@ -2074,7 +2073,7 @@ if (wt === "montage") {
     // ===== Inhuur aggregatie (per inhuur_id per dag + totaal per dag) =====
     const inhuurById = new Map(); // inhuur_id -> { name }
     for (const p of (inhuurPeopleVisible || [])) {
-      inhuurById.set(String(p.inhuur_id), { name: String(p.name || "").trim() || "Inhuur" });
+      inhuurById.set(normInhuurId(p.inhuur_id), { name: String(p.name || "").trim() || "Inhuur" });
     }
 
 
