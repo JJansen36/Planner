@@ -815,8 +815,10 @@ async function loadAllInhuurKrachtenForModal(){
     return;
   }
 
-  const opts = (data || []).map(r => `<option value="${r.inhuur_id}">${escapeHtml(r.name)}</option>`).join("");
-  sel.innerHTML = opts || `<option value="">(geen inhuur)</option>`;
+    const opts = (data || []).map(r => {
+      const nm = String(r.name || r.naam || "").trim() || "Inhuur";
+      return `<option value="${r.inhuur_id}">${escapeHtml(nm)}</option>`;
+    }).join("");
 }
 
 async function openInhuurModalAtWeek(wkStart){
@@ -1147,7 +1149,7 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
       // ✅ altijd alle actieve inhuur, zodat namen er altijd staan
       const { data: pDataAll, error: pErrAll } = await sb
         .from(INHUUR_TABLE)
-        .select("inhuur_id, name")
+        .select("inhuur_id, name, naam")
         .eq("is_active", true)
         .order("name", { ascending: true })
         .limit(5000);
@@ -1458,7 +1460,7 @@ function parseSectionNo(v){
     for (const p of (inhuurPeopleVisible || [])) {
       const rawId = (p?.inhuur_id ?? p?.id ?? "");
       const id = normInhuurId(rawId);
-      const nm = String(p?.name ?? p?.naam ?? "").trim();
+      const nm = String(p?.name || p?.naam || "").trim();
 
       if (id) inhuurNameById.set(id, nm || "Inhuur");
 
@@ -1989,7 +1991,7 @@ if (wt === "productie") {
 if (wt === "montage") {
   if (isDummy && note.startsWith("inhuur:")) {
     const iid = normInhuurId(note.slice("inhuur:".length));
-    if (iid) entry.inhuurProdIds.add(iid);
+    if (iid) entry.inhuurMontIds.add(iid); // ✅ goed
   } else if (isDummy) {
     entry.dummyMont += 1;
   } else {
