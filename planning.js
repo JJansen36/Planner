@@ -2913,7 +2913,7 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
       }
       if (!hasAny) continue;
 
-      const name = inhuurById.get(String(iid))?.name || "Inhuur";
+      const name = inhuurById.get(normInhuurId(iid))?.name || "Inhuur";
 
       const trI = document.createElement("tr");
       trI.className = "cap-emp-row hidden";     // ✅ valt onder hetzelfde expand/collapse
