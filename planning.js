@@ -2075,14 +2075,28 @@ if (wt === "montage") {
       }
     }
 
-    // ===== Inhuur aggregatie (per inhuur_id per dag + totaal per dag) =====
-    const inhuurById = new Map();
-    for (const p of (inhuurPeopleVisible || [])) {
-      const rawId = (p?.inhuur_id ?? p?.id ?? "");
-      const iidN  = normInhuurId(rawId);
-      const nm    = String(p?.name || p?.naam || "").trim();
-      if (iidN) inhuurById.set(iidN, { name: nm || "Inhuur" });
-    }
+      // ===== Inhuur aggregatie (naam-lookup) =====
+      const inhuurById = new Map(); // key -> { name }
+
+      // helper: zet 1 label op meerdere keys
+      function _setInhuurName(rawId, label){
+        const rawKey  = String(rawId ?? "").trim();
+        const normKey = normInhuurId(rawId);
+
+        if (normKey) inhuurById.set(normKey, { name: label });
+        if (rawKey && !inhuurById.has(rawKey)) inhuurById.set(rawKey, { name: label });
+
+        if (/^\d+$/.test(rawKey)) {
+          const numKey = String(Number(rawKey));
+          if (numKey && !inhuurById.has(numKey)) inhuurById.set(numKey, { name: label });
+        }
+      }
+
+      for (const p of (inhuurPeopleVisible || [])) {
+        const rawId = (p?.inhuur_id ?? p?.id ?? "");
+        const nm = String(p?.name || p?.naam || "").trim();
+        _setInhuurName(rawId, nm || "Inhuur");
+      }
 
 
 
@@ -2919,7 +2933,11 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
       }
       if (!hasAny) continue;
 
-      const name = inhuurById.get(normInhuurId(iid))?.name || "Inhuur";
+      const iidN = normInhuurId(iid);
+      const name =
+        inhuurById.get(iidN)?.name ||
+        inhuurById.get(String(iid).trim())?.name ||
+        "Inhuur";
 
       const trI = document.createElement("tr");
       trI.className = "cap-emp-row hidden";     // ✅ valt onder hetzelfde expand/collapse
