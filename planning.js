@@ -819,7 +819,10 @@ async function loadAllInhuurKrachtenForModal(){
       const nm = String(r.name || r.naam || "").trim() || "Inhuur";
       return `<option value="${r.inhuur_id}">${escapeHtml(nm)}</option>`;
     }).join("");
-}
+
+
+    sel.innerHTML = `<option value="">(kies)</option>` + opts;
+  }
 
 async function openInhuurModalAtWeek(wkStart){
   const modal = ensureInhuurModal();
@@ -2149,8 +2152,8 @@ if (wt === "montage") {
       for (const [dateISO, entry] of dm) {
         if (!inhuurAssignByDay[dateISO]) inhuurAssignByDay[dateISO] = { prod: new Set(), mont: new Set() };
 
-        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(String(iid));
-        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(String(iid));
+        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(normInhuurId(iid));
+        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(normInhuurId(iid));
       }
     }
 
@@ -2159,8 +2162,8 @@ if (wt === "montage") {
       for (const [dateISO, entry] of dm) {
         if (!inhuurAssignByDay[dateISO]) inhuurAssignByDay[dateISO] = { prod: new Set(), mont: new Set() };
 
-        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(String(iid));
-        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(String(iid));
+        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(normInhuurId(iid));
+        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(normInhuurId(iid));
       }
     }
 
@@ -2942,17 +2945,13 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
         td.className = `cell cap-cell inhuur-cell-click ${isWeekend(d) ? "wknd" : ""}`;
 
         // ✅ kleur als ingepland (zoals vaste werknemers)
-        const iidStr = String(iid).trim();
-        const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidStr);
-        const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidStr);
+        const iidN = normInhuurId(iid);
+        const name = inhuurById.get(iidN)?.name || "Inhuur";
 
-        if (inProd && inMont) td.classList.add("cap-assigned-both");
-        else if (inProd) td.classList.add("cap-assigned-prod");
-        else if (inMont) td.classList.add("cap-assigned-mont");
+        const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidN);
+        const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidN);
 
-
-        // ✅ nodig om op cel te kunnen klikken
-        td.dataset.inhuurId = String(iid);
+        td.dataset.inhuurId = iidN;
         td.dataset.workDate = iso;
 
         td.textContent = fmt0(h);
@@ -3014,11 +3013,11 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
 
       const rows = [];
       for (const [iid, dm] of src) {
-        const id = String(iid);
+        const id = normInhuurId(iid);
         const hours = Number(dm?.get(dateISO) || 0);
         const name = inhuurById?.get(id)?.name || "Inhuur";
 
-        const checked = targetSet.has(id);          // ✅ check in productie/montage set
+        const checked = targetSet.has(id);         // ✅ check in productie/montage set
         const shouldShow = checked || hours > 0;    // toon als beschikbaar of al gekozen
         if (!shouldShow) continue;
 
