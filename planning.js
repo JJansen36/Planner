@@ -1130,51 +1130,59 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
       .limit(200000);
 
       // 4b) inhuur_entries in range (alleen uren > 0) + bijbehorende namen
-      let inhuurEntries = [];
-      let inhuurPeopleVisible = [];
+      // 4b) inhuur_entries in range (alleen uren > 0) + bijbehorende namen
+let inhuurEntries = [];
+let inhuurPeopleVisible = [];
 
-      try {
-        const { data: iData, error: iErr } = await sb
-          .from(INHUUR_ENTRIES_TABLE)
-          .select("work_date, inhuur_id, hours")
-          .gt("hours", 0)
-          .gte("work_date", startISO)
-          .lte("work_date", endISO)
-          .limit(200000);
+try {
+  // uren
+  const { data: iData, error: iErr } = await sb
+    .from(INHUUR_ENTRIES_TABLE)
+    .select("work_date, inhuur_id, hours")
+    .gt("hours", 0)
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
 
-        if (iErr) {
-          console.warn("Fout inhuur_entries:", iErr.message);
-          inhuurEntries = [];
-        } else {
-          inhuurEntries = iData || [];
-        }
+  if (iErr) {
+    console.warn("Fout inhuur_entries:", iErr.message);
+    inhuurEntries = [];
+  } else {
+    inhuurEntries = iData || [];
+  }
 
-        // ✅ alle inhuur-krachten laden (ook inactief), zodat oude planning altijd de juiste naam houdt
-        const { data: pDataAll, error: pErrAll } = await sb
-          .from(INHUUR_TABLE)
-          .select("inhuur_id, name, naam, is_active")
-          .order("name", { ascending: true })
-          .limit(5000);
+  // alle inhuur-krachten (ook inactief) => namen
+  const { data: pDataAll, error: pErrAll } = await sb
+    .from(INHUUR_TABLE)
+    .select("inhuur_id, name, naam, is_active")
+    .order("name", { ascending: true })
+    .limit(5000);
 
-        if (pErrAll) {
-          console.warn("Fout inhuur_krachten:", pErrAll.message);
-          inhuurPeopleVisible = [];
-        } else {
-          inhuurPeopleVisible = pDataAll || [];
-        }
+  if (pErrAll) {
+    console.warn("Fout inhuur_krachten:", pErrAll.message);
+    inhuurPeopleVisible = [];
+  } else {
+    inhuurPeopleVisible = pDataAll || [];
+  }
+} catch (e) {
+  console.warn("Inhuur load exception:", e);
+  inhuurEntries = [];
+  inhuurPeopleVisible = [];
+}
 
-      if (pErrAll) {
-        console.warn("Fout inhuur_krachten:", pErrAll.message);
-        inhuurPeopleVisible = [];
-      } else {
-        inhuurPeopleVisible = pDataAll || [];
-      }
-        
-      } catch (e) {
-        console.warn("Inhuur load exception:", e);
-        inhuurEntries = [];
-        inhuurPeopleVisible = [];
-      }
+// ✅ alle inhuur-krachten laden (ook inactief), zodat oude planning altijd de juiste naam houdt
+const { data: pDataAll, error: pErrAll } = await sb
+  .from(INHUUR_TABLE)
+  .select("inhuur_id, name, naam, is_active")
+  .order("name", { ascending: true })
+  .limit(5000);
+
+if (pErrAll) {
+  console.warn("Fout inhuur_krachten:", pErrAll.message);
+  inhuurPeopleVisible = [];
+} else {
+  inhuurPeopleVisible = pDataAll || [];
+}
 
 
     if (cErr) { statusEl.textContent = "Fout capaciteit: " + cErr.message; return; }
