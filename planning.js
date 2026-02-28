@@ -1149,13 +1149,19 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
           inhuurEntries = iData || [];
         }
 
-      // ✅ altijd alle actieve inhuur, zodat namen er altijd staan
-      const { data: pDataAll, error: pErrAll } = await sb
-        .from(INHUUR_TABLE)
-        .select("inhuur_id, name, naam")
-        .eq("is_active", true)
-        .order("name", { ascending: true })
-        .limit(5000);
+        // ✅ alle inhuur-krachten laden (ook inactief), zodat oude planning altijd de juiste naam houdt
+        const { data: pDataAll, error: pErrAll } = await sb
+          .from(INHUUR_TABLE)
+          .select("inhuur_id, name, naam, is_active")
+          .order("name", { ascending: true })
+          .limit(5000);
+
+        if (pErrAll) {
+          console.warn("Fout inhuur_krachten:", pErrAll.message);
+          inhuurPeopleVisible = [];
+        } else {
+          inhuurPeopleVisible = pDataAll || [];
+        }
 
       if (pErrAll) {
         console.warn("Fout inhuur_krachten:", pErrAll.message);
