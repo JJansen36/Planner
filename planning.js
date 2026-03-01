@@ -41,7 +41,7 @@
   let ordersBySection = new Map();
   let __wasDragging = false;
   // ===== Extra kolom: uren (uit Supabase) vs gepland =====
-  let hoursColOpen = true; // alleen handmatig via pijltje boven de orders
+  let hoursColOpen = false; // alleen handmatig via pijltje boven de orders
 
 
 
@@ -815,14 +815,9 @@ async function loadAllInhuurKrachtenForModal(){
     return;
   }
 
-    const opts = (data || []).map(r => {
-      const nm = String(r.name || r.naam || "").trim() || "Inhuur";
-      return `<option value="${r.inhuur_id}">${escapeHtml(nm)}</option>`;
-    }).join("");
-
-
-    sel.innerHTML = `<option value="">(kies)</option>` + opts;
-  }
+  const opts = (data || []).map(r => `<option value="${r.inhuur_id}">${escapeHtml(r.name)}</option>`).join("");
+  sel.innerHTML = opts || `<option value="">(geen inhuur)</option>`;
+}
 
 async function openInhuurModalAtWeek(wkStart){
   const modal = ensureInhuurModal();
@@ -1130,59 +1125,47 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
       .limit(200000);
 
       // 4b) inhuur_entries in range (alleen uren > 0) + bijbehorende namen
-      // 4b) inhuur_entries in range (alleen uren > 0) + bijbehorende namen
-let inhuurEntries = [];
-let inhuurPeopleVisible = [];
+      let inhuurEntries = [];
+      let inhuurPeopleVisible = [];
 
-try {
-  // uren
-  const { data: iData, error: iErr } = await sb
-    .from(INHUUR_ENTRIES_TABLE)
-    .select("work_date, inhuur_id, hours")
-    .gt("hours", 0)
-    .gte("work_date", startISO)
-    .lte("work_date", endISO)
-    .limit(200000);
+      try {
+        const { data: iData, error: iErr } = await sb
+          .from(INHUUR_ENTRIES_TABLE)
+          .select("work_date, inhuur_id, hours")
+          .gt("hours", 0)
+          .gte("work_date", startISO)
+          .lte("work_date", endISO)
+          .limit(200000);
 
-  if (iErr) {
-    console.warn("Fout inhuur_entries:", iErr.message);
-    inhuurEntries = [];
-  } else {
-    inhuurEntries = iData || [];
-  }
+        if (iErr) {
+          console.warn("Fout inhuur_entries:", iErr.message);
+          inhuurEntries = [];
+        } else {
+          inhuurEntries = iData || [];
+        }
 
-  // alle inhuur-krachten (ook inactief) => namen
-  const { data: pDataAll, error: pErrAll } = await sb
-    .from(INHUUR_TABLE)
-    .select("inhuur_id, name, is_active")
-    .order("name", { ascending: true })
-    .limit(5000);
+        const inhuurIds = [...new Set(inhuurEntries.map(r => r.inhuur_id).filter(Boolean))];
 
-  if (pErrAll) {
-    console.warn("Fout inhuur_krachten:", pErrAll.message);
-    inhuurPeopleVisible = [];
-  } else {
-    inhuurPeopleVisible = pDataAll || [];
-  }
-} catch (e) {
-  console.warn("Inhuur load exception:", e);
-  inhuurEntries = [];
-  inhuurPeopleVisible = [];
-}
+        if (inhuurIds.length) {
+          const { data: pData, error: pErr } = await sb
+            .from(INHUUR_TABLE)
+            .select("inhuur_id, name")
+            .in("inhuur_id", inhuurIds)
+            .order("name", { ascending: true })
+            .limit(5000);
 
-// ✅ alle inhuur-krachten laden (ook inactief), zodat oude planning altijd de juiste naam houdt
-const { data: pDataAll, error: pErrAll } = await sb
-  .from(INHUUR_TABLE)
-  .select("inhuur_id, name, naam, is_active")
-  .order("name", { ascending: true })
-  .limit(5000);
-
-if (pErrAll) {
-  console.warn("Fout inhuur_krachten:", pErrAll.message);
-  inhuurPeopleVisible = [];
-} else {
-  inhuurPeopleVisible = pDataAll || [];
-}
+          if (pErr) {
+            console.warn("Fout inhuur_krachten:", pErr.message);
+            inhuurPeopleVisible = [];
+          } else {
+            inhuurPeopleVisible = pData || [];
+          }
+        }
+      } catch (e) {
+        console.warn("Inhuur load exception:", e);
+        inhuurEntries = [];
+        inhuurPeopleVisible = [];
+      }
 
 
     if (cErr) { statusEl.textContent = "Fout capaciteit: " + cErr.message; return; }
@@ -1398,244 +1381,6 @@ function parseSectionNo(v){
       return names;
     }
 
-    // -------- DAY MODAL (wie is ingepland op deze dag) --------
-    let dayModal = null;
-
-    function ensureDayModal(){
-      if (dayModal) return dayModal;
-
-      const wrap = document.createElement("div");
-      wrap.className = "modal-backdrop";
-      wrap.id = "dayModalBackdrop";
-      wrap.innerHTML = `
-        <div class="modal day-modal" role="dialog" aria-modal="true">
-          <div class="hd">
-            <div>
-              <div class="assign-title" id="dmTitle">Dag</div>
-              <div class="assign-sub" id="dmSub"></div>
-            </div>
-            <button class="btn small" id="dmClose" type="button">✕</button>
-          </div>
-          <div class="bd">
-            <div id="dmBody"></div>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(wrap);
-
-      const close = () => wrap.classList.remove("show");
-      wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
-      wrap.querySelector("#dmClose").onclick = close;
-
-      dayModal = { wrap, close };
-      return dayModal;
-    }
-
-
-    function normInhuurId(v){
-      const s = String(v ?? "").trim();
-      if (!s) return "";
-      // puur cijfer? -> normaliseer 0012 -> 12
-      if (/^\d+$/.test(s)) return String(Number(s));
-      // uuid/tekst -> case-insensitive match
-      return s.toLowerCase();
-    }
-
-    function openDayModal({
-      dateISO,
-      werknemers,
-      inhuurById,
-      inhuurPeopleVisible,   // ✅ toevoegen
-      assignMap,
-      projectAssignMap,
-      sectById,
-      projMetaById,
-      sectProjKey,
-      sectParaKey,
-      sectNameKey
-    }){
-
-      
-    const modal = ensureDayModal();
-    const titleEl = modal.wrap.querySelector("#dmTitle");
-    const subEl   = modal.wrap.querySelector("#dmSub");
-    const bodyEl  = modal.wrap.querySelector("#dmBody");
-
-    const d = parseISODate(dateISO) || new Date();
-    const dayName = d.toLocaleDateString("nl-NL", { weekday:"long" });
-    const nice = d.toLocaleDateString("nl-NL", { day:"numeric", month:"numeric" });
-
-    if (titleEl) titleEl.textContent = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-    if (subEl) subEl.textContent = nice;
-
-    // naam maps
-    const empNameById = new Map((werknemers || []).map(w => [String(w.id), String(w.name || "").trim()]));
-    const inhuurNameById = new Map();
-
-    // A) uit inhuurPeopleVisible (array met {inhuur_id, name})
-    for (const p of (inhuurPeopleVisible || [])) {
-      const rawId = (p?.inhuur_id ?? p?.id ?? "");
-      const id = normInhuurId(rawId);
-      const nm = String(p?.name || p?.naam || "").trim();
-
-      if (id) inhuurNameById.set(id, nm || "Inhuur");
-
-      // extra: ook de “on-genormaliseerde” variant bewaren (veilig)
-      const id2 = String(rawId ?? "").trim();
-      if (id2 && !inhuurNameById.has(id2)) inhuurNameById.set(id2, nm || "Inhuur");
-    }
-
-    // B) daarnaast ook uit inhuurById (Map) als die bestaat
-    if (inhuurById instanceof Map) {
-      for (const [iid, obj] of inhuurById.entries()) {
-        const idN = normInhuurId(iid);
-        const nm  = String(obj?.name ?? "").trim();
-        if (idN && !inhuurNameById.has(idN)) inhuurNameById.set(idN, nm || "Inhuur");
-      }
-    }
-    // helper: label (zoals jouw chips)
-    const buildLabel = (pid, sid) => {
-      const pm = projMetaById?.get(String(pid)) || {};
-      const top = [String(pm.nr||"").trim(), String(pm.nm||"").trim()].filter(Boolean).join(" - ").trim();
-
-      let sect = "";
-      if (sid) {
-        const sObj = sectById?.get(String(sid));
-        const sNr = String(sObj?.[sectParaKey] ?? sObj?.paragraph ?? "").trim();
-        const sNm = String(sObj?.[sectNameKey] ?? sObj?.name ?? "").trim();
-        sect = [sNr, sNm].filter(Boolean).join(" ").trim();
-      }
-      return [top, sect].filter(Boolean).join("\n");
-    };
-
-    // verzamelen: empId -> items[]
-    const byEmp = new Map(); // empId => [{type, text}]
-    const addEmpItem = (empId, type, text) => {
-      const k = String(empId);
-      if (!byEmp.has(k)) byEmp.set(k, []);
-      byEmp.get(k).push({ type, text });
-    };
-
-    // 1) sectie-niveau (assignMap)
-    for (const [sid, dm] of (assignMap || new Map())) {
-      const entry = dm?.get(dateISO);
-      if (!entry) continue;
-
-      const sObj = sectById?.get(String(sid));
-      const pid = String(sObj?.[sectProjKey] || "").trim();
-      if (!pid) continue;
-
-      const txt = buildLabel(pid, sid);
-
-      // echte medewerkers
-      for (const eid of (entry.productie || [])) addEmpItem(eid, "productie", txt);
-      for (const eid of (entry.montage || []))   addEmpItem(eid, "montage", txt);
-      for (const eid of (entry.cnc || []))       addEmpItem(eid, "cnc", txt);
-      for (const eid of (entry.reis || []))      addEmpItem(eid, "reis", txt);
-
-          // inhuur (we zetten ze als “pseudo medewerker” met prefix)
-      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "productie", txt);
-      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "montage", txt);   
-      }
-
-    // 2) project-niveau (projectAssignMap)
-    for (const [pid, dm] of (projectAssignMap || new Map())) {
-      const entry = dm?.get(dateISO);
-      if (!entry) continue;
-
-      const txt = buildLabel(pid, null);
-
-      for (const eid of (entry.productie || [])) addEmpItem(eid, "productie", txt);
-      for (const eid of (entry.montage || []))   addEmpItem(eid, "montage", txt);
-      for (const iid of (entry.inhuurProdIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "productie", txt);
-      for (const iid of (entry.inhuurMontIds || [])) addEmpItem(`inhuur:${normInhuurId(iid)}`, "montage", txt);
-    }
-
-    // ✅ ook tonen: iedereen met beschikbaarheid (uren > 0) op deze dag
-    const ctx = window.__plannerCtx || {};
-    const capByEmp = ctx.capByEmp || new Map();
-    const inhuurByEmp = ctx.inhuurByEmp || new Map();
-
-    // vaste medewerkers met capaciteit > 0
-    for (const w of (werknemers || [])) {
-      const eid = String(w?.id ?? "").trim();
-      if (!eid) continue;
-
-      const h = Number(capByEmp.get(eid)?.get(dateISO) || 0);
-      if (h > 0) {
-        if (!byEmp.has(eid)) byEmp.set(eid, []); // leeg = beschikbaar maar niets ingepland
-      }
-    }
-
-    // inhuur met uren > 0
-    for (const [iid, dm] of (inhuurByEmp || new Map())) {
-      const h = Number(dm?.get(dateISO) || 0);
-      if (h > 0) {
-        const key = `inhuur:${normInhuurId(iid)}`;
-        if (!byEmp.has(key)) byEmp.set(key, []);
-      }
-    }
-
-    // Render
-    const rows = [];
-
-    const keysSorted = Array.from(byEmp.keys()).sort((a,b)=>{
-      const aIn = a.startsWith("inhuur:");
-      const bIn = b.startsWith("inhuur:");
-
-      // ✅ vaste medewerkers eerst
-      if (aIn !== bIn) return aIn ? 1 : -1;
-
-      const aId = aIn ? normInhuurId(a.slice(6)) : "";
-      const bId = bIn ? normInhuurId(b.slice(6)) : "";
-      const an = aIn ? (inhuurNameById.get(aId) || "Inhuur") : (empNameById.get(a) || a);
-      const bn = bIn ? (inhuurNameById.get(bId) || "Inhuur") : (empNameById.get(b) || b);
-
-      return String(an).localeCompare(String(bn), "nl", { sensitivity:"base" });
-    });
-
-    for (const k of keysSorted) {
-    const isInhuur = k.startsWith("inhuur:");
-    const iid = isInhuur ? normInhuurId(k.slice(6)) : "";
-    const name = isInhuur
-      ? `${inhuurNameById.get(iid) || inhuurNameById.get(String(k.slice(6)).trim()) || "Inhuur"} (inhuur)`
-      : (empNameById.get(k) || k);
-
-    // dedupe per werknemer (zelfde type+text)
-    const seen = new Set();
-    const items = (byEmp.get(k) || []).filter(it=>{
-      const kk = `${it.type}||${it.text}`;
-      if (seen.has(kk)) return false;
-      seen.add(kk);
-      return true;
-    });
-
-    rows.push(`
-      <div class="dm-row">
-        <div class="dm-name">${escapeHtml(name)}</div>
-        <div class="dm-items">
-          ${items.length
-            ? items.map(it => `
-                <div class="dm-card ${it.type === "montage" ? "mont" : it.type === "productie" ? "prod" : ""}">
-                  ${escapeHtml(it.text).replace(/\n/g,"<br>")}
-                </div>
-              `).join("")
-            : `<div class="muted">Beschikbaar</div>`
-          }
-        </div>
-      </div>
-    `);
-  }
-
-    bodyEl.innerHTML = rows.length
-      ? `<div class="dm-list">${rows.join("")}</div>`
-      : `<div class="muted">Geen ingeplande medewerkers op deze dag.</div>`;
-
-    modal.wrap.classList.add("show");
-  }
-
-
     // -------- RENDER --------
     function renderPlanner({ start, days, projecten, secties, work, cap, werknemers, werknemersCap, assigns, pAssigns, orders, inhuurEntries, inhuurPeopleVisible }) {
     const DEBUG_OFFNR = "2600013";   // <-- zet hier jouw projectnr uit de screenshot
@@ -1824,8 +1569,8 @@ const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
 
       if (wt === "productie") {
         if (isDummy && note.startsWith("inhuur:")) {
-        const iid = normInhuurId(note.slice("inhuur:".length));
-        if (iid) entry.inhuurProdIds.add(iid);
+          const iid = note.slice("inhuur:".length).trim();
+          if (iid) entry.inhuurProdIds.add(iid);     // ✅ inhuur, NIET concept
         } else if (isDummy) {
           entry.dummyProd += 1;                      // ✅ echte concept
         } else {
@@ -1835,8 +1580,8 @@ const note = String(a.note || ""); // <- zet deze regel boven je wt checks (1x)
 
       if (wt === "montage") {
         if (isDummy && note.startsWith("inhuur:")) {
-        const iid = normInhuurId(note.slice("inhuur:".length));
-        if (iid) entry.inhuurMontIds.add(iid);
+          const iid = note.slice("inhuur:".length).trim();
+          if (iid) entry.inhuurMontIds.add(iid);     // ✅ inhuur, NIET concept
         } else if (isDummy) {
           entry.dummyMont += 1;                      // ✅ echte concept
         } else {
@@ -1996,7 +1741,7 @@ const note = String(a.note || "");
 
 if (wt === "productie") {
   if (isDummy && note.startsWith("inhuur:")) {
-    const iid = normInhuurId(note.slice("inhuur:".length));
+    const iid = note.slice("inhuur:".length).trim();
     if (iid) entry.inhuurProdIds.add(iid);
   } else if (isDummy) {
     entry.dummyProd += 1;
@@ -2007,8 +1752,8 @@ if (wt === "productie") {
 
 if (wt === "montage") {
   if (isDummy && note.startsWith("inhuur:")) {
-    const iid = normInhuurId(note.slice("inhuur:".length));
-    if (iid) entry.inhuurMontIds.add(iid); // ✅ goed
+    const iid = note.slice("inhuur:".length).trim();
+    if (iid) entry.inhuurMontIds.add(iid);
   } else if (isDummy) {
     entry.dummyMont += 1;
   } else {
@@ -2060,6 +1805,19 @@ if (wt === "montage") {
         });
       }
 
+      // --- maak context globaal beschikbaar voor modals (inhuur/capacity chips)
+      window.__plannerCtx = {
+        projMetaById,
+        sectById,
+        // keys
+        sectProjKey,
+        sectNameKey,
+        sectParaKey,
+        // planning maps
+        assignMap,
+        projectAssignMap,
+      };
+
     // capacity: per werknemer per dag  (KEYS ALS STRING!)
     const capByEmp = new Map(); // empIdStr -> dateISO -> sumHours
     for (const r of cap || []) {
@@ -2089,46 +1847,29 @@ if (wt === "montage") {
       }
     }
 
-      // ===== Inhuur aggregatie (naam-lookup) =====
-      const inhuurById = new Map(); // key -> { name }
-
-      // helper: zet 1 label op meerdere keys
-      function _setInhuurName(rawId, label){
-        const rawKey  = String(rawId ?? "").trim();
-        const normKey = normInhuurId(rawId);
-
-        if (normKey) inhuurById.set(normKey, { name: label });
-        if (rawKey && !inhuurById.has(rawKey)) inhuurById.set(rawKey, { name: label });
-
-        if (/^\d+$/.test(rawKey)) {
-          const numKey = String(Number(rawKey));
-          if (numKey && !inhuurById.has(numKey)) inhuurById.set(numKey, { name: label });
-        }
-      }
-
-      for (const p of (inhuurPeopleVisible || [])) {
-        const rawId = (p?.inhuur_id ?? p?.id ?? "");
-        const nm = String(p?.name || p?.naam || "").trim();
-        _setInhuurName(rawId, nm || "Inhuur");
-      }
+    // ===== Inhuur aggregatie (per inhuur_id per dag + totaal per dag) =====
+    const inhuurById = new Map(); // inhuur_id -> { name }
+    for (const p of (inhuurPeopleVisible || [])) {
+      inhuurById.set(String(p.inhuur_id), { name: String(p.name || "").trim() || "Inhuur" });
+    }
 
 
 
-      const inhuurByEmp = new Map(); // iidN -> Map(dateISO -> hours)
-      const inhuurTotalByDay = {};
+    const inhuurByEmp = new Map(); // inhuur_id -> Map(dateISO -> hours)
+    const inhuurTotalByDay = {};   // dateISO -> hours
 
-      for (const r of (inhuurEntries || [])) {
-        const iidN = normInhuurId(r.inhuur_id);
-        const d = String(r.work_date || "").trim();
-        const h = Number(r.hours || 0);
-        if (!iidN || !d || !(h > 0)) continue;
+    for (const r of (inhuurEntries || [])) {
+      const iid = String(r.inhuur_id || "").trim();
+      const d = String(r.work_date || "").trim();
+      const h = Number(r.hours || 0);
+      if (!iid || !d || !(h > 0)) continue;
 
-        if (!inhuurByEmp.has(iidN)) inhuurByEmp.set(iidN, new Map());
-        const dm = inhuurByEmp.get(iidN);
-        dm.set(d, (dm.get(d) || 0) + h);
+      if (!inhuurByEmp.has(iid)) inhuurByEmp.set(iid, new Map());
+      const dm = inhuurByEmp.get(iid);
+      dm.set(d, (dm.get(d) || 0) + h);
 
-        inhuurTotalByDay[d] = (inhuurTotalByDay[d] || 0) + h;
-      }
+      inhuurTotalByDay[d] = (inhuurTotalByDay[d] || 0) + h;
+    }
 
     // ✅ Inhuur meenemen in "Uren beschikbaar" totals
     for (const k of Object.keys(inhuurTotalByDay)) {
@@ -2183,8 +1924,8 @@ if (wt === "montage") {
       for (const [dateISO, entry] of dm) {
         if (!inhuurAssignByDay[dateISO]) inhuurAssignByDay[dateISO] = { prod: new Set(), mont: new Set() };
 
-        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(normInhuurId(iid));
-        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(normInhuurId(iid));
+        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(String(iid));
+        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(String(iid));
       }
     }
 
@@ -2193,8 +1934,8 @@ if (wt === "montage") {
       for (const [dateISO, entry] of dm) {
         if (!inhuurAssignByDay[dateISO]) inhuurAssignByDay[dateISO] = { prod: new Set(), mont: new Set() };
 
-        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(normInhuurId(iid));
-        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(normInhuurId(iid));
+        for (const iid of (entry.inhuurProdIds || [])) inhuurAssignByDay[dateISO].prod.add(String(iid));
+        for (const iid of (entry.inhuurMontIds || [])) inhuurAssignByDay[dateISO].mont.add(String(iid));
       }
     }
 
@@ -2223,22 +1964,6 @@ if (wt === "montage") {
 
     // THEAD (3 rijen: maand / week / dag)
     const thead = document.createElement("thead");
-
-    
-      // --- maak context globaal beschikbaar voor modals (inhuur/capacity chips)
-      window.__plannerCtx = {
-        projMetaById,
-        sectById,
-        sectProjKey,
-        sectNameKey,
-        sectParaKey,
-        assignMap,
-        projectAssignMap,
-
-        // ✅ nieuw: beschikbaarheid
-        capByEmp,
-        inhuurByEmp,
-      };
 
 
 
@@ -2296,13 +2021,8 @@ trMonth.appendChild(hdrCell("", `hdr-cell hourscol sticky-top sticky-left2 ${hou
     trDay.appendChild(hdrCell("",  `hdr-cell hourscol sticky-top3 sticky-left2 ${hoursColOpen ? "" : "hourscol-collapsed"}`.trim()));
     for(const d of dates){
       const iso = toISODate(d);
-      const cls = ["sticky-top3", "dayhead", isWeekend(d) ? "wknd" : ""].filter(Boolean).join(" ");
-      trDay.appendChild(hdrCell(
-        `<button type="button" class="dayhead-btn" data-iso="${escapeAttr(iso)}">
-          ${dayNameNL(d.getDay())}<br>${d.getDate()}-${d.getMonth()+1}
-        </button>`,
-        cls
-      ));
+      const cls = ["sticky-top3", isWeekend(d) ? "wknd" : ""].join(" ");
+      trDay.appendChild(hdrCell(`${dayNameNL(d.getDay())}<br>${d.getDate()}-${d.getMonth()+1}`, cls));
     }
     thead.appendChild(trDay);
     table.appendChild(thead);
@@ -2373,73 +2093,8 @@ for (const s of secsForProj) {
   req.mont += Number(s?.uren_montage ?? s?.uren_mont ?? 0);
   req.reis += Number(s?.uren_reis ?? 0);
 }
+
  
-
-// ===== planned (gepland) uren voor project (uit assignments) =====
-const pfP = (settings.planFactor ?? 1);
-const plP = { prod: 0, cnc: 0, mont: 0, reis: 0 };
-
-const secsP = (sectiesByProject.get(pid) || []);
-
-for (const dd of dates) {
-  const iso = toISODate(dd);
-
-  for (const s of secsP) {
-    const sidRaw = s?.[sectIdKey]
-      ? String(s[sectIdKey])
-      : (s?.section_id ? String(s.section_id) : null);
-    if (!sidRaw) continue;
-
-    const sidC = sectLookup.get(String(sidRaw)) || String(sidRaw);
-    const e = assignMap.get(sidC)?.get(iso);
-    if (!e) continue;
-
-    // echte medewerkers (splitten binnen project)
-    for (const emp of (e.productie || [])) {
-      plP.prod += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "productie", String(emp));
-    }
-    for (const emp of (e.cnc || [])) {
-      plP.cnc += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "cnc", String(emp));
-    }
-    for (const emp of (e.montage || [])) {
-      plP.mont += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "montage", String(emp));
-    }
-    for (const emp of (e.reis || [])) {
-      plP.reis += (HOURS_PER_PERSON_DAY * pfP) / getSplit(String(pid), iso, "reis", String(emp));
-    }
-
-    // concept (dummy) telt gewoon als “personen”
-    plP.prod += Number(e.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.cnc  += Number(e.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.mont += Number(e.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfP;
-
-    // inhuur telt ook als “personen” (zelfde factor)
-    plP.prod += Number(e.inhuurProdIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.mont += Number(e.inhuurMontIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
-  }
-
-  // projectniveau (↳ regels) ook meenemen
-  const pe = projectAssignMap.get(String(pid))?.get(iso);
-  if (pe) {
-    for (const emp of (pe.productie || [])) plP.prod += HOURS_PER_PERSON_DAY * pfP;
-    for (const emp of (pe.cnc || []))       plP.cnc  += HOURS_PER_PERSON_DAY * pfP;
-    for (const emp of (pe.montage || []))   plP.mont += HOURS_PER_PERSON_DAY * pfP;
-    for (const emp of (pe.reis || []))      plP.reis += HOURS_PER_PERSON_DAY * pfP;
-
-    plP.prod += Number(pe.dummyProd || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.cnc  += Number(pe.dummyCnc  || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.mont += Number(pe.dummyMont || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.reis += Number(pe.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfP;
-
-    plP.prod += Number(pe.inhuurProdIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
-    plP.mont += Number(pe.inhuurMontIds?.size || 0) * HOURS_PER_PERSON_DAY * pfP;
-  }
-}
-
-// vullen!
-hoursTd.innerHTML = miniHoursHtml(req, plP);
-
   // tel ingeplande mensen per dag op over alle secties van dit project
   const projAssignByDay = {};
   const secs = sectiesByProject.get(pid) || [];
@@ -2947,11 +2602,7 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
       }
       if (!hasAny) continue;
 
-      const iidN = normInhuurId(iid);
-      const name =
-        inhuurById.get(iidN)?.name ||
-        inhuurById.get(String(iid).trim())?.name ||
-        "Inhuur";
+      const name = inhuurById.get(String(iid))?.name || "Inhuur";
 
       const trI = document.createElement("tr");
       trI.className = "cap-emp-row hidden";     // ✅ valt onder hetzelfde expand/collapse
@@ -2980,13 +2631,17 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
         td.className = `cell cap-cell inhuur-cell-click ${isWeekend(d) ? "wknd" : ""}`;
 
         // ✅ kleur als ingepland (zoals vaste werknemers)
-        const iidN = normInhuurId(iid);
-        const name = inhuurById.get(iidN)?.name || "Inhuur";
+        const iidStr = String(iid).trim();
+        const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidStr);
+        const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidStr);
 
-        const inProd = !!inhuurAssignByDay[iso]?.prod?.has(iidN);
-        const inMont = !!inhuurAssignByDay[iso]?.mont?.has(iidN);
+        if (inProd && inMont) td.classList.add("cap-assigned-both");
+        else if (inProd) td.classList.add("cap-assigned-prod");
+        else if (inMont) td.classList.add("cap-assigned-mont");
 
-        td.dataset.inhuurId = iidN;
+
+        // ✅ nodig om op cel te kunnen klikken
+        td.dataset.inhuurId = String(iid);
         td.dataset.workDate = iso;
 
         td.textContent = fmt0(h);
@@ -3048,11 +2703,11 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
 
       const rows = [];
       for (const [iid, dm] of src) {
-        const id = normInhuurId(iid);
+        const id = String(iid);
         const hours = Number(dm?.get(dateISO) || 0);
         const name = inhuurById?.get(id)?.name || "Inhuur";
 
-        const checked = targetSet.has(id);         // ✅ check in productie/montage set
+        const checked = targetSet.has(id);          // ✅ check in productie/montage set
         const shouldShow = checked || hours > 0;    // toon als beschikbaar of al gekozen
         if (!shouldShow) continue;
 
@@ -3088,30 +2743,6 @@ plS.reis += Number(e.dummyReis || 0) * HOURS_PER_PERSON_DAY * pfS;
   }
     // click on section cell -> assignments modal
     gridEl.onclick = async (ev) => {
-
-
-          // ✅ klik op dagheader => dagmodal
-    const dayBtn = ev.target.closest(".dayhead-btn[data-iso]");
-    if (dayBtn) {
-      ev.stopPropagation();
-      const dateISO = String(dayBtn.dataset.iso || "");
-      if (!dateISO) return;
-
-      openDayModal({
-        dateISO,
-        werknemers,
-        inhuurById,
-        inhuurPeopleVisible,
-        assignMap,
-        projectAssignMap,
-        sectById,
-        projMetaById,
-        sectProjKey,
-        sectParaKey,
-        sectNameKey
-      });
-      return;
-    }
 
       // ✅ Inhuur "+" knop (naast Uren beschikbaar)
       const inBtn = ev.target.closest("#btnInhuurPlus");
@@ -4612,11 +4243,6 @@ loadAndRender();
       // planning maps
       assignMap,
       projectAssignMap,
-
-      // ✅ beschikbaarheid
-      capByEmp,
-      inhuurByEmp,
-      inhuurById, // (handig, maar niet verplicht)
     };
 
 
