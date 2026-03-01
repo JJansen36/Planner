@@ -1154,7 +1154,7 @@ try {
   // alle inhuur-krachten (ook inactief) => namen
   const { data: pDataAll, error: pErrAll } = await sb
     .from(INHUUR_TABLE)
-    .select("inhuur_id, name, naam, is_active")
+    .select("inhuur_id, name, is_active")
     .order("name", { ascending: true })
     .limit(5000);
 
