@@ -207,6 +207,26 @@ const ordersHtml = `
   ${renderOrdersAccordionHtml(ords)}
 `;
 
+const projectId = String(project?.[DB.projectPkCol] ?? id); // id is de URL param
+
+const filesHtml = `
+  <div class="muted" style="font-weight:800; margin:14px 0 8px">Bestanden</div>
+
+  <div class="sec-files" data-section-id="${escapeHtml(sid)}" data-project-id="${escapeHtml(projectId)}">
+    <div class="sec-files-top" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div class="sec-files-title" style="font-weight:700; color:var(--muted); font-size:12px; text-transform:uppercase;">
+        Uploads
+      </div>
+
+      <label class="btn small js-sec-upload" style="cursor:pointer;">
+        + Upload
+        <input class="secFileInput" type="file" multiple hidden />
+      </label>
+    </div>
+
+    <div class="sec-files-list" style="margin-top:8px;"></div>
+  </div>
+`;
 
 const includeInPlanning = getIncludePlanningValue(s);
 return `
@@ -239,6 +259,7 @@ return `
 
                 <div class="sec-right">
                   ${ordersHtml}
+                  ${filesHtml}
                 </div>
               </div>
             </div>
@@ -247,6 +268,8 @@ return `
       </tr>
     `;
   }).join("");
+
+  wireSectionFileBlocks(el("secBody"));
 
   // Accordion behavior
   [...el("secBody").querySelectorAll(".accordion-row")].forEach(tr=>{
@@ -302,6 +325,13 @@ return `
     }
   });
 
+
+  // Klikken op upload knop mag accordion niet togglen
+el("secBody").addEventListener("click", (e) => {
+  if (e.target.closest(".js-sec-upload") || e.target.closest(".secFileInput")) {
+    e.stopPropagation();
+  }
+});
 
 
 
