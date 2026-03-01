@@ -1552,8 +1552,8 @@ function parseSectionNo(v){
       // ✅ vaste medewerkers eerst
       if (aIn !== bIn) return aIn ? 1 : -1;
 
-      const aId = aIn ? a.slice(6).trim() : "";
-      const bId = bIn ? b.slice(6).trim() : "";
+      const aId = aIn ? a.slice("inhuur:".length).trim() : "";
+      const bId = bIn ? b.slice("inhuur:".length).trim() : "";
 
       const an = aIn ? (inhuurNameById.get(aId) || "Inhuur") : (empNameById.get(a) || a);
       const bn = bIn ? (inhuurNameById.get(bId) || "Inhuur") : (empNameById.get(b) || b);
@@ -1563,8 +1563,7 @@ function parseSectionNo(v){
 
     for (const k of keysSorted) {
     const isInhuur = k.startsWith("inhuur:");
-    const iid = isInhuur ? k.slice(6).trim() : "";
-
+    const iid = isInhuur ? k.slice("inhuur:".length).trim() : "";
     const name = isInhuur
       ? `${inhuurNameById.get(iid) || "Inhuur"} (inhuur)`
       : (empNameById.get(k) || k);
