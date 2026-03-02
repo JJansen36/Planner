@@ -720,6 +720,8 @@ function wireSectionFileBlocks(root=document){
 
       input.addEventListener("click", (e)=> e.stopPropagation());
       input.addEventListener("change", async (e) => {
+        console.log("[UPLOAD] change fired", input.files?.length, input.files?.[0]?.name);
+
         e.stopPropagation();
 
         const projectId = block.dataset.projectId;
@@ -727,11 +729,12 @@ function wireSectionFileBlocks(root=document){
 
         try{
           await uploadFilesToSection(projectId, sectionId, input.files);
+          console.log("[UPLOAD] done");
           input.value = "";
           await renderSectionFiles(block);
         }catch(err){
-          console.error(err);
-          alert("Er ging iets mis met uploaden.");
+          console.error("[UPLOAD] fatal", err);
+          alert("Er ging iets mis met uploaden (zie console).");
         }
       });
     }
