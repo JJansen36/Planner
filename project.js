@@ -164,6 +164,8 @@ async function loadProject(id){
       return `<td>${escapeHtml(v ?? "")}</td>`;
     }).join("");
 
+    wireSectionFileBlocks(el("secBody"));
+
 // ===== detail opsplitsen: tekst/beschrijving boven, uren links =====
 const detailText = DB.sectionDetailCols
   .filter(d => !String(Array.isArray(d.col) ? d.col[0] : d.col).includes("uren_"))
@@ -269,7 +271,7 @@ return `
     `;
   }).join("");
 
-  wireSectionFileBlocks(el("secBody"));
+
 
   // Accordion behavior
   [...el("secBody").querySelectorAll(".accordion-row")].forEach(tr=>{
@@ -516,4 +518,225 @@ function sectionSortKey(section){
     group: isM ? 1 : 0,   // 0 = normaal, 1 = M onderaan
     num,
   };
+}
+
+// =========================
+// SECTION FILES (uploads)
+// =========================
+
+// Bucket naam in Supabase Storage
+const FILES_BUCKET = "project-files";
+
+// DB tabelnaam voor metadata
+const FILES_TABLE = "section_files";
+
+function formatBytes(n){
+  if(n === null || n === undefined) return "";
+  const units = ["B","KB","MB","GB","TB"];
+  let i = 0, v = Number(n) || 0;
+  while(v >= 1024 && i < units.length-1){ v /= 1024; i++; }
+  return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function safeName(name){
+  return String(name || "bestand")
+    .replace(/[^\w.\- ]+/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function listSectionFiles(projectId, sectionId){
+  const { data, error } = await sb
+    .from(FILES_TABLE)
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("section_id", sectionId)
+    .order("created_at", { ascending: false });
+
+  if(error) throw error;
+  return data || [];
+}
+
+async function renderSectionFiles(blockEl){
+  const projectId = blockEl.dataset.projectId;
+  const sectionId = blockEl.dataset.sectionId;
+  const listEl = blockEl.querySelector(".sec-files-list");
+  if(!listEl) return;
+
+  listEl.innerHTML = `<div class="muted">Laden…</div>`;
+
+  let files = [];
+  try{
+    files = await listSectionFiles(projectId, sectionId);
+  }catch(err){
+    console.error(err);
+    listEl.innerHTML = `<div class="muted">Kon bestanden niet laden.</div>`;
+    return;
+  }
+
+  if(!files.length){
+    listEl.innerHTML = `<div class="muted">Nog geen bestanden.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = files.map(f => `
+    <div class="file-row" data-file-id="${f.id}">
+      <div class="file-meta">
+        <div class="file-name" title="${escapeHtml(f.file_name || "")}">${escapeHtml(f.file_name || "")}</div>
+        <div class="file-sub">${escapeHtml(formatBytes(f.size_bytes))}${f.content_type ? " • " + escapeHtml(f.content_type) : ""}</div>
+      </div>
+      <div class="file-actions">
+        <button class="btn small" type="button" data-act="open">Open</button>
+        <button class="btn small" type="button" data-act="download">Download</button>
+        <button class="btn small danger" type="button" data-act="delete">Verwijder</button>
+      </div>
+    </div>
+  `).join("");
+
+  // actions (event per row)
+  listEl.querySelectorAll(".file-row").forEach(row => {
+    row.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if(!btn) return;
+      e.stopPropagation();
+
+      const act = btn.dataset.act;
+      const fileId = row.dataset.fileId;
+      const file = files.find(x => String(x.id) === String(fileId));
+      if(!file) return;
+
+      if(act === "open" || act === "download"){
+        const { data, error } = await sb.storage
+          .from(FILES_BUCKET)
+          .createSignedUrl(file.file_path, 120); // 2 min
+
+        if(error){
+          console.error(error);
+          alert("Kon geen link maken.");
+          return;
+        }
+
+        const url = data?.signedUrl;
+        if(!url) return;
+
+        if(act === "open"){
+          window.open(url, "_blank", "noopener,noreferrer");
+        }else{
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = file.file_name || "download";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+      }
+
+      if(act === "delete"){
+        if(!confirm(`Bestand verwijderen?\n\n${file.file_name}`)) return;
+
+        // 1) storage object verwijderen
+        const { error: stErr } = await sb.storage
+          .from(FILES_BUCKET)
+          .remove([file.file_path]);
+
+        if(stErr){
+          console.error(stErr);
+          alert("Kon storage bestand niet verwijderen.");
+          return;
+        }
+
+        // 2) db row verwijderen
+        const { error: dbErr } = await sb
+          .from(FILES_TABLE)
+          .delete()
+          .eq("id", file.id);
+
+        if(dbErr){
+          console.error(dbErr);
+          alert("Kon database record niet verwijderen.");
+          return;
+        }
+
+        await renderSectionFiles(blockEl);
+      }
+    });
+  });
+}
+
+async function uploadFilesToSection(projectId, sectionId, fileList){
+  const files = Array.from(fileList || []);
+  if(!files.length) return;
+
+  const userRes = await sb.auth.getUser();
+  const userId = userRes?.data?.user?.id || null;
+
+  for(const file of files){
+    const original = safeName(file.name);
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const path = `projects/${projectId}/sections/${sectionId}/${ts}_${original}`;
+
+    // upload naar storage
+    const { data: up, error: upErr } = await sb.storage
+      .from(FILES_BUCKET)
+      .upload(path, file, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false
+      });
+
+    if(upErr){
+      console.error(upErr);
+      alert(`Upload mislukt: ${file.name}`);
+      continue;
+    }
+
+    // metadata in db
+    const { error: insErr } = await sb
+      .from(FILES_TABLE)
+      .insert({
+        project_id: projectId,
+        section_id: sectionId,
+        file_path: up.path,
+        file_name: original,
+        content_type: file.type || null,
+        size_bytes: file.size || null,
+        uploaded_by: userId
+      });
+
+    if(insErr){
+      console.error(insErr);
+      // rollback storage object
+      await sb.storage.from(FILES_BUCKET).remove([up.path]);
+      alert(`Metadata opslaan mislukt: ${file.name}`);
+    }
+  }
+}
+
+function wireSectionFileBlocks(root=document){
+  root.querySelectorAll(".sec-files").forEach(block => {
+    // input wiring
+    const input = block.querySelector(".secFileInput");
+    if(input && !input.dataset.wired){
+      input.dataset.wired = "1";
+
+      input.addEventListener("click", (e)=> e.stopPropagation());
+      input.addEventListener("change", async (e) => {
+        e.stopPropagation();
+
+        const projectId = block.dataset.projectId;
+        const sectionId = block.dataset.sectionId;
+
+        try{
+          await uploadFilesToSection(projectId, sectionId, input.files);
+          input.value = "";
+          await renderSectionFiles(block);
+        }catch(err){
+          console.error(err);
+          alert("Er ging iets mis met uploaden.");
+        }
+      });
+    }
+
+    // initial load
+    renderSectionFiles(block);
+  });
 }

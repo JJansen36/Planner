@@ -1657,6 +1657,14 @@ td.hourscol{
 }
 .dayhead-btn:hover{ text-decoration:underline; }
 
+.file-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:#fff;
+}
+.file-meta{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.file-name{ font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.file-sub{ font-size:12px; color:var(--muted); }
+.file-actions{ display:flex; gap:6px; flex:0 0 auto; }
 
 @media (max-width: 720px){
   .assign-grid-2{ grid-template-columns: 1fr; }
