@@ -683,9 +683,9 @@ async function uploadFilesToSection(projectId, sectionId, fileList){
         upsert: false
       });
 
-    if(upErr){
-      console.error(upErr);
-      alert(`Upload mislukt: ${file.name}`);
+    if (upErr) {
+      console.error("[UPLOAD] storage error", upErr);
+      alert(`Upload mislukt: ${upErr.message || upErr}`);
       continue;
     }
 
@@ -702,11 +702,13 @@ async function uploadFilesToSection(projectId, sectionId, fileList){
         uploaded_by: userId
       });
 
-    if(insErr){
-      console.error(insErr);
+    if (insErr) {
+      console.error("[UPLOAD] db error", insErr);
+      alert(`Opslaan in database mislukt: ${insErr.message || insErr}`);
+
       // rollback storage object
       await sb.storage.from(FILES_BUCKET).remove([up.path]);
-      alert(`Metadata opslaan mislukt: ${file.name}`);
+      continue;
     }
   }
 }
