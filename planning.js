@@ -587,7 +587,7 @@ function asISODate(v){
             <div class="label">Paragraaf</div><div class="value">${escapeHtml(para || "-")}</div>
             <div class="label">Opleverdatum</div><div class="value">${escapeHtml(complTxt || "-")}</div>
 
-            <div class="label">WVB</div><div class="value">${escapeHtml(formatHoursCell(totals.prep))} uur</div>
+            <div class="label">WVB</div><div class="value">${escapeHtml(fmtHours(totals.prep))} uur</div>
             <div class="label">Productie</div><div class="value">${escapeHtml(formatHoursCell(totals.prod))} uur</div>
             <div class="label">CNC</div><div class="value">${escapeHtml(formatHoursCell(totals.cnc))} uur</div>
             <div class="label">Montage</div><div class="value">${escapeHtml(formatHoursCell(totals.mont))} uur</div>
