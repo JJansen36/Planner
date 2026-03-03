@@ -565,31 +565,124 @@ function asISODate(v){
     return secModal;
   }
 
-  function openSectionDetailsModal({ sid, dateISO, sectie, totals, complTxt }){
-    const modal = ensureSecModal();
-    if (!modal) return;
+  function openSectionDetailsModal({ sid, dateISO, sectie, totals, complTxt, projectId, sectionObj }){
+  const modal = ensureSecModal();
+  if (!modal) return;
 
-    const sub = document.getElementById("secModalSub");
-    const body = document.getElementById("secModalBody");
+  const sub = document.getElementById("secModalSub");
+  const body = document.getElementById("secModalBody");
 
-    if (sub) sub.textContent = `${dateISO} • ${sectie || "sectie"} • ${sid}`;
-    if (body) {
-        body.innerHTML = `
-          <div class="fieldgrid" style="grid-template-columns: 170px 1fr;">
+  if (sub) sub.textContent = `${sectie || "sectie"} • ${sid}`;
+
+  const para = sectionObj?.paragraaf ?? sectionObj?.paragraph ?? "";
+  const tekst = sectionObj?.tekst ?? sectionObj?.text ?? sectionObj?.omschrijving ?? "";
+
+  if (body) {
+    body.innerHTML = `
+      <div class="sec-modal-grid">
+        <div>
+          <div class="muted" style="font-weight:800; margin-bottom:8px;">Gegevens</div>
+
+          <div class="fieldgrid" style="grid-template-columns:170px 1fr;">
+            <div class="label">Paragraaf</div><div class="value">${escapeHtml(para || "-")}</div>
             <div class="label">Opleverdatum</div><div class="value">${escapeHtml(complTxt || "-")}</div>
 
-            <div class="label">Werkvoorbereiding</div><div class="value">${escapeHtml(formatHoursCell(totals.prep))} uur</div>
+            <div class="label">WVB</div><div class="value">${escapeHtml(formatHoursCell(totals.prep))} uur</div>
             <div class="label">Productie</div><div class="value">${escapeHtml(formatHoursCell(totals.prod))} uur</div>
             <div class="label">CNC</div><div class="value">${escapeHtml(formatHoursCell(totals.cnc))} uur</div>
-
             <div class="label">Montage</div><div class="value">${escapeHtml(formatHoursCell(totals.mont))} uur</div>
             <div class="label">Reis</div><div class="value">${escapeHtml(formatHoursCell(totals.reis))} uur</div>
           </div>
-        `;
+
+          ${tekst ? `
+            <div class="muted" style="font-weight:800; margin:14px 0 8px;">Tekst</div>
+            <div class="value" style="white-space:pre-line">${escapeHtml(tekst)}</div>
+          ` : ""}
+        </div>
+
+        <div>
+          <div class="muted" style="font-weight:800; margin-bottom:8px;">Bestanden</div>
+
+          <div class="row" style="justify-content:space-between; gap:10px; align-items:center;">
+            <div class="muted" style="font-weight:700;">Uploads</div>
+            <label class="btn small" style="cursor:pointer;">
+              + Upload
+              <input id="secModalFileInput" type="file" multiple hidden />
+            </label>
+          </div>
+
+          <div id="secModalFilesList" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  modal.wrap.classList.add("show");
+
+  // === Files wiring (per open modal) ===
+  const listEl = document.getElementById("secModalFilesList");
+  const inputEl = document.getElementById("secModalFileInput");
+
+  if (!listEl || !inputEl) return;
+
+  // initial load
+  renderSectionFilesInto(listEl, String(projectId), String(sid));
+
+  inputEl.onchange = async () => {
+    try{
+      await uploadFilesToSection(String(projectId), String(sid), inputEl.files);
+      inputEl.value = "";
+      await renderSectionFilesInto(listEl, String(projectId), String(sid));
+    }catch(e){
+      console.error(e);
+      alert("Upload ging mis (zie console).");
+    }
+  };
+
+  // actions
+  listEl.onclick = async (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if(!btn) return;
+
+    const act = btn.dataset.act;
+    const row = btn.closest(".file-row");
+    const fileId = row?.dataset?.fileId;
+    if(!fileId) return;
+
+    const files = listEl._filesCache || [];
+    const file = files.find(x => String(x.id) === String(fileId));
+    if(!file) return;
+
+    if(act === "open" || act === "download"){
+      const { data, error } = await sb.storage.from(FILES_BUCKET).createSignedUrl(file.file_path, 120);
+      if(error){ console.error(error); alert("Kon geen link maken."); return; }
+      const url = data?.signedUrl;
+      if(!url) return;
+
+      if(act === "open") window.open(url, "_blank", "noopener,noreferrer");
+      else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.file_name || "download";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     }
 
-    modal.wrap.classList.add("show");
-  }
+    if(act === "delete"){
+      if(!confirm(`Bestand verwijderen?\n\n${file.file_name}`)) return;
+
+      const { error: stErr } = await sb.storage.from(FILES_BUCKET).remove([file.file_path]);
+      if(stErr){ console.error(stErr); alert("Kon storage bestand niet verwijderen."); return; }
+
+      const { error: dbErr } = await sb.from(FILES_TABLE).delete().eq("id", file.id);
+      if(dbErr){ console.error(dbErr); alert("Kon database record niet verwijderen."); return; }
+
+      await renderSectionFilesInto(listEl, String(projectId), String(sid));
+    }
+  };
+}
 
   // -------- ASSIGNMENTS MODAL (productie/montage + collega's) --------
   let assignModal = null;
@@ -3230,13 +3323,15 @@ const totals = {
         // datum voor in de header van popup (ik pak de start van je range)
         const dateISO = toISODate(start);
 
-        openSectionDetailsModal({
-          sid,
-          dateISO,
-          sectie: sectieNaam,
-          totals,
-          complTxt
-        });
+      openSectionDetailsModal({
+        sid,
+        dateISO,
+        sectie: sectieNaam,
+        totals,
+        complTxt,
+        projectId: pid,
+        sectionObj: sObj
+      });
         return;
       }
 
@@ -6074,4 +6169,109 @@ function getContiguousRunFromCell(td){
 
   return { startISO, endISO };
 }
+}
+
+// =========================
+// SECTION FILES in MODAL
+// =========================
+const FILES_BUCKET = "project-files";
+const FILES_TABLE  = "section_files";
+
+function formatBytes(n){
+  if(n === null || n === undefined) return "";
+  const u = ["B","KB","MB","GB","TB"];
+  let i=0, v=Number(n)||0;
+  while(v>=1024 && i<u.length-1){ v/=1024; i++; }
+  return `${v.toFixed(v>=10 || i===0 ? 0 : 1)} ${u[i]}`;
+}
+function safeName(name){
+  return String(name||"bestand").replace(/[^\w.\- ]+/g,"_").trim();
+}
+
+async function listSectionFiles(projectId, sectionId){
+  const { data, error } = await sb
+    .from(FILES_TABLE)
+    .select("*")
+    .eq("project_id", projectId)
+    .eq("section_id", sectionId)
+    .order("created_at", { ascending:false });
+  if(error) throw error;
+  return data || [];
+}
+
+async function renderSectionFilesInto(listEl, projectId, sectionId){
+  listEl.innerHTML = `<div class="muted">Laden…</div>`;
+
+  let files = [];
+  try { files = await listSectionFiles(projectId, sectionId); }
+  catch(err){
+    console.error("[FILES] list error", err);
+    listEl.innerHTML = `<div class="muted">Kon bestanden niet laden.</div>`;
+    return;
+  }
+
+  if(!files.length){
+    listEl.innerHTML = `<div class="muted">Nog geen bestanden.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = files.map(f => `
+    <div class="file-row" data-file-id="${f.id}">
+      <div class="file-meta">
+        <div class="file-name" title="${escapeHtml(f.file_name||"")}">${escapeHtml(f.file_name||"")}</div>
+        <div class="file-sub">${escapeHtml(formatBytes(f.size_bytes))}${f.content_type ? " • " + escapeHtml(f.content_type) : ""}</div>
+      </div>
+      <div class="file-actions">
+        <button class="btn small" type="button" data-act="open">Open</button>
+        <button class="btn small" type="button" data-act="download">Download</button>
+        <button class="btn small danger" type="button" data-act="delete">Verwijder</button>
+      </div>
+    </div>
+  `).join("");
+
+  // store current list in DOM for click handler
+  listEl._filesCache = files;
+}
+
+async function uploadFilesToSection(projectId, sectionId, fileList){
+  const files = Array.from(fileList || []);
+  if(!files.length) return;
+
+  const userRes = await sb.auth.getUser();
+  const userId = userRes?.data?.user?.id || null;
+
+  for(const file of files){
+    const original = safeName(file.name);
+    const ts = new Date().toISOString().replace(/[:.]/g,"-");
+    const path = `projects/${projectId}/sections/${sectionId}/${ts}_${original}`;
+
+    const { data: up, error: upErr } = await sb.storage
+      .from(FILES_BUCKET)
+      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert:false });
+
+    if(upErr){
+      console.error("[UPLOAD] storage error", upErr);
+      alert(`Upload mislukt: ${upErr.message || upErr}`);
+      continue;
+    }
+
+    const { error: insErr } = await sb
+      .from(FILES_TABLE)
+      .insert({
+        project_id: projectId,
+        section_id: sectionId,
+        file_path: up.path,
+        file_name: original,
+        content_type: file.type || null,
+        size_bytes: file.size || null,
+        uploaded_by: userId
+      });
+
+    if(insErr){
+      console.error("[UPLOAD] db error", insErr);
+      alert(`Opslaan in database mislukt: ${insErr.message || insErr}`);
+      await sb.storage.from(FILES_BUCKET).remove([up.path]);
+      continue;
+    }
+  }
 }

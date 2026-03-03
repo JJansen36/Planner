@@ -5,33 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LOVD Planning — Capaciteit</title>
   <link rel="stylesheet" href="styles.css" />
-
-  <style>
-  /* TEST badge: rood kader om hele pagina */
-  body.is-test{
-    outline: 6px solid #dc2626;      /* rood */
-    outline-offset: -6px;            /* naar binnen */
-    min-height: 100vh;
-  }
-
-  /* optioneel: klein label linksboven */
-  body.is-test::before{
-    content: "TEST";
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 999999;
-    background: #dc2626;
-    color: #fff;
-    font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    padding: 6px 10px;
-    border-radius: 10px;
-    letter-spacing: .08em;
-  }
-</style>
 </head>
 
-<body class="is-test">
+<body>
   <div class="container full-width">
     <div class="topbar">
       <div class="row" style="gap:12px">
@@ -63,32 +39,23 @@
   </div>
 
   <!-- Section details modal (moet IN body) -->
-  <div id="secModalBackdrop" class="modal-backdrop">
-    <div class="modal assign-modal" role="dialog" aria-modal="true" aria-labelledby="secModalTitle">
-      <div class="hd">
-        <div>
-          <div id="secModalTitle" class="assign-title">Sectie gegevens</div>
-          <div id="secModalSub" class="assign-sub"></div>
-        </div>
-        <button class="btn small" id="secModalClose" type="button">✕</button>
+<div id="secModalBackdrop" class="modal-backdrop">
+  <div class="modal" style="max-width:900px;">
+    <div class="hd">
+      <div>
+        <div class="assign-title">Sectie</div>
+        <div class="assign-sub" id="secModalSub"></div>
       </div>
-      <div class="hr"></div>
+      <button class="btn small" id="secModalClose" type="button">✕</button>
+    </div>
 
-        <div class="label" style="font-weight:800; margin-bottom:6px;">Bestellingen filter (soort)</div>
-        <div class="muted" style="font-size:12px; margin-bottom:8px;">
-          Vink soorten aan die je als gele blokjes op leverdatum wilt zien.
-        </div>
-        
-        <div id="orderTypeList" class="order-type-list"></div>
+    <div class="bd" id="secModalBody"></div>
 
-
-      <div class="bd" id="secModalBody"></div>
-
-      <div class="ft">
-        <button class="btn" id="secModalClose2" type="button">Sluiten</button>
-      </div>
+    <div class="ft">
+      <button class="btn" id="secModalClose2" type="button">Sluiten</button>
     </div>
   </div>
+</div>
 
   
 

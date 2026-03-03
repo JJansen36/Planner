@@ -161,10 +161,12 @@ async function loadProject(id){
         ? c.col.map(k => valFrom(s, k)).find(x => x !== null && x !== undefined && x !== "")
         : valFrom(s, c.col);
 
+
       return `<td>${escapeHtml(v ?? "")}</td>`;
     }).join("");
 
-    wireSectionFileBlocks(el("secBody"));
+    setupSectionFilesDelegation();
+el("secBody").querySelectorAll(".sec-files").forEach(b => renderSectionFiles(b));
 
 // ===== detail opsplitsen: tekst/beschrijving boven, uren links =====
 const detailText = DB.sectionDetailCols
@@ -182,6 +184,7 @@ const detailText = DB.sectionDetailCols
       </div>
     `;
   }).join("");
+
 
 const detailHours = DB.sectionDetailCols
   .filter(d => String(Array.isArray(d.col) ? d.col[0] : d.col).includes("uren_"))
@@ -328,12 +331,6 @@ return `
   });
 
 
-  // Klikken op upload knop mag accordion niet togglen
-el("secBody").addEventListener("click", (e) => {
-  if (e.target.closest(".js-sec-upload") || e.target.closest(".secFileInput")) {
-    e.stopPropagation();
-  }
-});
 
 
 
@@ -520,29 +517,22 @@ function sectionSortKey(section){
   };
 }
 
-// =========================
-// SECTION FILES (uploads)
-// =========================
 
-// Bucket naam in Supabase Storage
+// =========================
+// SECTION FILES (delegated)
+// =========================
 const FILES_BUCKET = "project-files";
-
-// DB tabelnaam voor metadata
-const FILES_TABLE = "section_files";
+const FILES_TABLE  = "section_files";
 
 function formatBytes(n){
   if(n === null || n === undefined) return "";
-  const units = ["B","KB","MB","GB","TB"];
-  let i = 0, v = Number(n) || 0;
-  while(v >= 1024 && i < units.length-1){ v /= 1024; i++; }
-  return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+  const u = ["B","KB","MB","GB","TB"];
+  let i=0, v=Number(n)||0;
+  while(v>=1024 && i<u.length-1){ v/=1024; i++; }
+  return `${v.toFixed(v>=10 || i===0 ? 0 : 1)} ${u[i]}`;
 }
-
 function safeName(name){
-  return String(name || "bestand")
-    .replace(/[^\w.\- ]+/g, "_")
-    .replace(/\s+/g, " ")
-    .trim();
+  return String(name||"bestand").replace(/[^\w.\- ]+/g,"_").trim();
 }
 
 async function listSectionFiles(projectId, sectionId){
@@ -551,8 +541,7 @@ async function listSectionFiles(projectId, sectionId){
     .select("*")
     .eq("project_id", projectId)
     .eq("section_id", sectionId)
-    .order("created_at", { ascending: false });
-
+    .order("created_at", { ascending:false });
   if(error) throw error;
   return data || [];
 }
@@ -566,10 +555,9 @@ async function renderSectionFiles(blockEl){
   listEl.innerHTML = `<div class="muted">Laden…</div>`;
 
   let files = [];
-  try{
-    files = await listSectionFiles(projectId, sectionId);
-  }catch(err){
-    console.error(err);
+  try { files = await listSectionFiles(projectId, sectionId); }
+  catch(err){
+    console.error("[FILES] list error", err);
     listEl.innerHTML = `<div class="muted">Kon bestanden niet laden.</div>`;
     return;
   }
@@ -582,7 +570,7 @@ async function renderSectionFiles(blockEl){
   listEl.innerHTML = files.map(f => `
     <div class="file-row" data-file-id="${f.id}">
       <div class="file-meta">
-        <div class="file-name" title="${escapeHtml(f.file_name || "")}">${escapeHtml(f.file_name || "")}</div>
+        <div class="file-name" title="${escapeHtml(f.file_name||"")}">${escapeHtml(f.file_name||"")}</div>
         <div class="file-sub">${escapeHtml(formatBytes(f.size_bytes))}${f.content_type ? " • " + escapeHtml(f.content_type) : ""}</div>
       </div>
       <div class="file-actions">
@@ -592,75 +580,6 @@ async function renderSectionFiles(blockEl){
       </div>
     </div>
   `).join("");
-
-  // actions (event per row)
-  listEl.querySelectorAll(".file-row").forEach(row => {
-    row.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button[data-act]");
-      if(!btn) return;
-      e.stopPropagation();
-
-      const act = btn.dataset.act;
-      const fileId = row.dataset.fileId;
-      const file = files.find(x => String(x.id) === String(fileId));
-      if(!file) return;
-
-      if(act === "open" || act === "download"){
-        const { data, error } = await sb.storage
-          .from(FILES_BUCKET)
-          .createSignedUrl(file.file_path, 120); // 2 min
-
-        if(error){
-          console.error(error);
-          alert("Kon geen link maken.");
-          return;
-        }
-
-        const url = data?.signedUrl;
-        if(!url) return;
-
-        if(act === "open"){
-          window.open(url, "_blank", "noopener,noreferrer");
-        }else{
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = file.file_name || "download";
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        }
-      }
-
-      if(act === "delete"){
-        if(!confirm(`Bestand verwijderen?\n\n${file.file_name}`)) return;
-
-        // 1) storage object verwijderen
-        const { error: stErr } = await sb.storage
-          .from(FILES_BUCKET)
-          .remove([file.file_path]);
-
-        if(stErr){
-          console.error(stErr);
-          alert("Kon storage bestand niet verwijderen.");
-          return;
-        }
-
-        // 2) db row verwijderen
-        const { error: dbErr } = await sb
-          .from(FILES_TABLE)
-          .delete()
-          .eq("id", file.id);
-
-        if(dbErr){
-          console.error(dbErr);
-          alert("Kon database record niet verwijderen.");
-          return;
-        }
-
-        await renderSectionFiles(blockEl);
-      }
-    });
-  });
 }
 
 async function uploadFilesToSection(projectId, sectionId, fileList){
@@ -672,24 +591,21 @@ async function uploadFilesToSection(projectId, sectionId, fileList){
 
   for(const file of files){
     const original = safeName(file.name);
-    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const ts = new Date().toISOString().replace(/[:.]/g,"-");
     const path = `projects/${projectId}/sections/${sectionId}/${ts}_${original}`;
 
-    // upload naar storage
+    console.log("[UPLOAD] start", { original, path });
+
     const { data: up, error: upErr } = await sb.storage
       .from(FILES_BUCKET)
-      .upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false
-      });
+      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert:false });
 
-    if (upErr) {
+    if(upErr){
       console.error("[UPLOAD] storage error", upErr);
       alert(`Upload mislukt: ${upErr.message || upErr}`);
       continue;
     }
 
-    // metadata in db
     const { error: insErr } = await sb
       .from(FILES_TABLE)
       .insert({
@@ -702,46 +618,94 @@ async function uploadFilesToSection(projectId, sectionId, fileList){
         uploaded_by: userId
       });
 
-    if (insErr) {
+    if(insErr){
       console.error("[UPLOAD] db error", insErr);
       alert(`Opslaan in database mislukt: ${insErr.message || insErr}`);
-
-      // rollback storage object
       await sb.storage.from(FILES_BUCKET).remove([up.path]);
       continue;
     }
+
+    console.log("[UPLOAD] done", original);
   }
 }
 
-function wireSectionFileBlocks(root=document){
-  root.querySelectorAll(".sec-files").forEach(block => {
-    // input wiring
-    const input = block.querySelector(".secFileInput");
-    if(input && !input.dataset.wired){
-      input.dataset.wired = "1";
+let _filesDelegationWired = false;
+function setupSectionFilesDelegation(){
+  if(_filesDelegationWired) return;
+  _filesDelegationWired = true;
 
-      input.addEventListener("click", (e)=> e.stopPropagation());
-      input.addEventListener("change", async (e) => {
-        console.log("[UPLOAD] change fired", input.files?.length, input.files?.[0]?.name);
+  const body = el("secBody");
+  if(!body) return;
 
-        e.stopPropagation();
+  body.addEventListener("change", async (e) => {
+    const input = e.target.closest(".secFileInput");
+    if(!input) return;
 
-        const projectId = block.dataset.projectId;
-        const sectionId = block.dataset.sectionId;
+    const block = input.closest(".sec-files");
+    if(!block) return;
 
-        try{
-          await uploadFilesToSection(projectId, sectionId, input.files);
-          console.log("[UPLOAD] done");
-          input.value = "";
-          await renderSectionFiles(block);
-        }catch(err){
-          console.error("[UPLOAD] fatal", err);
-          alert("Er ging iets mis met uploaden (zie console).");
-        }
-      });
+    const projectId = block.dataset.projectId;
+    const sectionId = block.dataset.sectionId;
+
+    console.log("[UPLOAD] change fired", input.files?.length, input.files?.[0]?.name, { projectId, sectionId });
+
+    try{
+      await uploadFilesToSection(projectId, sectionId, input.files);
+      input.value = "";
+      await renderSectionFiles(block);
+    }catch(err){
+      console.error("[UPLOAD] fatal", err);
+      alert("Upload ging mis (zie console).");
+    }
+  });
+
+  body.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if(!btn) return;
+
+    const act = btn.dataset.act;
+    const block = btn.closest(".sec-files");
+    const row = btn.closest(".file-row");
+    if(!block || !row) return;
+
+    e.stopPropagation();
+
+    const fileId = row.dataset.fileId;
+    const projectId = block.dataset.projectId;
+    const sectionId = block.dataset.sectionId;
+
+    const files = await listSectionFiles(projectId, sectionId);
+    const file = files.find(x => String(x.id) === String(fileId));
+    if(!file) return;
+
+    if(act === "open" || act === "download"){
+      const { data, error } = await sb.storage.from(FILES_BUCKET).createSignedUrl(file.file_path, 120);
+      if(error){ console.error(error); alert("Kon geen link maken."); return; }
+      const url = data?.signedUrl;
+      if(!url) return;
+
+      if(act === "open"){
+        window.open(url, "_blank", "noopener,noreferrer");
+      }else{
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.file_name || "download";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     }
 
-    // initial load
-    renderSectionFiles(block);
+    if(act === "delete"){
+      if(!confirm(`Bestand verwijderen?\n\n${file.file_name}`)) return;
+
+      const { error: stErr } = await sb.storage.from(FILES_BUCKET).remove([file.file_path]);
+      if(stErr){ console.error(stErr); alert("Kon storage bestand niet verwijderen."); return; }
+
+      const { error: dbErr } = await sb.from(FILES_TABLE).delete().eq("id", file.id);
+      if(dbErr){ console.error(dbErr); alert("Kon database record niet verwijderen."); return; }
+
+      await renderSectionFiles(block);
+    }
   });
 }
