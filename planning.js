@@ -1150,12 +1150,16 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
 
     statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
-    // 1) projecten
+    // cutoff: als je terugkijkt wil je ook projecten zien die in/na de view nog liepen.
+    // maar als je vooruit kijkt (startISO > vandaag), houd dan vandaag aan als cutoff.
+    const cutoffISO = (startISO > todayISO) ? todayISO : startISO;
+
     const { data: projecten, error: pErr } = await sb
       .from("projecten_planner")
       .select("*")
       .in("salesstatus", [3,4,5,6,7,8])
-      .gte("completiondate_d", todayISO)
+      // toon projecten die nog niet opgeleverd zijn óf waarvan opleverdatum >= cutoff
+      .or(`completiondate_d.is.null,completiondate_d.gte.${cutoffISO}`)
       .order("offerno", { ascending: true })
       .limit(500);
 
