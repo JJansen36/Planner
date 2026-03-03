@@ -1252,7 +1252,7 @@ if (viewingPast) {
 }
 
 
-    if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
+
 
     // 2) secties
     const projectIds = (projecten || []).map(p => p.project_id ?? p.id).filter(Boolean);
