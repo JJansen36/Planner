@@ -365,6 +365,10 @@ function buildPlannedSetsByDay(planningItems){
     return s.replace(".", ",").replace(/,00$/, "");
   }
 
+    function formatHoursCell(n){
+    return fmtHours(n);
+  }
+
   // Dit is de "haak" die jij straks laat verwijzen naar je eigen render-functie
   function refreshAfterSettingsChange(){
     // VERVANG DIT door jouw bestaande functie(s):
@@ -588,10 +592,10 @@ function asISODate(v){
             <div class="label">Opleverdatum</div><div class="value">${escapeHtml(complTxt || "-")}</div>
 
             <div class="label">WVB</div><div class="value">${escapeHtml(fmtHours(totals.prep))} uur</div>
-            <div class="label">Productie</div><div class="value">${escapeHtml(formatHoursCell(totals.prod))} uur</div>
-            <div class="label">CNC</div><div class="value">${escapeHtml(formatHoursCell(totals.cnc))} uur</div>
-            <div class="label">Montage</div><div class="value">${escapeHtml(formatHoursCell(totals.mont))} uur</div>
-            <div class="label">Reis</div><div class="value">${escapeHtml(formatHoursCell(totals.reis))} uur</div>
+            <div class="label">Productie</div><div class="value">${escapeHtml(fmtHours(totals.prod))} uur</div>
+            <div class="label">CNC</div><div class="value">${escapeHtml(fmtHours(totals.cnc))} uur</div>
+            <div class="label">Montage</div><div class="value">${escapeHtml(fmtHours(totals.mont))} uur</div>
+            <div class="label">Reis</div><div class="value">${escapeHtml(fmtHours(totals.reis))} uur</div>
           </div>
 
           ${tekst ? `
