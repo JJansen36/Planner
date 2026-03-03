@@ -1150,18 +1150,106 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
 
     statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
-    // cutoff: als je terugkijkt wil je ook projecten zien die in/na de view nog liepen.
-    // maar als je vooruit kijkt (startISO > vandaag), houd dan vandaag aan als cutoff.
-    const cutoffISO = (startISO > todayISO) ? todayISO : startISO;
+const viewingPast = (endISO < todayISO); // terugkijken?
 
-    const { data: projecten, error: pErr } = await sb
-      .from("projecten_planner")
-      .select("*")
-      .in("salesstatus", [3,4,5,6,7,8])
-      // toon projecten die nog niet opgeleverd zijn óf waarvan opleverdatum >= cutoff
-      .or(`completiondate_d.is.null,completiondate_d.gte.${cutoffISO}`)
-      .order("offerno", { ascending: true })
-      .limit(500);
+let projecten = [];
+
+if (viewingPast) {
+  // ✅ TERUGKIJKEN: haal projecten op die activiteit hebben in dit bereik
+  const secIds = new Set();
+
+  // 1) section_assignments -> section_id’s
+  const { data: aSecs, error: aErr2 } = await sb
+    .from("section_assignments")
+    .select("section_id, work_date")
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
+
+  if (!aErr2) for (const r of (aSecs || [])) if (r.section_id) secIds.add(String(r.section_id));
+
+  // 2) (optioneel) section_work -> section_id’s (als je die ook als bron wil)
+  const { data: wSecs, error: wErr2 } = await sb
+    .from("section_work")
+    .select("section_id, work_date")
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
+
+  if (!wErr2) for (const r of (wSecs || [])) if (r.section_id) secIds.add(String(r.section_id));
+
+  // 3) secIds -> projectIds via secties
+  let projectIdsSet = new Set();
+  const secArr = Array.from(secIds);
+
+  if (secArr.length) {
+    // let op: jouw secties worden elders met id/section_id gemixt.
+    // We proberen eerst "id". Als jouw assignment.section_id eigenlijk secties.section_id is, switch naar .in("section_id", secArr)
+    let { data: secsInRange, error: sInErr } = await sb
+      .from("secties")
+      .select("id, section_id, project_id")
+      .in("id", secArr)
+      .limit(5000);
+
+    if (sInErr || !secsInRange?.length) {
+      // fallback: probeer section_id kolom
+      const res2 = await sb
+        .from("secties")
+        .select("id, section_id, project_id")
+        .in("section_id", secArr)
+        .limit(5000);
+
+      secsInRange = res2.data || [];
+    }
+
+    for (const s of (secsInRange || [])) {
+      if (s?.project_id) projectIdsSet.add(String(s.project_id));
+    }
+  }
+
+  // 4) project_assignments (projectniveau planning) -> projectIds
+  const { data: pAs, error: pAsErr } = await sb
+    .from("project_assignments")
+    .select("project_id, work_date")
+    .gte("work_date", startISO)
+    .lte("work_date", endISO)
+    .limit(200000);
+
+  if (!pAsErr) for (const r of (pAs || [])) if (r.project_id) projectIdsSet.add(String(r.project_id));
+
+  const pidArr = Array.from(projectIdsSet).filter(Boolean);
+
+  if (!pidArr.length) {
+    statusEl.textContent = `Geen planning gevonden in ${startISO} t/m ${endISO}.`;
+    gridEl.innerHTML = "";
+    return;
+  }
+
+  const { data: pData, error: pErr2 } = await sb
+    .from("projecten_planner")
+    .select("*")
+    .in("project_id", pidArr)     // ✅ jouw view gebruikt project_id
+    .order("offerno", { ascending: true })
+    .limit(5000);
+
+  if (pErr2) { statusEl.textContent = "Fout projecten: " + pErr2.message; return; }
+  projecten = pData || [];
+
+} else {
+  // ✅ NU/VOORUIT: jouw huidige “actief” filter blijft
+  const cutoffISO = (startISO > todayISO) ? todayISO : startISO;
+
+  const { data: pData, error: pErr2 } = await sb
+    .from("projecten_planner")
+    .select("*")
+    .in("salesstatus", [3,4,5,6,7,8])
+    .or(`completiondate_d.is.null,completiondate_d.gte.${cutoffISO}`)
+    .order("offerno", { ascending: true })
+    .limit(500);
+
+  if (pErr2) { statusEl.textContent = "Fout projecten: " + pErr2.message; return; }
+  projecten = pData || [];
+}
 
 
     if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
