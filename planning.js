@@ -1137,7 +1137,7 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
   modal.wrap.classList.add("show");
 }
 
-async function fetchSectiesInChunks(ids){
+async function fetchSectiesInChunks(colName, ids){
   const out = [];
   const CHUNK = 700;
 
@@ -1146,8 +1146,9 @@ async function fetchSectiesInChunks(ids){
 
     const { data, error } = await sb
       .from("secties")
-      .select("section_id, project_id")   // ✅ GEEN "id"
-      .in("section_id", chunk)            // ✅ ALLEEN section_id
+      // ✅ alleen kolommen die zeker bestaan
+      .select("section_id, project_id")
+      .in(colName, chunk)
       .limit(5000);
 
     if (error) throw error;
