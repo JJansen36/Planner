@@ -1137,6 +1137,24 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
   modal.wrap.classList.add("show");
 }
 
+async function fetchSectiesInChunks(colName, ids){
+  const out = [];
+  const CHUNK = 700; // veilig (URL wordt anders te lang)
+  for (let i = 0; i < ids.length; i += CHUNK){
+    const chunk = ids.slice(i, i + CHUNK);
+
+    const { data, error } = await sb
+      .from("secties")
+      .select("id, section_id, project_id")
+      .in(colName, chunk)
+      .limit(5000);
+
+    if (error) throw error;
+    out.push(...(data || []));
+  }
+  return out;
+}
+
   // -------- DATA LOAD --------
   async function loadAndRender(){
     const start = new Date(rangeStart);
@@ -1185,22 +1203,19 @@ if (viewingPast) {
   if (secArr.length) {
     // let op: jouw secties worden elders met id/section_id gemixt.
     // We proberen eerst "id". Als jouw assignment.section_id eigenlijk secties.section_id is, switch naar .in("section_id", secArr)
-    let { data: secsInRange, error: sInErr } = await sb
-      .from("secties")
-      .select("id, section_id, project_id")
-      .in("id", secArr)
-      .limit(5000);
+  let secsInRange = [];
 
-    if (sInErr || !secsInRange?.length) {
-      // fallback: probeer section_id kolom
-      const res2 = await sb
-        .from("secties")
-        .select("id, section_id, project_id")
-        .in("section_id", secArr)
-        .limit(5000);
-
-      secsInRange = res2.data || [];
+  try {
+    secsInRange = await fetchSectiesInChunks("id", secArr);
+  } catch (e1) {
+    // fallback: als assignment.section_id eigenlijk secties.section_id is
+    try {
+      secsInRange = await fetchSectiesInChunks("section_id", secArr);
+    } catch (e2) {
+      console.warn("Fout secties lookup (id + section_id):", e1?.message || e1, e2?.message || e2);
+      secsInRange = [];
     }
+  }
 
     for (const s of (secsInRange || [])) {
       if (s?.project_id) projectIdsSet.add(String(s.project_id));
