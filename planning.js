@@ -1138,22 +1138,38 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
 }
 
 async function fetchSectiesInChunks(colName, ids){
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
   const out = [];
   const CHUNK = 700;
+
+  // fallback volgorde als kolom niet bestaat of mismatch
+  const tryCols = [colName, "section_id", "id"].filter((v,i,a)=>v && a.indexOf(v)===i);
 
   for (let i = 0; i < ids.length; i += CHUNK){
     const chunk = ids.slice(i, i + CHUNK);
 
-    const { data, error } = await sb
-      .from("secties")
-      // ✅ alleen kolommen die zeker bestaan
-      .select("section_id, project_id")
-      .in(colName, chunk)
-      .limit(5000);
+    let ok = false;
+    let lastErr = null;
 
-    if (error) throw error;
-    out.push(...(data || []));
+    for (const c of tryCols){
+      const { data, error } = await sb
+        .from("secties")
+        .select("section_id, project_id") // ✅ GEEN id selecteren
+        .in(c, chunk)
+        .limit(5000);
+
+      if (!error) {
+        out.push(...(data || []));
+        ok = true;
+        break;
+      }
+      lastErr = error;
+    }
+
+    if (!ok) throw lastErr;
   }
+
   return out;
 }
 
@@ -1202,22 +1218,20 @@ if (viewingPast) {
   let projectIdsSet = new Set();
   const secArr = Array.from(secIds);
 
-  if (secArr.length) {
-    // let op: jouw secties worden elders met id/section_id gemixt.
-    // We proberen eerst "id". Als jouw assignment.section_id eigenlijk secties.section_id is, switch naar .in("section_id", secArr)
-  let secsInRange = [];
+let secsInRange = [];
 
+try {
+  // ✅ eerst section_id proberen (jouw tabel heeft dit wél)
+  secsInRange = await fetchSectiesInChunks("section_id", secArr);
+} catch (e1) {
+  // fallback: als het toch ooit "id" is in een andere omgeving
   try {
-    secsInRange = await fetchSectiesInChunks(secArr);   // ✅ alleen section_id
-  } catch (e) {
-    console.warn("Fout secties lookup (section_id):", e?.message || e);
+    secsInRange = await fetchSectiesInChunks("id", secArr);
+  } catch (e2) {
+    console.warn("Fout secties lookup (section_id/id):", e1?.message || e1, e2?.message || e2);
     secsInRange = [];
   }
-
-    for (const s of (secsInRange || [])) {
-      if (s?.project_id) projectIdsSet.add(String(s.project_id));
-    }
-  }
+}
 
   // 4) project_assignments (projectniveau planning) -> projectIds
   const { data: pAs, error: pAsErr } = await sb
