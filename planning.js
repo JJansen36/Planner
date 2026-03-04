@@ -1137,16 +1137,17 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
   modal.wrap.classList.add("show");
 }
 
-async function fetchSectiesInChunks(colName, ids){
+async function fetchSectiesInChunks(ids){
   const out = [];
-  const CHUNK = 700; // veilig (URL wordt anders te lang)
+  const CHUNK = 700;
+
   for (let i = 0; i < ids.length; i += CHUNK){
     const chunk = ids.slice(i, i + CHUNK);
 
     const { data, error } = await sb
       .from("secties")
-      .select("id, section_id, project_id")
-      .in(colName, chunk)
+      .select("section_id, project_id")   // ✅ GEEN "id"
+      .in("section_id", chunk)            // ✅ ALLEEN section_id
       .limit(5000);
 
     if (error) throw error;
@@ -1206,15 +1207,10 @@ if (viewingPast) {
   let secsInRange = [];
 
   try {
-    secsInRange = await fetchSectiesInChunks("id", secArr);
-  } catch (e1) {
-    // fallback: als assignment.section_id eigenlijk secties.section_id is
-    try {
-      secsInRange = await fetchSectiesInChunks("section_id", secArr);
-    } catch (e2) {
-      console.warn("Fout secties lookup (id + section_id):", e1?.message || e1, e2?.message || e2);
-      secsInRange = [];
-    }
+    secsInRange = await fetchSectiesInChunks(secArr);   // ✅ alleen section_id
+  } catch (e) {
+    console.warn("Fout secties lookup (section_id):", e?.message || e);
+    secsInRange = [];
   }
 
     for (const s of (secsInRange || [])) {
