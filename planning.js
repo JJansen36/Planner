@@ -1245,11 +1245,28 @@ try {
 
   const pidArr = Array.from(projectIdsSet).filter(Boolean);
 
-  if (!pidArr.length) {
-    statusEl.textContent = `Geen planning gevonden in ${startISO} t/m ${endISO}.`;
-    gridEl.innerHTML = "";
-    return;
-  }
+if (!pidArr.length) {
+  console.warn("[viewingPast] Geen projectIds uit assignments/work in range. Val terug op brede projecten-lijst.");
+
+  const { data: pDataAll, error: pErrAll } = await sb
+    .from("projecten_planner")
+    .select("*")
+    .order("offerno", { ascending: true })
+    .limit(5000);
+
+  if (pErrAll) { statusEl.textContent = "Fout projecten (fallback): " + pErrAll.message; return; }
+  projecten = pDataAll || [];
+} else {
+  const { data: pData, error: pErr2 } = await sb
+    .from("projecten_planner")
+    .select("*")
+    .in("project_id", pidArr)
+    .order("offerno", { ascending: true })
+    .limit(5000);
+
+  if (pErr2) { statusEl.textContent = "Fout projecten: " + pErr2.message; return; }
+  projecten = pData || [];
+}
 
   const { data: pData, error: pErr2 } = await sb
     .from("projecten_planner")
