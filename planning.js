@@ -92,8 +92,7 @@ async function undoLast(){
           section_id: action.section_id,
           work_date: action.from_date,
           werknemer_id: r.werknemer_id,
-          work_type: r.work_type,
-          note: r.note || null
+          work_type: r.work_type
         }));
         await sb.from("section_assignments").insert(backRows);
       }
@@ -407,14 +406,12 @@ async function fillOrderTypeFilterUI(){
   if(!box) return;
 
   // haal unieke soorten uit DB
-const { data, error } = await sb.from("section_orders").select("soort").not("soort", "is", null);
-if (error) {
-   console.warn("soorten ophalen fout:", error.message);
- }
+  const res = await sb
+    .from("section_orders")
+    .select("soort")
+    .not("soort", "is", null);
 
-
-
-  const soorten = [...new Set((data || [])
+  const soorten = [...new Set((res.data || [])
     .map(r => String(r.soort || "").trim())
     .filter(Boolean)
   )].sort();
@@ -1140,74 +1137,6 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
   modal.wrap.classList.add("show");
 }
 
-async function fetchSectiesInChunks(colName, ids){
-  if (!Array.isArray(ids) || ids.length === 0) return [];
-
-  const out = [];
-  const CHUNK = 700;
-
-  // fallback volgorde als kolom niet bestaat of mismatch
-  const tryCols = [colName, "section_id", "id"].filter((v,i,a)=>v && a.indexOf(v)===i);
-
-  for (let i = 0; i < ids.length; i += CHUNK){
-    const chunk = ids.slice(i, i + CHUNK);
-
-    let ok = false;
-    let lastErr = null;
-
-    for (const c of tryCols){
-      const { data, error } = await sb
-        .from("secties")
-        .select("section_id, project_id") // ✅ GEEN id selecteren
-        .in(c, chunk)
-        .limit(5000);
-
-      if (!error) {
-        out.push(...(data || []));
-        ok = true;
-        break;
-      }
-      lastErr = error;
-    }
-
-    if (!ok) throw lastErr;
-  }
-
-  return out;
-}
-
-function workToPseudoAssignRows(workRows){
-  const out = [];
-
-  for (const r of (workRows || [])) {
-    const sid = r.section_id;
-    const d   = String(r.work_date || "").slice(0,10);
-    const wid = r.werknemer_id;
-
-    if (!sid || !d || !wid) continue;
-
-    const t = String(r.work_type || "").toLowerCase();
-
-    let wt = null;
-    if (t.includes("prod")) wt = "productie";
-    else if (t.includes("mont")) wt = "montage";
-    else if (t.includes("cnc")) wt = "cnc";
-    else if (t.includes("reis")) wt = "reis";
-
-    if (!wt) continue;
-
-    out.push({
-      section_id: String(sid),
-      work_date: d,
-      werknemer_id: wid,
-      work_type: wt,
-      note: null
-    });
-  }
-
-  return out;
-}
-
   // -------- DATA LOAD --------
   async function loadAndRender(){
     const start = new Date(rangeStart);
@@ -1221,101 +1150,17 @@ function workToPseudoAssignRows(workRows){
 
     statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
-const viewingPast = (endISO < todayISO); // terugkijken?
-
-let projecten = [];
-
-if (viewingPast) {
-  // ✅ TERUGKIJKEN: haal projecten op die activiteit hebben in dit bereik
-  const secIds = new Set();
-
-  // 1) section_assignments -> section_id’s
-  const { data: aSecs, error: aErr2 } = await sb
-    .from("section_assignments")
-    .select("section_id, work_date")
-    .gte("work_date", startISO)
-    .lte("work_date", endISO)
-    .limit(200000);
-
-  if (!aErr2) for (const r of (aSecs || [])) if (r.section_id) secIds.add(String(r.section_id));
-
-  // 2) (optioneel) section_work -> section_id’s (als je die ook als bron wil)
-  const { data: wSecs, error: wErr2 } = await sb
-    .from("section_work")
-    .select("section_id, work_date")
-    .gte("work_date", startISO)
-    .lte("work_date", endISO)
-    .limit(200000);
-
-  if (!wErr2) for (const r of (wSecs || [])) if (r.section_id) secIds.add(String(r.section_id));
-
-  // 3) secIds -> projectIds via secties
-  let projectIdsSet = new Set();
-  const secArr = Array.from(secIds);
-
-let secsInRange = [];
-
-try {
-  // ✅ eerst section_id proberen (jouw tabel heeft dit wél)
-  secsInRange = await fetchSectiesInChunks("section_id", secArr);
-} catch (e1) {
-  // fallback: als het toch ooit "id" is in een andere omgeving
-  try {
-    secsInRange = await fetchSectiesInChunks("id", secArr);
-  } catch (e2) {
-    console.warn("Fout secties lookup (section_id/id):", e1?.message || e1, e2?.message || e2);
-    secsInRange = [];
-  }
-}
-
-// ✅ vul projectIdsSet vanuit secties lookup
-for (const s of (secsInRange || [])) {
-  if (s?.project_id) projectIdsSet.add(String(s.project_id));
-}
+    // 1) projecten
+    const { data: projecten, error: pErr } = await sb
+      .from("projecten_planner")
+      .select("*")
+      .in("salesstatus", [3,4,5,6,7,8])
+      .gte("completiondate_d", todayISO)
+      .order("offerno", { ascending: true })
+      .limit(500);
 
 
-  // 4) project_assignments (projectniveau planning) -> projectIds
-  const { data: pAs, error: pAsErr } = await sb
-    .from("project_assignments")
-    .select("project_id, work_date")
-    .gte("work_date", startISO)
-    .lte("work_date", endISO)
-    .limit(200000);
-
-  if (!pAsErr) for (const r of (pAs || [])) if (r.project_id) projectIdsSet.add(String(r.project_id));
-
-  const pidArr = Array.from(projectIdsSet).filter(Boolean);
-
-if (!pidArr.length) {
-  console.warn("[viewingPast] Geen projectIds uit assignments/work in range. Val terug op brede projecten-lijst.");
-
-  const { data: pDataAll, error: pErrAll } = await sb
-    .from("projecten_planner")
-    .select("*")
-    .order("offerno", { ascending: true })
-    .limit(5000);
-
-  if (pErrAll) { statusEl.textContent = "Fout projecten (fallback): " + pErrAll.message; return; }
-  projecten = pDataAll || [];
-
-} else {
-  // ✅ NU/VOORUIT: jouw huidige “actief” filter blijft
-  const cutoffISO = (startISO > todayISO) ? todayISO : startISO;
-
-  const { data: pData, error: pErr2 } = await sb
-    .from("projecten_planner")
-    .select("*")
-    .in("salesstatus", [3,4,5,6,7,8])
-    .or(`completiondate_d.is.null,completiondate_d.gte.${cutoffISO}`)
-    .order("offerno", { ascending: true })
-    .limit(500);
-
-  if (pErr2) { statusEl.textContent = "Fout projecten: " + pErr2.message; return; }
-  projecten = pData || [];
-}
-
-}
-
+    if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
 
     // 2) secties
     const projectIds = (projecten || []).map(p => p.project_id ?? p.id).filter(Boolean);
@@ -1447,17 +1292,8 @@ if (!pidArr.length) {
     
     // Als tabel nog niet bestaat of er zijn geen rechten, wil je de planner niet "slopen".
     // We gaan dan verder zonder assignments.
-    let safeAssigns = aErr ? [] : (assigns || []);
+    const safeAssigns = aErr ? [] : (assigns || []);
     if (aErr) console.warn("section_assignments niet geladen:", aErr.message);
-
-    // ✅ fallback: oudere planning staat vaak alleen in section_work
-    if (!safeAssigns.length) {
-      const pseudo = workToPseudoAssignRows(work);
-      if (pseudo.length) {
-        console.log("[past fallback] use section_work as assignments:", pseudo.length);
-        safeAssigns = pseudo;
-      }
-    }
 
     // 6b) project_assignments in range (projectniveau planning zoals "↳ Montage"-regel)
     const { data: pAssigns, error: paErr } = await sb
@@ -2211,7 +2047,6 @@ for (const a of (pAssigns || [])) {
       productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
       dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
       dummySub: 0,
-      subcNames: [],
       inhuurProdIds: new Set(),
       inhuurMontIds: new Set()
     });
@@ -4066,7 +3901,7 @@ if (ptd) {
 
   };
 
-
+  for (const iid of (cur.inhuurProdIds || [])) selected.productie.add(String(iid));
   for (const iid of (cur.inhuurMontIds || [])) selected.montage.add(String(iid));
 
   const subEl   = modal.wrap.querySelector("#amSub");
@@ -4078,7 +3913,46 @@ if (ptd) {
 
 
 
+  function renderInhuurPicker(){
+  const pickInhuur = modal.wrap.querySelector("#amInhuurPick");
+  if (!pickInhuur) return;
 
+  const src = (inhuurByEmp || new Map());
+  const rows = [];
+
+  for (const [iid, dm] of src) {
+    const id = String(iid);
+    const hours = Number(dm?.get(dateISO) || 0);
+    const name = inhuurById?.get(id)?.name || "Inhuur";
+
+    const checked = selected.inhuurIds?.has(id);
+    const shouldShow = checked || hours > 0;
+    if (!shouldShow) continue;
+
+    rows.push(`
+      <label class="assign-item" style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+        <span style="display:flex; gap:10px; align-items:center;">
+          <input type="checkbox" class="inhuur-pick" data-iid="${escapeAttr(id)}" ${checked ? "checked" : ""} />
+          <span>${escapeHtml(name)}</span>
+        </span>
+        <span class="muted">${hours > 0 ? (hours + "u") : ""}</span>
+      </label>
+    `);
+  }
+
+  pickInhuur.innerHTML = rows.length
+    ? rows.join("")
+    : `<div class="muted" style="padding:6px 2px;">Geen inhuur-uren beschikbaar op deze dag.</div>`;
+
+  pickInhuur.querySelectorAll("input.inhuur-pick").forEach(chk => {
+    chk.onchange = () => {
+      const iid = String(chk.dataset.iid || "").trim();
+      if (!iid) return;
+      if (chk.checked) selected.inhuurIds.add(iid);
+      else selected.inhuurIds.delete(iid);
+    };
+  });
+}
   // hergebruik jouw bestaande renderBothLists() (zelfde als sectie)
   // TIP: haal jouw renderBothLists() functie omhoog zodat je hem 2x kunt gebruiken.
   // Snelste: kopieer renderBothLists() uit je sectie branch, en plak hem hier 1-op-1.
@@ -4155,15 +4029,14 @@ const countM = rowM.querySelector(".concept-count");
   };
 
   renderBothLists();
-renderInhuurPickerTo(modal.wrap, selected, dateISO, inhuurByEmp, inhuurById);
+
   saveBtn.onclick = async () => {
     // delete bestaande projectniveau planning voor deze dag
-const del = await sb
-  .from("project_assignments")
-  .delete()
-  .eq("project_id", projectId)
-  .eq("work_date", dateISO)
-  .eq("work_type", "montage");
+    const del = await sb
+      .from("project_assignments")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("work_date", dateISO);
 
     if (del.error) { alert("Fout verwijderen: " + del.error.message); return; }
 
@@ -5133,7 +5006,13 @@ function infoRow(text, cols){
     return tr;
   }
 
-
+  function formatHoursCell(n){
+    const v = Number(n||0);
+    if(!v) return "0";
+    // 2 decimal NL met komma, maar kort
+    const s = (Math.round(v*100)/100).toString().replace(".", ",");
+    return s;
+  }
 
   function pickKey(obj, keys){
     if(!obj) return keys[0];
@@ -5171,6 +5050,70 @@ function buildPlanLabelFromCtx(ctx, { pid, sid }) {
 
   return [top, sectTxt].filter(Boolean).join("\n");
 }
+
+function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
+  const ctx = window.__plannerCtx;
+  if (!ctx) return [];
+
+  const iid = String(inhuurIdStr || "").trim();
+  const iso = String(dateISO || "").trim();
+  const out = [];
+
+  // 1) sectie-niveau: section_assignments -> assignMap (inhuurProdIds / inhuurMontIds)
+  for (const [sid, dm] of (ctx.assignMap || new Map())) {
+    const entry = dm?.get(iso);
+    if (!entry) continue;
+
+    const sObj = ctx.sectById.get(String(sid));
+    const pid = String(sObj?.[ctx.sectProjKey] || "").trim();
+    if (!pid) continue;
+
+    if (entry.inhuurProdIds?.has(iid)) {
+      out.push({ type: "productie", text: buildPlanLabelFromCtx(ctx, { pid, sid }) });
+    }
+    if (entry.inhuurMontIds?.has(iid)) {
+      out.push({ type: "montage", text: buildPlanLabelFromCtx(ctx, { pid, sid }) });
+    }
+  }
+
+  // 2) project-niveau: project_assignments -> projectAssignMap (inhuurProdIds / inhuurMontIds)
+  for (const [pid, dm] of (ctx.projectAssignMap || new Map())) {
+    const entry = dm?.get(iso);
+    if (!entry) continue;
+
+    if (entry.inhuurProdIds?.has(iid)) {
+      out.push({ type: "productie", text: buildPlanLabelFromCtx(ctx, { pid, sid: null }) });
+    }
+    if (entry.inhuurMontIds?.has(iid)) {
+      out.push({ type: "montage", text: buildPlanLabelFromCtx(ctx, { pid, sid: null }) });
+    }
+  }
+
+  // dedupe
+  const seen = new Set();
+  return out.filter(x => {
+    const k = `${x.type}||${x.text}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function escapeAttr(s){
+    return escapeHtml(String(s ?? "")).replaceAll('"', "&quot;");
+  }
+  function cssEsc(s){
+    return String(s ?? "").replaceAll('"','\\"');
+  }
 
   function toggleRowsByKey(key, open){
     const rows = gridEl.querySelectorAll(`tr[data-cap-parent="${cssEsc(key)}"]`);
@@ -6024,7 +5967,7 @@ pushUndo({
   section_id: sectionId,
   from_date: fromDate,
   to_date: toDate,
-  rows: rows.map(r => ({ werknemer_id: r.werknemer_id, work_type: r.work_type, note: r.note || null}))
+  rows: rows.map(r => ({ werknemer_id: r.werknemer_id, work_type: r.work_type }))
 });
 
   // 2) delete oude dag
