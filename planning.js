@@ -1139,25 +1139,22 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
 
   // -------- DATA LOAD --------
   async function loadAndRender(){
-    const start = new Date(rangeStart);
-    const end = addDays(start, RANGE_DAYS - 1);
-    const startISO = toISODate(start);
-    const endISO = toISODate(end);
-    const todayISO = toISODate(new Date());
+  const start = new Date(rangeStart);
+  const end = addDays(start, RANGE_DAYS - 1);
+  const startISO = toISODate(start);
+  const endISO = toISODate(end);
 
+  captureOpenState();
+  statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
 
-    captureOpenState();  // ✅ hier direct
-
-    statusEl.textContent = `Laden… (${startISO} t/m ${endISO})`;
-
-    // 1) projecten
-    const { data: projecten, error: pErr } = await sb
-      .from("projecten_planner")
-      .select("*")
-      .in("salesstatus", [1,2,3,4,5,6,7,8])
-      .gte("completiondate_d", todayISO)
-      .order("offerno", { ascending: true })
-      .limit(500);
+  // 1) projecten
+  const { data: projecten, error: pErr } = await sb
+    .from("projecten_planner")
+    .select("*")
+    .in("salesstatus", [1,2,3,4,5,6,7,8])
+    .gte("completiondate_d", startISO)   // ✅ niet vandaag, maar begin van zichtbare range
+    .order("offerno", { ascending: true })
+    .limit(500);
 
 
     if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
