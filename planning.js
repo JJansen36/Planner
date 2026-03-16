@@ -1152,10 +1152,13 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
     .from("projecten_planner")
     .select("*")
     .in("salesstatus", [1,2,3,4,5,6,7,8])
-    .gte("completiondate_d", startISO)   // ✅ niet vandaag, maar begin van zichtbare range
+    .or(`completiondate_d.is.null,completiondate_d.gte.${startISO}`)
     .order("offerno", { ascending: true })
     .limit(500);
 
+    console.log("startISO:", startISO);
+    console.log("geladen projecten:", projecten?.length || 0);
+    console.log("sample projecten:", projecten?.slice(0, 5));
 
     if (pErr) { statusEl.textContent = "Fout projecten: " + pErr.message; return; }
 
@@ -2040,13 +2043,20 @@ for (const a of (pAssigns || [])) {
   if (!projectAssignMap.has(pid)) projectAssignMap.set(pid, new Map());
   const dmP = projectAssignMap.get(pid);
 
-    if (!dmP.has(d)) dmP.set(d, {
-      productie: new Set(), cnc: new Set(), montage: new Set(), reis: new Set(),
-      dummyProd: 0, dummyCnc: 0, dummyMont: 0, dummyReis: 0,
-      dummySub: 0,
-      inhuurProdIds: new Set(),
-      inhuurMontIds: new Set()
-    });
+if (!dmP.has(d)) dmP.set(d, {
+  productie: new Set(),
+  cnc: new Set(),
+  montage: new Set(),
+  reis: new Set(),
+  dummyProd: 0,
+  dummyCnc: 0,
+  dummyMont: 0,
+  dummyReis: 0,
+  dummySub: 0,
+  subcNames: [],          // <-- toevoegen
+  inhuurProdIds: new Set(),
+  inhuurMontIds: new Set()
+});
 
   const entry = dmP.get(d);
 
@@ -5138,31 +5148,36 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
     });
   }
 
-  function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates){
+  function buildDayLabelsForProject(projectId, sectiesByProject, sectIdKey, workMap, dates, sectLookup){
     const secs = sectiesByProject.get(projectId) || [];
 
-    return dates.map(d=>{
+    return dates.map(d => {
       const iso = toISODate(d);
       const counts = {};
 
-      for(const s of secs){
-        const sid = s?.[sectIdKey]
+      for (const s of secs) {
+        const sidRaw = s?.[sectIdKey]
           ? String(s[sectIdKey])
-          : (s?.section_id ? String(s.section_id) : null);
+          : (s?.section_id ? String(s.section_id) : "");
 
-        if(!sid) continue;
+        const sid = sectLookup?.get(String(sidRaw)) || String(sidRaw);
+        if (!sid) continue;
 
-        const rows = workMap.get(sid)?.get(iso) || [];
-        for(const r of rows){
+        const rows = workMap.get(String(sid))?.get(iso) || [];
+        for (const r of rows) {
           const t = normalizeType(r.work_type);
-          counts[t] = (counts[t]||0) + Number(r.hours||0);
+          counts[t] = (counts[t] || 0) + Number(r.hours || 0);
         }
       }
 
-      let bestT="", bestH=0;
-      for(const [t,h] of Object.entries(counts)){
-        if(h>bestH){ bestH=h; bestT=t; }
+      let bestT = "", bestH = 0;
+      for (const [t, h] of Object.entries(counts)) {
+        if (h > bestH) {
+          bestH = h;
+          bestT = t;
+        }
       }
+
       return bestT || "";
     });
   }
