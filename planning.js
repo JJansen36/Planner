@@ -1154,7 +1154,7 @@ function getPlannedForInhuurDate(inhuurIdStr, dateISO) {
     const { data: projecten, error: pErr } = await sb
       .from("projecten_planner")
       .select("*")
-      .in("salesstatus", [3,4,5,6,7,8])
+      .in("salesstatus", [1,2,3,4,5,6,7,8])
       .gte("completiondate_d", todayISO)
       .order("offerno", { ascending: true })
       .limit(500);
